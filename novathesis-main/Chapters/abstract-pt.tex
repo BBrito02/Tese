@@ -1,0 +1,64 @@
+%!TEX root = ../template.tex
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% abstract-pt.tex
+%% NOVA thesis document file
+%%
+%% Abstract in Portuguese
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\typeout{NT FILE abstract-pt.tex}%
+
+Com o crescimento exponencial na geração de dados, a necessidade de processar, analisar e apresentar informações de forma clara e eficiente tem se tornado essencial. Este cenário evidencia a importância de ferramentas que simplifiquem a compreensão de dados complexos e permitam uma tomada de decisão mais informada.
+
+Os dashboards surgem como soluções cruciais para responder às questões analíticas de utilizadores, ao sintetizarem grandes volumes de dados em visualizações claras e interativas. Estas ferramentas proporcionam uma visão integrada e objetiva, ajudando utilizadores a identificar tendências, padrões e insights de forma rápida e eficiente.
+
+As técnicas de visualização são indispensáveis para transformar dados em representações visuais compreensíveis, enquanto a interatividade é fundamental para cativar os utilizadores. A possibilidade de explorar diferentes perspetivas sobre os dados aumenta o valor analítico dos dashboards e promove uma experiência mais envolvente e adaptada às necessidades de cada utilizador.
+
+O desenvolvimento de dashboards eficazes exige uma comunicação constante entre os designers e os stakeholders. Este diálogo é essencial para garantir que os dashboards atendam aos objetivos analíticos específicos e maximizem a sua utilidade. No entanto, a ausência de ferramentas adequadas para prototipagem dificulta este processo, levando a atrasos e retrabalhos.
+
+Embora existam ferramentas consolidadas, como Tableau e Microsoft Power BI, estas concentram-se mais na visualização e análise de dados do que na prototipagem e documentação das interações e fluxos analíticos. Estas lacunas limitam a eficiência e a clareza no design iterativo de dashboards.
+
+A Interactive Visualization Modeling Language (IVML) surge como uma linguagem dedicada ao design e documentação de dashboards, abordando as limitações das ferramentas existentes. Com a IVML, é possível modelar visualizações interativas e suas interações de forma clara e formal, facilitando a comunicação entre designers e stakeholders. Este modelo não só otimiza o planeamento e implementação de dashboards, como também garante uma melhor adaptação às necessidades dos utilizadores.
+
+
+%Independentemente da língua em que a dissertação está escrita, geralmente esta contém pelo menos dois resumos: um resumo na mesma língua do texto principal e outro resumo numa outra língua.
+
+%A ordem dos resumos varia de acordo com a escola. Se a sua escola tiver regulamentos específicos sobre a ordem dos resumos, o template (\LaTeX) \gls{novathesis} irá respeitá-los. Caso contrário, a regra padrão no template \gls{novathesis} é ter em primeiro lugar o resumo \emph{no mesmo idioma do texto principal} e depois o resumo \emph{no outro idioma}. Por exemplo, se a dissertação for escrita em português, a ordem dos resumos será primeiro o português e depois o inglês, seguido do texto principal em português. Se a dissertação for escrita em inglês, a ordem dos resumos será primeiro em inglês e depois em português, seguida do texto principal em inglês.
+%
+%No entanto, esse pedido pode ser personalizado adicionando um dos seguintes ao arquivo \verb+5_packages.tex+.
+
+\begin{verbatim}
+    \abstractorder(<MAIN_LANG>):={<LANG_1>,...,<LANG_N>}
+\end{verbatim}
+
+Por exemplo, para um documento escrito em Alemão com resumos em Alemão, Inglês e Italiano (por esta ordem), pode usar-se:
+\begin{verbatim}
+    \ntsetup{abstractorder={de={de,en,it}}}
+\end{verbatim}
+
+Relativamente ao seu conteúdo, os resumos não devem ultrapassar uma página e frequentemente tentam responder às seguintes questões (é imprescindível a adaptação às práticas habituais da sua área científica):
+
+\begin{enumerate}
+  \item Qual é o problema?
+  \item Porque é que é um problema interessante/desafiante?
+  \item Qual é a proposta de abordagem/solução?
+  \item Quais são as consequências/resultados da solução proposta?
+\end{enumerate}
+
+% E agora vamos fazer um teste com uma quebra de linha no hífen a ver se a \LaTeX\ duplica o hífen na linha seguinte se usarmos \verb+"-+… em vez de \verb+-+.
+%
+% zzzz zzz zzzz zzz zzzz zzz zzzz zzz zzzz zzz zzzz zzz zzzz zzz zzzz zzz zzzz comentar"-lhe zzz zzzz zzz zzzz
+%
+% Sim!  Funciona! :)
+
+% Palavras-chave do resumo em Português
+% \begin{keywords}
+% Palavra-chave 1, Palavra-chave 2, Palavra-chave 3, Palavra-chave 4
+% \end{keywords}
+\keywords{
+  Primeira palavra-chave \and
+  Outra palavra-chave \and
+  Mais uma palavra-chave \and
+  A última palavra-chave
+}
+% to add an extra black line

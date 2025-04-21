@@ -1,0 +1,58 @@
+%!TEX root = ../template.tex
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% abstract-en.tex
+%% NOVA thesis document file
+%%
+%% Abstract in English([^%]*)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\typeout{NT FILE abstract-en.tex}%
+
+With the exponential growth in data generation, the need to process, analyze, and present information clearly and efficiently has become essential. This scenario highlights the importance of tools that simplify the understanding of complex data and support more informed decision-making.
+
+Dashboards emerge as crucial solutions to address users' analytical needs by synthesizing large volumes of data into clear and interactive visualizations. These tools provide an integrated and objective view, helping users quickly identify trends, patterns, and insights.
+
+Visualization techniques are indispensable for transforming data into comprehensible visual representations, while interactivity plays a vital role in engaging users. The ability to explore different perspectives of the data enhances the analytical value of dashboards and fosters a more engaging and user-centric experience.
+
+The development of effective dashboards requires constant communication between designers and stakeholders. This dialogue is essential to ensure that dashboards meet specific analytical objectives and maximize their utility. However, the lack of adequate prototyping tools complicates this process, resulting in delays and rework.
+
+Although established tools like Tableau and Microsoft Power BI are available, they primarily focus on data visualization and analysis rather than prototyping and documenting interactions and analytical workflows. These gaps hinder the efficiency and clarity of iterative dashboard design.
+
+The Interactive Visualization Modeling Language (IVML) emerges as a dedicated language for designing and documenting dashboards, addressing the limitations of existing tools. IVML enables the modeling of interactive visualizations and their interactions in a clear and formal manner, facilitating communication between designers and stakeholders. This approach not only optimizes the planning and implementation of dashboards but also ensures better adaptation to users' needs.
+
+%Regardless of the language in which the dissertation is written, usually there are at least two abstracts: one abstract in the same language as the main text, and another abstract in some other language.
+
+%The abstracts' order varies with the school.  If your school has specific regulations concerning the abstracts' order, the \gls{novathesis} (\LaTeX) template will respect them.  Otherwise, the default rule in the \gls{novathesis} template is to have in first place the abstract in \emph{the same language as main text}, and then the abstract in \emph{the other language}. For example, if the dissertation is written in Portuguese, the abstracts' order will be first Portuguese and then English, followed by the main text in Portuguese. If the dissertation is written in English, the abstracts' order will be first English and then Portuguese, followed by the main text in English.
+%
+%However, this order can be customized by adding one of the following to the file \verb+5_packages.tex+.
+
+\begin{verbatim}
+    \ntsetup{abstractorder={<LANG_1>,...,<LANG_N>}}
+    \ntsetup{abstractorder={<MAIN_LANG>={<LANG_1>,...,<LANG_N>}}}
+\end{verbatim}
+
+For example, for a main document written in German with abstracts written in German, English and Italian (by this order) use:
+\begin{verbatim}
+    \ntsetup{abstractorder={de={de,en,it}}}
+\end{verbatim}
+
+Concerning its contents, the abstracts should not exceed one page and may answer the following questions (it is essential to adapt to the usual practices of your scientific area):
+
+\begin{enumerate}
+  \item What is the problem?
+  \item Why is this problem interesting/challenging?
+  \item What is the proposed approach/solution/contribution?
+  \item What results (implications/consequences) from the solution?
+\end{enumerate}
+
+% Palavras-chave do resumo em Inglês
+% \begin{keywords}
+% Keyword 1, Keyword 2, Keyword 3, Keyword 4, Keyword 5, Keyword 6, Keyword 7, Keyword 8, Keyword 9
+% \end{keywords}
+\keywords{
+  One keyword \and
+  Another keyword \and
+  Yet another keyword \and
+  One keyword more \and
+  The last keyword
+}
