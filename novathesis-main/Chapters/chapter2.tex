@@ -284,9 +284,47 @@ Dizer que nesta secção a pproach que irei ter vai ser segundo essas 3 possibil
 %Processo Iterativo no design de Dashboards
 %Design Informado por Dados
 
+\section{Avaliação da usabilidade de linguagens visuais} % (fold)
+\label{sec:avaliacao_usabilidade}
+
+A eficiência de uma linguagem visual depende não só da forma como a exibimos e implementamos, mas também da forma como os utilizadores e interagem com ela. No contexto de visualização interativa de dados, é essencial garantir que a linguagens utilizada comunica de forma clara e eficiente com o utilizador, facilitando assim a sua interação com a mesma. 
+
+Para isso, é necessário avaliar a usabilidade das linguagens visuais utilizadas, nomeadamente a clareza da sua sintaxe visual, a facilidade com que os utilizadores interagem com as suas componentes, e o impacto que estas têm na realização de tarefas cognitivas complexas. Este tipo de avaliação torna-se bastante relevante no desenvolvimento de linguagens como a IVML (Interactive Visualization Modeling Language), onde as \textit{dashboards} não representam apenas informação sobre determinado tema, mas também as possíveis interações que os utilizadores podem efetuar no sistema.
+
+\subsection{\textit{Physics of Notation}} % (fold)
+\label{sub:physics_notation}
+
+% Diagrmas, fluxogramas, etc
+% Temos de parar para pensar se este tipo de diagramas são realmente eficazes para a visualização de informação, ou se são apenas uma forma de representar a informação de forma gráfica.
+% A forma como os diagramas são representados e desenhados tem um impacto direto na forma como os utilizadores interagem com a informação, e na forma como a mesma é interpretada.
+
+% porque é que eu preciso de uma física das notaçoes?
+% O artigo aponta que usamos imenso este tipo de diagramas para aproveitar o nosso sistema visual que é muito potente
+% mas por vezes o design e a parte visual destes diagrmas muitas vezes é deixada ao acaso, o que pode levar a uma má interpretação da informação
+% Moody diz que há determinados diagramas usados especificamente para determinados contextos mas que por vezes a sua representação visual não é a mais adequada
+% Um mesmo fluxo de dados pode ser desenhado de diferentes formas, a investigação mostra que pequenas alterações visuais que por vezes podem parecer triviais podem ter um impacto significativo na forma como os utilizadores compreendem a informação
+
+A \textit{Physics of Notation} foi proposta por Moody no ano de 2009 como apenas uma teoria descritiva, que evoluiu para um referencial para a avaliação e construção de linguagens visuais. O seu objetivo é maximizar a eficiência cognitiva das linguagens visuais, isto é, assegurar que estas são compreendidas com rapidez, precisão e mínimo esforço cognitivo por parte dos utilizadores. 
+
+A teoria responde a uma lacuna histórica no que toca o design de linguagens visuais, onde a semântica é muitas vezes tida em consideração, omitindo a importância da sintaxe visual. O ser humano retém informação com maior facilidade quando esta é apresentada de forma visual, uma vez que o nosso sitema visual é bastante potente contendo cerca de 1/4 do nosso cérebro \cite{moody2009physics}. %ver melhor este parágrafo
+
+Por norma, quando queremos observar um determinado tipo de infromação, existem já representações e conceitos visuais já pre-definidos para representar essa informação. No entanto, a forma como esses conceitos visuais são representados e desenhados tem um impacto direto na forma como os utilizadores interagem com a informação, e na forma como a mesma é interpretada. Moody refere que que existem vários diagramas usados especificamente para determinados contextos mas que por vezes a sua representação visual não é a mais adequada. Um mesmo diagrama pode ser desenhado de diferentes formas, resuultando em diferentes interpretações por parte dos utilizadores \cite{moody2009physics}. 
+
+Tal como é mencionado anteriormente, a toeria \textit{Physics of Notation} é baseada em 9 princípios que devem ser tidos em consideração para atingir um maior nível de eficiência cognitiva, nomeadamente \cite{moody2009physics}:
+
+\begin{itemize}
+  \item \textbf{Clareza Semiótica (Semiotic Clarity)}
+  \item \textbf{Distinçãi Perceptual (Perceptual Distinction)}
+  \item \textbf{Transparência Semiótica (Semiotic Transparency)}
+  \item \textbf{Gestão da Complexidade (Complexity Management)}
+  \item \textbf{Integração Cognitiva (Cognitive Integration)}
+  \item \textbf{Expressão Visual (Visual Expression)}
+  \item \textbf{Codificação Dupla (Dual Coding)}
+  \item \textbf{Economia Gráfica (Graphical Economy)}
+  \item \textbf{Enquadramaento Cognitivo (Cognitive Fit)}
+\end{itemize}
+
+
 
 \section{Especificação IVML}
 \label{sec:esp_ivml}
-
-%Ainda não sei o que e que vou falar aqui, ver secalhar depois com os professores
-% Aqui é falar sobre o documento IVML que tenho no Zotero
