@@ -8,20 +8,39 @@
 
 \typeout{NT FILE chapter1.tex}%
 
-\chapter{Introdução}
+\chapter{Introdução (Ainda não implementei)}
 \label{cha:introducao}
 
-Neste capítulo introdutório, irão ser apresentados os elemetnos crucias que sustentam e enquadram o trbalho desenolvido ao longo da dissertação. Inicialmente, será feita uma breve contextualização do tema abordado bem como a motivação para o seu estudo. De seguida, será apresentada uma descrição do problema abordado, bem como os objetivos e as questões de investigação que guiaram o trabalho. Por fim, será feita uma breve descrição da organização do documento.
+Neste capítulo introdutório, irão ser apresentados os elementos crucias que sustentam e enquadram o trabalho desenvolvido ao longo da dissertação. Inicialmente, será feita uma breve contextualização do tema abordado bem como a motivação para o seu estudo. De seguida, será apresentada uma descrição do problema abordado, bem como os objetivos e as questões de investigação que guiaram o trabalho. Por fim, será feita uma breve descrição da organização do documento.
 
-\section{Contexto e Motivação}
+\section{Contexto e motivação}
 \label{sec:cont_e_motiv}
 
-\section{Descrição do Problema}
+Com o constante crescimento na geração de dados, a necessidade de processar e apresentar informação de forma clara, eficiente, e intuitiva tem vindo a crescer com o passar dos anos. A introdução de ferramentas que simplifiquem a interpretação e visualização de grandes volumes de dados, e que ajudem na tomada de decisão são cada vez mais necessários. Neste sentido, os \textit{dashboards} surgem como uma solução eficiente para a visualização de dados, permitindo a apresentação de informação de forma clara e concisa, respondendo a questões analíticas impostas por parte dos utilizadores. As \textit{dashboards} proporcionam uma visão clara e objetiva dos dados a serem mostrados, facilitando a identificação de padrões, tendências e anomalias de forma rápida e intuitiva. No entanto, a sua criação e implementação podem ser um desafio. Muitas vezes os seus \textit{designers} apresentam um foco principal na representação do máximo de informação possível, sobrecarregando o utilizador, em vez de se focarem na eficácia e utilidade da informação apresentada. 
+
+Para o correto desenvolvimento de \textit{dashboards} é necessário que exija uma comunicação constante entre os \textit{stakeholders} e os \textit{designers}. É através deste diálogo constante que conseguimos garantir que os \textit{dashboards} implementados satisfaçam os objetivos e necessidades do seu público-alvo. No entanto, a ausência de ferramentas de prototipagem adequadas dificulta bastante este processo de desenvolvimento, levando a atrasos e até mesmo a falhas na suaa implementação. Embora existam várias ferramentas, como o \textit{Tableau} e o \textit{Power BI}, estas ferramentas apresentam um maior foco na visualização e análise de dados do que propriamente na fase de \textit{design} e prototipagem. Existe assim, uma motivação clara para o desenvolvimento de uma ferramente que apoie o \textit{design} sistemático de \textit{dashboards}, permitindo a prototipagem e documentação de forma clara e intuitiva.
+
+É neste contexto que surge a Interactive Visualization Modeling Language (IVML), uma linguagem visual dedicada à modelação e documentação de dashboards interativos. A IVML foi desenvolvida com o objetivo de colmatar a lacuna existente na fase de conceção, oferecendo uma forma formal de representar os diversos componentes de um dashboard, como visualizações, interações e tooltips. Esta linguagem permite descrever de forma clara as intenções de design, facilitando a comunicação entre \textit{designers} e \textit{stakeholders} promovendo um processo de desenvolvimento mais ágil, iterativo e centrado no utilizador.
+
+\section{Descrição do problema}
 \label{sec:des_problema}
 
-\section{Trabalho Realizado e Contributos}
+Os \textit{dashboards} desempenham um papel fundamental no que toca a visualização e análise de dados, sendo através das diferentes representações visuais e mecanismos de interação presentes que os utilizadores vêm respondidas as suas questões analíticas. No entanto, como é referido na secção \ref{sec:cont_e_motiv}, o processo de desenvolvimento de \textit{dashboards} é um processo complexo e desafiante. Para esta implementação seja bem-sucedida, é necessário ter em consideração vários fatores:
+
+\begin{itemize}
+    \item Conhecer o público-alvo;
+    \item Definir o propósito e os objetivos;
+    \item Selecionar e preparar os dados relevantes;
+    \item Focar na clareza e eficácia da comunicação;
+\end{itemize}
+
+O processo de desenvolvimento de \textit{dashboards} é um processo interativo, onde a constante comunicação entre os \textit{stakeholders} e os \textit{designers} é fundamental para garantir que o produto final satisfaça as necessidades e expectativas do público-alvo. Este diálogo é muitas vezes atrasado, e por vezes omitido, uma vez que existe uma falta de ferramentas que suportem esta fase inicial de \textit{design} e prototipagem. Por vezes, este diálogo só é realizado numa fase final, onde já se encontram implementadas as diferentes \textit{dashboards}. Esta falta de comunicação pode resultar numa implementação falhada, onde os \textit{dashboards} não satisfazem as necessidades do seu público-alvo, o que resulta num desperdício de tempo e recursos.
+
+Neste contexto, surge a necessidade de uma ferramenta que suporte o processo de \textit{design} e prototipagem de \textit{dashboards}, uma vez que de momento não existe nenhuma ferramenta de suporte que os \textit{designers} possam utilizar para mostrar aos utilizadores como será o desenvolvimento e produto final da \textit{dashboad}, nomeadamento, que visualizações iram ser usadas, qual a estrutura e organização optada, que interações vão estar disponíveis e quais os seus impactos. A linguagem \gls{IVML} foi criada com o principal intuito de preencher essa lacuna, oferecendo um modelo capaz de representar as diferentes componentes de uma dashboards, facilitando assim a comunicação entre os \textit{stakeholders} e os \textit{designers}, uma vez que a linguagem oferce uma documentação detalhada de todas as componentes e interações presentes no seu \textit{design}.
+
+\section{Abordagem e contributos esperados}
 \label{sec:contribuicoes}
 
-\section{Organização do Documento}
+\section{Organização do documento}
 \label{sec:organizacao}
 
