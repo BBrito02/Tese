@@ -120,7 +120,7 @@ Técnicas como \textbf{Participação/Colaboração} são técnicas que envolvem
 Por fim, a \textbf{Gamificação} é considerada uma das técnicas interativas mais complexas de adicionar num sistema \gls{InfoVis}. Segundo Deterding \cite{deterding2011game}, gamificação pode ser brevemente definida como o uso de elementos de design de jogos em contextos não relacionados com jogos. Apesar de ser uma técnica cuja implementação por vezes é bastante demorada e complexa, esta contém uma panoplia de elementos como contextos narrativos, recompensas, \textit{ranks}, nívels e objetivos de forma a tornarem a experiência do utilizador mais lúdica e cativante, contrariando as práticas comuns que por vezes podem passar por serem monótonas e aborrecidas \cite{figueiras2015towards}.
 
 \section{Design de \textit{Dashboard}}
-\label{sec:design_dashboard}
+\label{cha:design_dashboard}
 %Capitulo 3 de "Riding the Technology Wave" pode aprofundar a introdução
 %Os \textit{dashboards} com o passar dos anos têm vindo a ser cada vez mais requisitados no que toca a visualização de dados \cite{sarikaya2018we}. Este tipo de ferramente oferece aos utilizadores a posssibilidade de não só visualizar, como interagir com a informação disponibilizada, facilitando a compreensão e interpretação da informação disponibilizada.
 
@@ -145,17 +145,27 @@ De forma a que o design da \textit{dashboard} se encontre enquadrada com as nece
   \label{fig:gqm-model}
 \end{figure}
 
-\subsection{Recomendações para o Design de Dashboards (Ainda não implementei)} % (fold)
-\label{sub:recomendacoes}
+\subsection{Recomendações para o Design de Dashboards (Implementado, Rever)} % (fold)
+\label{sub:recomendacoes_design}
+% Aqui no notebooklm eles falaram que um documento suporta o contar historias na dashboard, o que melhorou bastante a compreensão e reduziu a quantidade de erros tomados
+% Posso fazer como o Ferreira fez no capitulo 1.2 Descrição do problema onde falo sobre o documento "10 principios..." e apenas falo sobre as 3 categorias que ele falou e exploro cada uma em detalhe com exemplos e tal
 
-Aqui é onde eu vou citar os 10 principios para construir um dashboard de forma eficaz
+%Fazer alguma referência ao que é dito em cima
+%Introduzir os conceitos e recomendações de design de dashboards (aqui secalhar posso citar uma coisa ou outra do novo docjmento que o stor mandou)
+%listar as 3 técnicaas que o documento fala
 
-Aqui secalhar em vez de listar mesmo os 10 principios, posso no capitulo logo inicial mencionar alguns dos principios e citar
+O \textit{design} de \textit{dashboards} pode se tornar uma tarefa complexa e desafiante senão forem consideradas e seguidas boas práticas de \textit{design}. Muitos desenvolvedores de \textit{software} continuam a dar prioridade à vertenta estática e ao volume de visualizações, em vez de se focarem na eficácia informativa e na clareza da informação a ser exibida, originando uma sobrecarga visual e cognitiva por parte dos utilizadores \cite{abduldaem2019principles}.
 
-Posso fazer aqui este capitulo mas tenho de me basear em mais coisas para alem dos 10 principios porque à muita coisa lá que nao faz sentido pegar e colocar aqui
+Para garantir que o design de \textit{dashboards} tenha em consideração boas práticas de \textit{design}, existem alguns princípios que devem ser tomados em consideração que tornam a sua criação e desenvolvimento mais eficientes. Podemos dividir estes princípios em três categorias principais: planeamento cuidadoso, \textit{design} informado e olho crítico \cite{Tableau2020}.
+
+O primeiro passo a seguir para obtermos um design de \textit{dashboard} bem sucedido é o \textbf{planeamento cuidadoso}. Este planeamento defende que numa primeira fase, é crucial conhecermos as necessidades e perfil do público-alvo. Diferentes perfis de utilizador requerem diferentes níveis de detalhe e formas de representação diferentes. Além disso, aspetos como o tamanho do ecrã e o tempo de carregamento devem ser estipulados nesta fase ínicial. Esta antecipação dos requisitos técnicos garante uma experiência mais fluida e adequada ao ambiente real de utilização.
+
+O \textbf{design informado} defende que o design de \textit{dashboards} deve ir para além da componente estética, dando um maior foco à clareza e eficácia da informação apresentada. Para evitar a sobrecarga cognitiva dos utilizadores, o número de visualizações e cores a serem exibidas numa \textit{dashboard} devem ser limitados, focando a atenção nos elementos essenciais para a visualização. A informação deve ser organizada segundo uma hierarquia visual coerente, dando relevância aos elementos mais importantes e relevantes para o utilizador.  
+
+Após ser concluído o \textit{design} inicial do \textit{dashboard}, é necessário ter um \textbf{olho crítico}, que permita avaliar e ajustar a solução desenvolvida. Através do uso de \textit{tooltips} com o principal intuito de ajudar o utilizador a entender a informação presente nas diferentes visualizações. O processo de avaliação e revisão do \textit{dashboard} desenvolvido passa pelo processo de eliminação de ruído, onde é feita a remoção de elementos desnecessários e redundantes, focando apenas a atenção nos elementos mais relevantes para o utilizador. 
 
 \subsection{Desafios no Design de \textit{Dashboards}}
-\label{sec:desafios_design}
+\label{sub:desafios_design}
 
 Muitas vezes, os \textit{dashboards} são desenhados segundo más práticas de design, onde o intuito principal é mostrar o maior número de visualizações dos dados possíveis. Este tipo de abordagem apenas serve para mostrar as capacidades gráficas do sistema, de forma a impressionar futuros utilizadores, em vez de se focar no principal objetivo deste tipo de ferramenta, a representação clara de informação \cite{janes2013effective}. Muitos dos desafios e limitações que são impostos na implementação dos \textit{dashboards} surgem devido a fatores externos, como a performance e o tempo de resposta do sistema, ou fatores internos, como a escolha errada de elementos visuais. 
 
@@ -183,11 +193,11 @@ De forma a uma \textit{dashboard} ser considerada uma ferramenta útil para a vi
   \item \textbf{Analíticos}: ~\ref{fig:anal-dash}
 \end{itemize}
 
-Os \textit{dashboards} estratégicas são \textit{dashbords} que reportam aos diferentes departamentes de uma organização qual a situação geral de uma empresa. A representação neste tipo de \textit{dashboards} é de alto nível, focando-se nos diferentes \textit{KPIs} e métricas de negócio a longo prazo. Ao apresentarem uma representação alto nível, este tipo de \textit{dashboards} não possuem visualizações que entrem em detalhe sobre os dados apresentados, agregando os diferentes dados apresentados de forma a criar uma visualização global sobre a situação atual da organização. Ao apresentarem uma janela temporal bastante alargada, o design deste tipo de \textit{dashboards} ter de ser claro e bem estruturado, de forma a facilitar a interpretação dos dados por parte dos seus utilizadores \cite{pappas2011riding}. 
+Os \textit{dashboards} \textbf{estratégicos} são \textit{dashbords} que reportam aos diferentes departamentes de uma organização qual a situação geral de uma empresa. A representação neste tipo de \textit{dashboards} é de alto nível, focando-se nos diferentes \gls{KPI} e métricas de negócio a longo prazo. Ao apresentarem uma representação alto nível, este tipo de \textit{dashboards} não possuem visualizações que entrem em detalhe sobre os dados apresentados, agregando os diferentes dados apresentados de forma a criar uma visualização global sobre a situação atual da organização. Ao apresentarem uma janela temporal bastante alargada, o design deste tipo de \textit{dashboards} ter de ser claro e bem estruturado, de forma a facilitar a interpretação dos dados por parte dos seus utilizadores \cite{pappas2011riding}. 
 
-Os \textit{dashboards} operacionais, de forma semelhante aos \textit{dashboards} estratégicos, necessitam de ter um design simples e organizado de forma a que os seus utilizadores possam, através da rápida visualização da informação disponibilizada, identificar medidas e métricas que se encontrem fora dos limites normais definidos pela organização, necessitando uma intervenção imediata \cite{pappas2011riding}. Este tipo de \textit{dashboards}, em comparação com os \textit{dashboards} estratégicos, necessitam de um nível mais detalhado e atualizado de informação, uma vez que a principal função deste tipo de \textit{dashboards} é controlar, e monitorizar as operações e processos envolventes numa organização em tempo real. Ao necessitar de uma quantidade elevada de informação em tempo real, \textit{performance} é uma característica crucial neste tipo de visualizações, uma vez que, com o constante fluxo de informação, se o design for algo complexo e pouco eficiente, a interpretação da informação pode ficar comprometida, atrasando a tomada de decisão dos utilizadores, o que pode comprometer o funcionamente da organização.
+Os \textit{dashboards} \textbf{operacionais}, de forma semelhante aos \textit{dashboards} estratégicos, necessitam de ter um design simples e organizado de forma a que os seus utilizadores possam, através da rápida visualização da informação disponibilizada, identificar medidas e métricas que se encontrem fora dos limites normais definidos pela organização, necessitando uma intervenção imediata \cite{pappas2011riding}. Este tipo de \textit{dashboards}, em comparação com os \textit{dashboards} estratégicos, necessitam de um nível mais detalhado e atualizado de informação, uma vez que a principal função deste tipo de \textit{dashboards} é controlar, e monitorizar as operações e processos envolventes numa organização em tempo real. Ao necessitar de uma quantidade elevada de informação em tempo real, \textit{performance} é uma característica crucial neste tipo de visualizações, uma vez que, com o constante fluxo de informação, se o design for algo complexo e pouco eficiente, a interpretação da informação pode ficar comprometida, atrasando a tomada de decisão dos utilizadores, o que pode comprometer o funcionamente da organização.
 
-Os \textit{dashboards} analíticos partilham atributos comuns com os \textit{dashboards} estratégicos e operacionais, uma vez que podem apresentar informação consuante um grande espaço temporal como as \textit{dashboards} estratégicas, e informação detalhada como as \textit{dashboards} operacionais. No entando, o principal propósito deste tipo de \textit{dashbaord} é a decoberta de padrões e tendências nos dados, através da constante interação e exploração de informação, consuante diferentes janelas temporais.
+Os \textit{dashboards} \textbf{analíticos} partilham atributos comuns com os \textit{dashboards} estratégicos e operacionais, uma vez que podem apresentar informação consuante um grande espaço temporal como as \textit{dashboards} estratégicas, e informação detalhada como as \textit{dashboards} operacionais. No entando, o principal propósito deste tipo de \textit{dashbaord} é a decoberta de padrões e tendências nos dados, através da constante interação e exploração de informação, consuante diferentes janelas temporais.
 
 Em relação ao nível de interatividade que cada tipo de \textit{dashboards} necessita de ter, este varia de forma crescente consuante as categorias mencionadas. Os \textit{dashboards} estratégicos uma vez que apresentam uma visão geral da organização, num espaço temporal alargado não necessitam de ter um nível de interatividade elevado. As \textit{dashboards} operacionais necessitam de apresentar um nível de interação mais moderado, desta forma, é possível monitorizar as operações da organização em tempo real. O tipo de \textit{dashboard} que necessita de ter um nível de interativadade mais elevado são as \textit{dashboards} analíticas. Este tipo de dashboards ao apresentarem diferentes janelas temporais, e com o principal objetivo de encontrar tendências e padrões nos dados, é crucial que nas suas visualizações estejam incorporados elementos de interação como \textit{drill-down}, \textit{filtering} e \textit{highlighting}, de forma a facilitar a navegação do utilizador pela \textit{dashboard}.
 
@@ -249,7 +259,7 @@ O \textit{Tableau Mobile} é uma aplicação desenvolvida para permitir a visual
 O \textbf{\textit{Qlik Sense}} \cite{qlik} é uma ferramenta que permite explorar e visualizar dados de forma intuitiva e interativa. Esta ferramenta possui uma ferramenta chamada \textit{Qlik cognitive engine} onde através da sua utilização são facilitadas a descobertas de relações entre os diferentes conjuntos de dados no sistema. Ao possuir uma interface \textit{drag and drop}, é permitida a criação de \textit{dashboards} personalizados sem haver necessidade de programação, facilitando a integração de utilizadores não experientes na área de visualização. O \textit{Qlik} combina inteligência artificial com a intuição humana para ajudar os seus utilizadores a descobrir padrões e tendências nos dados, facilitando a análise e interpretação da informação presente. Esta interação também é suportada através de técnicas de interação como \textit{drill-down}, \textit{filtering} e \textit{highlighting}, facilitando a navegação do utilizador nas \textit{dashbaords} em análise. 
 
 \section{Design de Interfaces de Utilizador (UI Design)} % (fold)
-\label{sec:ui_design}
+\label{cha:ui_design}
 
 Uma interface estabelece o ponto de contacto entre o utilizador e o sistema, sendo esta a principal responsável pela forma como os utilizadores interagem com o sistema. O design de interfaces de utilizador é considerado o elemento mais importante de um sistema de visualização de informação, uma vez que este design possui um impacto direto na forma como os utilizadores iram comunicar com o sistema. Esta interação pode ser considerada pobre, resultando numa má análise de informação e num esforço cognitivo para realizar as tarefas propostas por parte do utilizador, ou ser uma implementação bastante rica e simplista, ao apresentar um design orientado para o público-alvo, nunca dificultando as tarefas a realizar pelo utilizador. De forma a criarmos um design orientado para o público-alvo que queremos atingir, Sridevi implementou três regras de "ouro" indispensáveis no que toca a implementação de interfaces de utilizador. \cite{sridevi2014user}.
 
@@ -265,9 +275,9 @@ No âmbito do ponto 2, uma interface que exija que o utilizador se lembre e reco
 
 Relacionado com o ponto 3, a interface deve apresentar e obter a informação sempre de forma consistente. De modo a ter uma interface consistente, é necessário que toda a informação a nível visual seja organizada de acordo um padrão de design que deve ser mantido em todas as interfaces implementadas, os mecanismos de \textit{input} devem ser limitados e utilizados de forma consistente em toda a aplicação, e os mecanismos de navegação entre tarefas devem ser definidos e implementados de forma consistente. O design de uma interface só deve ser alterado caso exista um motivo de extrema importância, uma vez que mudar o design e consistência de uma interface implica que o utilizador tenha de a reaprender \cite{sridevi2014user}.
 
-\subsection{Princípios de Usabilidade e Experiência do Utilizador em Interfaces Interativas (Ainda não implementei)} % (fold)
+\subsection{Princípios de Usabilidade e Experiência do Utilizador em Interfaces Interativas (Ainda não implementei, secalhar não faz sentido implementar)} % (fold)
 \label{sub:principios_usabilidade}
-
+%ta guardado no consensus o que devo falar aqui neste capitulo
 Neste capítulo irei falar sobre os princípios de usabilidade e experiência do utilizador em interfaces interativas.
 
 %Este subcapítulo permitir-te-á alargar a análise para além de Sridevi, abordando conceitos-chave da usabilidade e da experiência do utilizador (UX) aplicados a interfaces interativas, sem depender ainda do IVML Designer.
@@ -281,7 +291,7 @@ Neste capítulo irei falar sobre os princípios de usabilidade e experiência do
 %Com esta abordagem, solidificas o capítulo com uma base teórica transversal e reconhecida academicamente, que mais tarde poderá ser retomada quando introduzires o IVML Designer no Capítulo 3.
 
 \section{Avaliação da usabilidade de linguagens visuais} % (fold)
-\label{sec:avaliacao_usabilidade}
+\label{cha:avaliacao_usabilidade}
 
 A eficiência de uma linguagem visual depende não só da forma como a exibimos e implementamos, mas também da forma como os utilizadores e interagem com ela. No contexto de visualização interativa de dados, é essencial garantir que a linguagens utilizada comunica de forma clara e eficiente com o utilizador, facilitando assim a sua interação com a mesma. 
 
@@ -330,9 +340,12 @@ O princípio da \textbf{gestão da complexidade} é um dos pilares da teoria do 
 
 O princípio da \textbf{integração cognitiva} é apenas aplicado quando multiplos diagramas são usados para representar um mesmo sistema. O seu principal objetivo é garantir que sejam incluídos mecanismos que ajudem o utilizador a integrar a informação apresentada em diferentes diagramas, de forma a que o mesmo consiga compreender a informação de forma mais intuitiva. A representação de um sistema através da utilização de vários diagramas pode levar a uma sobrecarga cognitiva por parte do utilizador, uma vez que é necessário criar um mapa mental entre os diferentes diagramas apresentados. De forma a suprimir este problema, Moody sugere dois tipos de mecanismos. O primeiro é a integração conceptual, onde são usados diagramas gerais do sistema de forma a dar uma maior contextualização ao utilizador enquanto o mesmo analisa os diferentes diagramas. O segundo é a integração perceptual, que tem como principal objetivo simplificar a navegação e transição entre diagramas \cite{moody2009physics}.
 
+% dar uma definição breve logo no inicio
+% Fazer a comparação entre perceptual discriminability e visual expression 
+% dizer que a visual expression divide o conjunto de variaveis visuais em dois grupos
 
 
 \section{Descrição Técnica IVML (Ainda não implementei)} % (fold)
-\label{sec:esp_ivml}
+\label{cha:esp_ivml}
 
 %aqui é falar sobre o documento de descrição IVML
