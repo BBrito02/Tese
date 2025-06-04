@@ -120,7 +120,7 @@ Técnicas como \textbf{Participação/Colaboração} são técnicas que envolvem
 Por fim, a \textbf{Gamificação} é considerada uma das técnicas interativas mais complexas de adicionar num sistema \gls{InfoVis}. Segundo Deterding \cite{deterding2011game}, gamificação pode ser brevemente definida como o uso de elementos de design de jogos em contextos não relacionados com jogos. Apesar de ser uma técnica cuja implementação por vezes é bastante demorada e complexa, esta contém uma panoplia de elementos como contextos narrativos, recompensas, \textit{ranks}, nívels e objetivos de forma a tornarem a experiência do utilizador mais lúdica e cativante, contrariando as práticas comuns que por vezes podem passar por serem monótonas e aborrecidas \cite{figueiras2015towards}.
 
 \section{Design de \textit{Dashboard}}
-\label{cha:design_dashboard}
+\label{sec:design_dashboard}
 %Capitulo 3 de "Riding the Technology Wave" pode aprofundar a introdução
 %Os \textit{dashboards} com o passar dos anos têm vindo a ser cada vez mais requisitados no que toca a visualização de dados \cite{sarikaya2018we}. Este tipo de ferramente oferece aos utilizadores a posssibilidade de não só visualizar, como interagir com a informação disponibilizada, facilitando a compreensão e interpretação da informação disponibilizada.
 
@@ -259,7 +259,7 @@ O \textit{Tableau Mobile} é uma aplicação desenvolvida para permitir a visual
 O \textbf{\textit{Qlik Sense}} \cite{qlik} é uma ferramenta que permite explorar e visualizar dados de forma intuitiva e interativa. Esta ferramenta possui uma ferramenta chamada \textit{Qlik cognitive engine} onde através da sua utilização são facilitadas a descobertas de relações entre os diferentes conjuntos de dados no sistema. Ao possuir uma interface \textit{drag and drop}, é permitida a criação de \textit{dashboards} personalizados sem haver necessidade de programação, facilitando a integração de utilizadores não experientes na área de visualização. O \textit{Qlik} combina inteligência artificial com a intuição humana para ajudar os seus utilizadores a descobrir padrões e tendências nos dados, facilitando a análise e interpretação da informação presente. Esta interação também é suportada através de técnicas de interação como \textit{drill-down}, \textit{filtering} e \textit{highlighting}, facilitando a navegação do utilizador nas \textit{dashbaords} em análise. 
 
 \section{Design de Interfaces de Utilizador (UI Design)} % (fold)
-\label{cha:ui_design}
+\label{sec:ui_design}
 
 Uma interface estabelece o ponto de contacto entre o utilizador e o sistema, sendo esta a principal responsável pela forma como os utilizadores interagem com o sistema. O design de interfaces de utilizador é considerado o elemento mais importante de um sistema de visualização de informação, uma vez que este design possui um impacto direto na forma como os utilizadores iram comunicar com o sistema. Esta interação pode ser considerada pobre, resultando numa má análise de informação e num esforço cognitivo para realizar as tarefas propostas por parte do utilizador, ou ser uma implementação bastante rica e simplista, ao apresentar um design orientado para o público-alvo, nunca dificultando as tarefas a realizar pelo utilizador. De forma a criarmos um design orientado para o público-alvo que queremos atingir, Sridevi implementou três regras de "ouro" indispensáveis no que toca a implementação de interfaces de utilizador. \cite{sridevi2014user}.
 
@@ -275,10 +275,10 @@ No âmbito do ponto 2, uma interface que exija que o utilizador se lembre e reco
 
 Relacionado com o ponto 3, a interface deve apresentar e obter a informação sempre de forma consistente. De modo a ter uma interface consistente, é necessário que toda a informação a nível visual seja organizada de acordo um padrão de design que deve ser mantido em todas as interfaces implementadas, os mecanismos de \textit{input} devem ser limitados e utilizados de forma consistente em toda a aplicação, e os mecanismos de navegação entre tarefas devem ser definidos e implementados de forma consistente. O design de uma interface só deve ser alterado caso exista um motivo de extrema importância, uma vez que mudar o design e consistência de uma interface implica que o utilizador tenha de a reaprender \cite{sridevi2014user}.
 
-\subsection{Princípios de Usabilidade e Experiência do Utilizador em Interfaces Interativas (Ainda não implementei, secalhar não faz sentido implementar)} % (fold)
-\label{sub:principios_usabilidade}
+%\subsection{Princípios de Usabilidade e Experiência do Utilizador em Interfaces Interativas (Ainda não implementei, secalhar não faz sentido implementar)} % (fold)
+%\label{sub:principios_usabilidade}
 %ta guardado no consensus o que devo falar aqui neste capitulo
-Neste capítulo irei falar sobre os princípios de usabilidade e experiência do utilizador em interfaces interativas.
+%Neste capítulo irei falar sobre os princípios de usabilidade e experiência do utilizador em interfaces interativas.
 
 %Este subcapítulo permitir-te-á alargar a análise para além de Sridevi, abordando conceitos-chave da usabilidade e da experiência do utilizador (UX) aplicados a interfaces interativas, sem depender ainda do IVML Designer.
 
@@ -291,7 +291,7 @@ Neste capítulo irei falar sobre os princípios de usabilidade e experiência do
 %Com esta abordagem, solidificas o capítulo com uma base teórica transversal e reconhecida academicamente, que mais tarde poderá ser retomada quando introduzires o IVML Designer no Capítulo 3.
 
 \section{Avaliação da usabilidade de linguagens visuais} % (fold)
-\label{cha:avaliacao_usabilidade}
+\label{sec:avaliacao_usabilidade}
 
 A eficiência de uma linguagem visual depende não só da forma como a exibimos e implementamos, mas também da forma como os utilizadores e interagem com ela. No contexto de visualização interativa de dados, é essencial garantir que a linguagens utilizada comunica de forma clara e eficiente com o utilizador, facilitando assim a sua interação com a mesma. 
 
@@ -320,7 +320,7 @@ Tal como é mencionado anteriormente, a toeria \textit{Physics of Notation} é b
 
 \begin{itemize}
   \item \textbf{Clareza Semiótica (Semiotic Clarity)}
-  \item \textbf{Distinção Perceptual (Perceptual Distinction)}
+  \item \textbf{Distinção Perceptual (Perceptual Distinction) Ver se o nome é mm este}
   \item \textbf{Transparência Semiótica (Semiotic Transparency)}
   \item \textbf{Gestão da Complexidade (Complexity Management)}
   \item \textbf{Integração Cognitiva (Cognitive Integration)}
@@ -340,12 +340,22 @@ O princípio da \textbf{gestão da complexidade} é um dos pilares da teoria do 
 
 O princípio da \textbf{integração cognitiva} é apenas aplicado quando multiplos diagramas são usados para representar um mesmo sistema. O seu principal objetivo é garantir que sejam incluídos mecanismos que ajudem o utilizador a integrar a informação apresentada em diferentes diagramas, de forma a que o mesmo consiga compreender a informação de forma mais intuitiva. A representação de um sistema através da utilização de vários diagramas pode levar a uma sobrecarga cognitiva por parte do utilizador, uma vez que é necessário criar um mapa mental entre os diferentes diagramas apresentados. De forma a suprimir este problema, Moody sugere dois tipos de mecanismos. O primeiro é a integração conceptual, onde são usados diagramas gerais do sistema de forma a dar uma maior contextualização ao utilizador enquanto o mesmo analisa os diferentes diagramas. O segundo é a integração perceptual, que tem como principal objetivo simplificar a navegação e transição entre diagramas \cite{moody2009physics}.
 
-% dar uma definição breve logo no inicio
-% Fazer a comparação entre perceptual discriminability e visual expression 
-% dizer que a visual expression divide o conjunto de variaveis visuais em dois grupos
+Para maximizar a eficácia cognitiva de uma notação, o princípio da \textbf{expressão visual} defende que deve ser utilizado o maior número possível de variáveis visuais. Este elevado número de variáveis permite representar múltiplas dimensões de informação de forma simultânea, facilitando a análise e interpretação da informação por parte do utilizador. Estas variáveis, compostas por elementos como a cor, forma, tamanho, e posição, apesar de serem bastante vantajosas na representação de informação, têm de ser utilizadas de forma cuidadosa e sentida, uma vez que a sua má utilização pode resultar numa sobrecarga por parte do utilizador, podendo até levar a uma má interpretação da informação presente. A utilização de diferentes elementos visuais resulta numa representação muito enriquecida a nível perceptual. Este princípio distingue as variáveis visuais em duas categorias distintas:
 
+\begin{itemize}
+  \item \textbf{Variáveis visuais de caráter informativo} - Variáveis com conteúdo informativo na visualização.
+  \item \textbf{Variáveis visuais de caráter livre} - Variáveis que não são formalmente utilizadas.
+\end{itemize}
+
+O número de variáveis de caráter livre é definida como o grau de liberdade visual e representa o inverso da expressividade visual. O grau de expressividade visual tem de ser considerado de forma cuidadosa, uma vez que a excessiva utilização de variáveis visuais de caráter informativo tornam a representação visualmente saturada, ao passo que a excessiva utilização de variáveis visuais de caráter livre tornam a representação visualmente pobre \cite{moody2009physics}.
+
+Os princípios de distinção perceptual e expressão visual não apoiam a utilização de elementos textuais para a representação de informação. De acordo com o princípio de \textbf{codificação dupla}, a utiilização simultânea de elementos textuais e visuais para representar informação é mais eficaz do que optarmos pela sua utilização de forma isolada. Ao utilizarmos estes dois tipos de elementos de forma conjunta, a representação dessa informação é codificada em sistemas distintos da memória de trabalho, fortalecendo as ligações referenciais entre ambos. A utilização de elementos textuais quando utilizada como suporte para elementos de caráter visual torna-se uma técnica bastante vantajosa, aumentando a capacidade de retenção de informação por parte do utilizador. No entanto, a utilização de elementos textuais não deve ser utilizada para efetuar a distinção entre diferentes símbolos, uma vez que a sua utilização não respeita o conceito de distância visual abordado no princípio de distinção perceptual \cite{moody2009physics}. 
+
+O princípio da \textbf{economia gráfica} defende que uma notação visual deve, sempre que possível, utilizar o menor número possível de elementos visuais distintos para representar informação. O uso minimalista de diferentes elementos visuais contra-se diretamente relacionado com o facto de o ser humano ter uma capacidade limitada de processamento de informação a curto prazo, tendo apenas capacidade de processar um número limitado de elementos em simultâneo. Existem 3 técnicas que nos ajudam a gerir esta complexidade visual: redução da complexidade semântica, introdução de défices de símbolos, aumento da expressão visual. É através da aplicação destas técnicas que conseguimos estabelecer um equilíbrio entre simplicidade e expressividade, uma vez que não é necessário a simplificação extrema de uma notação, o que pode originar numa perda de informação.
+
+O último princípio estipulado na teoria do \textit{physics of notation} é o \textbf{enquadramento cognitivo}. Este princípio defende que a notação visual deve ser adaptada ao contexto e às necessidades dos diferentes perfis de utilizador. Quando é estipulado um bom enquadramento cognitivo, o utilizador consegue extrair mais rapidamente a informação apresentada, com um menor esforço cognitivo, uma vez que a notação está de encontro com as suas necessidades e objetivos. A ideia de que existe uma representação universalmente ideial é um conceito que não é apoiado neste princípio, diferentes tarefas requerem diferentes tipos de representação visual, e a notação deve ser adaptada a cada uma delas. 
 
 \section{Descrição Técnica IVML (Ainda não implementei)} % (fold)
-\label{cha:esp_ivml}
+\label{sec:esp_ivml}
 
-%aqui é falar sobre o documento de descrição IVML
+Ver no obsidian reunião 06-03-2025 o que é falado sobre este capítulo
