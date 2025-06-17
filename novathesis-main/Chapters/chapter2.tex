@@ -34,7 +34,7 @@ O design para sistemas de Visualização Interativa de Dados mutas vezes é subd
 \begin{figure}[htbp]
   \centering
   \includegraphics[height=3in]{tamara-munzner2}
-  \caption{Exemplo dos 4 níveis de design para sistemas de visualização de interativa de dados.}
+  \caption{Exemplo dos 4 níveis de design para sistemas de visualização de interativa de dados \cite{munzner2014visualization}.}
   \label{fig:tamara-munzner-principles}
 \end{figure}
 
@@ -204,17 +204,17 @@ Em relação ao nível de interatividade que cada tipo de \textit{dashboards} ne
 \begin{figure}[htbp]
   \begin{subfigure}{0.5\textwidth}
     \includegraphics[width=0.9\linewidth, height=5cm]{strategic-dashboard.png} 
-    \caption{Exemplo de um \textit{dashboard} estratégico}
+    \caption{Exemplo de um \textit{dashboard} estratégico \cite{IntrafocusKPIDashboard}.}
     \label{fig:strat-dash}
   \end{subfigure}
   \begin{subfigure}{0.5\textwidth}
     \includegraphics[width=0.9\linewidth, height=5cm]{operational-dashboard.jpg}
-    \caption{Exemplo de um \textit{dashboard} operacional}
+    \caption{Exemplo de um \textit{dashboard} operacional \cite{RegendusPowerBIAlternatives}.}
     \label{fig:op-dash}
   \end{subfigure}
   \begin{subfigure}{0.5\textwidth}
-    \includegraphics[width=0.9\linewidth, height=5cm]{analytical-dashboard.jpg}
-    \caption{Exemplo de um \textit{dashboard} analítico}
+    \includegraphics[width=0.9\linewidth, height=5cm]{analytical-dashboard3-remake.png}
+    \caption{Exemplo de um \textit{dashboard} analítico \cite{QlikAnalyticsDashboard}.}
     \label{fig:anal-dash}
   \end{subfigure}
   
@@ -297,8 +297,8 @@ A eficiência de uma linguagem visual depende não só da forma como a exibimos 
 
 Para isso, é necessário avaliar a usabilidade das linguagens visuais utilizadas, nomeadamente a clareza da sua sintaxe visual, a facilidade com que os utilizadores interagem com as suas componentes, e o impacto que estas têm na realização de tarefas cognitivas complexas. Este tipo de avaliação torna-se bastante relevante no desenvolvimento de linguagens como a \gls{IVML}, onde as \textit{dashboards} não representam apenas informação sobre determinado tema, mas também as possíveis interações que os utilizadores podem efetuar no sistema.
 
-\subsection{\textit{Physics of Notation}} % (fold)
-\label{sub:physics_notation}
+%\subsection{\textit{Physics of Notation}} % (fold)
+%\label{sub:physics_notation}
 
 % Diagrmas, fluxogramas, etc
 % Temos de parar para pensar se este tipo de diagramas são realmente eficazes para a visualização de informação, ou se são apenas uma forma de representar a informação de forma gráfica.
@@ -355,22 +355,71 @@ O princípio da \textbf{economia gráfica} defende que uma notação visual deve
 
 O último princípio estipulado na teoria do \textit{physics of notation} é o \textbf{enquadramento cognitivo}. Este princípio defende que a notação visual deve ser adaptada ao contexto e às necessidades dos diferentes perfis de utilizador. Quando é estipulado um bom enquadramento cognitivo, o utilizador consegue extrair mais rapidamente a informação apresentada, com um menor esforço cognitivo, uma vez que a notação está de encontro com as suas necessidades e objetivos. A ideia de que existe uma representação universalmente ideial é um conceito que não é apoiado neste princípio, diferentes tarefas requerem diferentes tipos de representação visual, e a notação deve ser adaptada a cada uma delas. 
 
-\section{Descrição Técnica IVML (Ainda não implementei)} % (fold)
+\section{Descrição Técnica IVML} % (fold)
 \label{sec:esp_ivml}
 % Tipos de Diagramas da IVML -> Componentes da Linguagem -> Exemplo de Aplicação -> Limitações da Linguagem
 
-%PARTE ROXA DO DOCUMENTO
-A criação da linguagem \gls{IVML} surge para dar suporte à documentação e modelação de \textit{dashboards} analíticos. Atualmente, as ferramentas mais utilizadas para a visualização e implementação de \textit{dashboards} concentram as suas funcionalidades exclusivamente nas funcionalidades a nível visual e de representação, deixando de parte a parte da prototipagem e documentação formas das interações, tooltips e estrutura analítica que esta possui.
+A criação da linguagem \gls{IVML} surge para dar suporte à documentação e modelação de \textit{dashboards} analíticos. Atualmente, as ferramentas mais utilizadas para a visualização e implementação de \textit{dashboards} concentram as suas funcionalidades maioritariamente a nível visual e de representação, ignorando a implementação de funcionalidades ao nível de prototipagem e documentação das diferentes formas de interações, tooltips e estrutura analítica que esta possui.
 
-%PARTE AZUL DO DOCUMENTO
-Neste contexto, a \gls{IVML} apresenta-se como uma proposta 
+Neste contexto, a \gls{IVML} apresenta-se como uma proposta para uma linguagem visual que tem como principal objetivo responder à lacuna que as grandes ferramentas de desenho apresentam. A linguagem \gls{IVML} permite não só desenhar o layout estrutural de um \textit{dashboard}, como também permite documentar todas as interações, tooltips e relações entre as componentes que a compõem. A linguagem é orientada para os diferentes \textit{designers}, funcionando como uma ferramenta de apoio à constante comunicação existente entre \textit{stakeholders} \cite{Ferreira2023IVML}. 
 
-A \gls{IVML} é composta por dois tipos de diagramas: o \textbf{diagrama de interações}, que representa a estrutura do \textit{dashboard} e as interações entre as suas componentes; e o \textbf{diagrama de tooltips}, que descreve visualmente o comportamente das tooltips presentes em cada \textit{dashboard}. Esta separação entre diferentes diagramas promove a modularidade e evita a sobrecarga visual quando lidamos com \textit{dashboards} de alta complexidade.
+% basear me no documento para expandir melhor o que é cada componente
+A \gls{IVML} é composta por dois tipos de diagramas: o \textbf{Diagrama de Interações} (Figura \ref{fig:interacao}), que tem como objetivo modelar as interações dos utilizadores com os diferentes elementos que compõem o \textit{dashboard} bem como as relações que podem existir entre elementos; e o \textbf{Diagrama de Tooltips} (Figura \ref{fig:tooltip}), que tem como objetivo representar as diferentes \textit{tooltips} associadas às visualizações. Esta separação entre diferentes diagramas promove a modularidade e evita a sobrecarga visual quando lidamos com \textit{dashboards} de alta complexidade \cite{Ferreira2023IVML}.
+
+%\begin{figure}[htbp]
+%  \includegraphics[width=\textwidth]{ivml/diagrama_interacao}
+%  \centering
+%  \caption{Exemplo de diagrama de interações.}
+%  \label{fig:interacao}
+%\end{figure}
+
+%\begin{figure}[htbp]
+%  \includegraphics[width=\textwidth]{ivml/diagrama_tooltip}
+%  \centering
+%  \caption{Exemplo de diagrama de tooltips.}
+%  \label{fig:tooltip}
+%\end{figure}
 
 
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}[b]{0.45\textwidth}
+    \includegraphics[height=2.5in, width=\textwidth]{ivml/diagrama_interacao}
+    \caption{Exemplo de diagrama de interações.}
+    \label{fig:interacao}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.45\textwidth}
+    \includegraphics[height=2.5in, width=\textwidth]{ivml/diagrama_tooltip}
+    \caption{Exemplo de diagrama de tooltips.}
+    \label{fig:tooltip}
+  \end{subfigure}
+  \caption{Os diferentes tipos de diagramas IVML.}
+  \label{fig:diagramas_ivml}
+\end{figure}
 
-% Fazer uma overview (professor referiu que não é suposto ser muito grande, referenciando 3/4 paginas) que inclua
-% Qual o problema que a linguagem pretende enfrentar, como é que a linguagem o vai resolver
-% O Objetivo da linguagem (parte documental que pretende documentar o layout, documentação das interações e tooltips que não são fácies de ver)
-% As principais componentes da linguagem (aqui ajudar a explicação com um exemplo)
-% Limitações que a linguagem enfrenta
+A linguagem é composta por diferentes componentes, estas componentes representam os diferentes elementos visuais presentes nos diferentes \textit{dashboards}. Cada componente é composto por uma etiqueta única. A etiqueta é composta por uma letra e um número, cada letra correponde à letra inicial da componente em análise e o número é único e sequencial para cada componente em questão \cite{Ferreira2023IVML}. A \gls{IVML} é composta por três grupos de componentes: 
+
+\begin{enumerate}
+  \item \textbf{Componentes de Visualização}: A componente de visualização é responsável por representar os elementos gráficos responsáveis pela apresentação dos dados. Esta componente é compostas por quatro entidades: \textbf{Dashboard} cujo objetivo é representar o \textit{dashboard} a ser desenvolvido; \textbf{Visualização} que é utilizado para representar as diferentes visualizações que vão integrar o \textit{dahsboard}; \textbf{Tooltip} que é utilizada para representar as diferentes \textit{tooltips} presentes no \textit{dashboard}; e por fim \textbf{Legenda}, que são utilizadas para representar as legendas associadas a cada visualização ou tooltip no \textit{dashboard}. Esta componente pode ter dois tipos de atributos associados, nomeadamente: \textbf{Variável Visual}, que são utilizadas para distinguir as diferentes métricas dentro de uma mesma representação; e os diferentes \textbf{Tipos de Gráfico} utilizados para especificar que tipo de representação a visualização vai adotar.
+  \item \textbf{Componentes de Layout}: A componente de layout organiza a estrutura e disposição dos elementos visuais. Uma das entidades desta componente é o \textbf{Placeholder}. Esta entidade pode ser utilizada para indicar espaços reservados para conteúdos estáticos. Nesta componente também nos é possível definir variantes da visualização que partilham eixos entre si.
+  \item \textbf{Componentes de Interação}: A componente de interação define os comportamentos e mecanismos através dos quais o utilizador comunica com o \textit{dashboard}. Esta componente é composta por elementos de interação como \textbf{Botão}, \textbf{Filtro}, \textbf{Parâmetro} e \textbf{Ação de dados}. As componentes de interação podem ter três tipos de atributos associados a si, nomeadamente: para representar o tipo de interação, podendo este ser através de \textbf{Clique} ou de \textbf{Hover}; para representar o tipo de navegação entre \textit{dashboards} através de \textbf{Ir para Dashboard} ou através de páginas \textit{web} exteriores através de \textbf{Ir para URL}; por fim, para representar o resultado das ações realizadas sobre os dados, podendo este resultado ser de \textbf{Filtragem} ou de \textbf{Destaque}.
+\end{enumerate}
+
+\begin{figure}[htbp]
+  \includegraphics[width=\textwidth]{ivml/exemplo_real}
+  \centering
+  \caption{\textit{Dashboard} de exemplo do \textit{Tableau} para o conjunto de dados "\textit{Superstore}" \cite{Ferreira2023IVML}.}
+  \label{fig:exemplo}
+\end{figure}
+
+% Aqui agora é fazer uma descrição breve sobre as componentes de cada diagrama
+Na Figura \ref{fig:exemplo} podemos observar a implementação de uma \textit{dashboard} real. Esta \textit{dashboard} é desenvolvida e suportada pelos diferentes diagramas já mencionados anteriormente, respetivamente, pelo seu diagrama de interações (Figura \ref{fig:interacao}) e pelo seu diagrama de \textit{tooltips} (Figura \ref{fig:tooltip}). 
+
+No diagrama de interações, conseguimos ver que dentro da componente \textit{dashboard} (D1) destacam-se quatro visualizações diferentes (V1 a V4). Na visualização V1 os diferentes dados a serem mostrados são apresentados sobre forma textual, um tipo de representação característico que a entidade visualização suporta. A visualização V2 já nos é apresentada sob a forma de um mapa geográfico com a distribuição da lucratividade por estado. As visualizações V3 e V4 mostram gráficos temporais das vendas por segmento. Estas últimas três visualizações fazem uso de variáveis visuais, respetivamente cor, de forma a ajudar a interpretação e análise da informação a ser mostrada segundo a legenda definida L1. À direita, encontam-se três filtros (F1 a F3), que têm como objetivo filtrar os dados com base na região, data de encomenda e lucro. Por fim, existe a implementação de uma componente de navegação acionada por B1 através de um clique, originando numa navegação interna para um novo \textit{dashboard} D2. 
+
+Relativamente ao diagrama de \textit{tooltips}, este tem como objetivo documentar as diferentes \textit{tooltips} interativas que funcionam de forma a enriquecer a experiência analítica do utilizador. Neste diagrama são apresentadas três \textit{tooltips} (T1 a T3), cada uma ligada a uma visualização distinta (V2, V3 e V4 respetivamente). Através da análise da Figura \ref{fig:exemplo}, é possível observar que a \textit{tooltip} T1 se encontra ativa na sua representação, a \textit{tooltip} é composta por uma visualização interna referente ao lucro por cidade dentro de uma região, através de uma interação do tipo hover. As \textit{tooltips} T2 e T3 apresentam um comportamento bastante semelhante entre si, enquanto T2 oferece uma análise mensal das vendas e lucros por segmento, T3 oferece por categoria de produto. 
+
+Apesar do tremendo potencial que a linguagem apresenta como resposta à lacuna apresentada nas ferramentas de desenho de \textit{dashboards} analíticos, a linguagem \gls{IVML} enfrenta algumas limitações. A curva de aprendizagem da linguagem e da sua utilização pode ser bastante acentuada para utilizadores novos e sem conhecimentos prévios na área de modelação e visualização de dados. 
+
+De um modo geral, a linguagem \gls{IVML} é uma proposta inovadora que fornece uma estrutura formal e visual para descrever \textit{dashboards} interativos, de forma a captar as suas interações, visualizações e relações entre dados. Apesar das suas limitações, a linguagem representa um avanço significativo no sentido de sistematizar e formalizar o processo de conceção de \textit{dashboards} analíticos.
