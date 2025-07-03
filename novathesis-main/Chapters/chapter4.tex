@@ -7,3 +7,45 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \typeout{NT FILE chapter4.tex}%
+
+\chapter{Abordagem e Plano de Trabalho}
+\label{cha:plano_trabalho}
+
+Neste capítulo vai ser apresentada a proposta de abordagem para a segunda fase da dissertação bem como o diagrama Gantt que a suporta. 
+
+\section{Abordagem para a Segunda Fase de Trabalho} % (fold)
+\label{sec:abordagem}
+
+Para a segunda fase da dissertação, será tomada uma abordagem iterativa para a implementação da ferramenta Dashboard Designer. Esta etapa terá como principal objetivo o desenvolvimento de uma aplicação web funcional e interativa que permita aos seus utilizadores modelar diferentes \textit{dashboards} de forma eficiente e intuitiva.
+
+Para alcançar o objetivo proposto, vão ser utilizadas tecnologias como: \textit{TypeScript} \cite{typescript} e \textit{React} \cite{react} para o desenvolvimento da interface da ferramenta. \textit{React} foi escolhido como \textit{framework} principal pela sua modulariadade, reatividade e compatibilidade com uma grande diversidade de bibliotecas bastante úteis para o contexto deste projeto, destacando-se a biblioteca \textit{React Flow} \cite{reactflow}, que será utilizada na representação gráfica das diferentes componentes \gls{IVML}. Adicionalmente, será utilizada a biblioteca \textit{dnd-kit} \cite{dndkit}, uma biblioteca bastante utilizada para implementar funcionalidades de \textit{drag-and-drop}. A personalização das diferentes componentes visuais será feita com \textit{TailwindCSS} \cite{tailwindcss}, uma \textit{framework} que facilita a construção de interfaces responsivas.
+
+O desenvolvimento da ferramenta será organizado em ciclos curtos e iterativos, através de \textit{sprints} semanais. Cada \textit{sprint} terá metas e objetivos específicos, correspondentes à implementação de diferentes subconjuntos de funcionalidades que a ferramenta irá possuir. Através deste planeamento estratégico, é feito um controlo rigoroso sobre a evolução da aplicação, facilitando a deteção de problemas, atrasos e imprevistos durante a sua implementação.
+
+Ao terminar o desenvolvimento funcional da ferramenta, é dado ínicio ao processo de avaliação da mesma com utilizadores reais, com o objetivo de validar a usabilidade da solução desenvolvida. Para a avaliação, vão ser selecionados utilizadores com perfil adequado, isto é, utilizadores com experiência ou interesse na área de visualização de dados, que serão convidados a implementar diferentes tarefas. Estas tarefas permitem identificar a forma como os utilizadores interagem com a ferramenta, facilitando a identificação de eventuais dificuldades ou imprevistos na sua realização.
+
+Após a realização dos testes de usabilidade com os diferentes utilizadores, os resultados obtidos são recolhidos e analisados de forma sistemática. Esta análise permite identificar os pontos fortes e fracos da ferraamenta, identificando as dificuldados mais recorrentes, erros de interação e funcionalidades pouco intuitivas. Com base nos padrões de análise recolhidos, serão definidas medidas de melhoria da ferramenta sempre que necessário, desta forma, é possível garantir que a versão final da solução desenvolvida é fundamentado e centrado na experiência do utilizador.
+
+\section{Diagrama de Gantt} % (fold)
+\label{sec:ganttchart}
+
+De forma a alcançar os objetivos estipulados para a realização do trabalho, foi elaborado um diagrama de Gantt apresentado na Tabela \ref{tab:ganttchart}. Este diagrama apresenta a estimativa do tempo a desenvolver as atividades pretendidas, no entanto, o mesmo pode vir a sofrer alterações no decorrer da sua implementação.
+
+\begin{figure}[htbp]
+  \includegraphics[width=\textwidth]{diagramas/Gantt_Semanal_cropped}
+  \centering
+  \caption{Diagrama de Gantt.}
+  \label{tab:ganttchart}
+\end{figure}
+
+A tarefa de \textbf{Implementação de Protótipos} está prevista para ser realizada durante as primeiras duas semanas de agosto. Esta tarefa corresponde à criação de versões inicias e reais do \textit{layout} da ferramenta. A realização de diferentes protótipos oferece a possibilidade de experimentar diferentes abordagens a nível visual e funcional.
+
+Após a relização dos protótipos é iniciado o \textbf{Desenvolvimento da Ferramenta}, onde irá ser desenvolvida a versão funcional da aplicação do Dashboard Designer. O seu desenvolvimento vai ser feito de forma iterativa, fazendo uso de técnicas como \textit{drag-and-drop} e fazendo de suporte à linguagem \gls{IVML}.
+
+Durantes as primeiras semanas de novembro, irá ser realizada a tarefa de \textbf{Planeamento de Avaliação}, essencial para estruturar a fase de avaliação da solução desenvolvida. Nesta fase, vai ser feito o planeamento das atividades e métricas a serem avaliadas, bem como os testes que irão ser implementados de forma a testar todas as funcionalidades propostas pela ferramenta.
+
+A tarefa de \textbf{Análise de Resultados} terá lugar entre dezembro e janeiro, e vai consistir na interpretação crítica dos dados recolhidos. Aqui, aspetos como usabilidade, clareza e interpretação vão ser avaliados, com o objetivo de compreender em que medida a ferramenta desenvolvida atinge os objetivos estipulados.
+
+Com base nos resultados obtidos, será realizada a \textbf{Revisão da Ferramenta}, agendada para ter início em janeiro. Esta tarefa resulta numa melhoria da solução desenvolvida, tendo em análise os resultados obtidos na fase de análise de resultados.
+
+Para finalizar, a \textbf{Redação da Tese} decorrerá ao longo de toda a segunda fase da dissertação, desta forma, é possível documentar o progresso do trabalho realizado à medida que o mesmo é desenvolvido.
