@@ -11,7 +11,7 @@
 \chapter{Conceitos base e trabalho relacionado}
 \label{cha:conceitos_base}
 
-Para obtermos uma melhor percepção do problema descrito no capítulo 1 é necessário perceber em que consiste a visualização de dados, bem como os seus fundamentos e elementos de interação.
+Para obtermos uma melhor percepção do problema descrito no capítulo \ref{cha:introducao} é necessário perceber em que consiste a visualização de dados, bem como os seus fundamentos e elementos de interação.
 Com esse objetivo, neste capítulo, irão ser apresentados os conceitos bases e o trabalho relacionado que servem de suporte base para o desenvolvimento da dissertação.
 
 \section{Visualização de Dados}
@@ -26,27 +26,27 @@ Devido à forma como o ser humano processa e retém informações, o uso de elem
 
 Um dos principais fundamentos da visualização de dados consiste no mapeamento de variáveis de dados em variávies visuais. Esta ideia define que os atributos visuais como a posição, o tamanho ou a forma podem ser utilizados para representar diferentes dimensões de dados, facilitando a identificação de padrões e relações entre os mesmos.
 
-Atualmente, esta abordagem foi refinada por Tamara Munzner, que introduziu os conceitos de \textit{marks} e \textit{channels}. Os \textit{marks} correspondem aos elementos gráficos como pontos, linhas e polígonos que são usados para representar os dados. Os \textit{channels} são as propriedades visuais com que a informação é apresentada, como cor, tamanho, forma e posição. A combinação destes dois conceitos contribui para uma melhor compreensão do processo de codificação visual e para o desenvolvimento de visualizações mais eficazes \cite{munzner2014visualization}.
+Atualmente, esta abordagem foi refinada por Munzner, que introduziu os conceitos de \textit{marks} e \textit{channels}. Os \textit{marks} correspondem aos elementos gráficos como pontos, linhas e polígonos que são usados para representar os dados. Os \textit{channels} são as propriedades visuais com que a informação é apresentada, como cor, tamanho, forma e posição. A combinação destes dois conceitos contribui para uma melhor compreensão do processo de codificação visual e para o desenvolvimento de visualizações mais eficazes \cite{munzner2014visualization}.
 
 \subsection{Desenho de Sistemas de Visualização Interativa de Dados} % (fold)
 \label{sub:desenho_sistemas_vis}
 
 Atualmente, a interatividade tornou-se uma componente essencial nos sistemas de visualização de dados, permitindo que os seus utilizadores explorem grandes volumes de informação de forma dinâmica e ajustada às suas necessidades \cite{keim2002information}. 
 
-O design de sistemas de Visualização Interativa de Dados muitas vezes é subdividido em quatro áreas principais. Segundo Tamara Munzner \cite{munzner2014visualization}, essas quatros áreas são: \textit{Domain Situation}, \textit{Data/task abstraction}, \textit{Visual encoding} e \textit{Algorithm}. Cada uma destas áreas desempenha um papel crucial na implementação do design de sistemas de visualização de dados. Como é possível observar na Figura \ref{fig:tamara-munzner-principles}, o gráfico serve como guia para criar visualizações de dados de uma forma eficaz e eficiente. Este apresenta uma estrutura concêntrica, onde cada nível do design depende do nível anterior.
+O design de sistemas de Visualização Interativa de Dados muitas vezes é subdividido em quatro áreas principais. Segundo Munzner \cite{munzner2014visualization}, essas quatros áreas são: \textit{Domain Situation}, \textit{Data/task abstraction}, \textit{Visual encoding} e \textit{Algorithm}. Cada uma destas áreas desempenha um papel crucial na implementação do design de sistemas de visualização de dados. Como é possível observar na Figura \ref{fig:tamara-munzner-principles}, o gráfico serve como guia para criar visualizações de dados de uma forma eficaz e eficiente. Este apresenta uma estrutura concêntrica, onde cada nível do design depende do nível anterior.
 
 \begin{figure}[htbp]
   \centering
   \includegraphics[height=3in]{tamara-munzner2}
-  \caption{Exemplo dos 4 níveis de design para sistemas de visualização de interativa de dados \cite{munzner2014visualization}.}
+  \caption{Exemplo dos 4 níveis de design para sistemas de visualização interativa de dados \cite{munzner2014visualization}.}
   \label{fig:tamara-munzner-principles}
 \end{figure}
 
 O primeiro nível apresentado no gráfico da Figura \ref{fig:tamara-munzner-principles} é o \textit{Domain Situation}. Este nível representa o ponto de partida inicial do processo de design de visualizações, onde se realiza a análise do contexto no qual a visualização irá ser utilizada.
-Para garantirmos a maior eficácia da visualização, precisamos de garantir que esta está alinhada aos interesses dos utilizadores. Para isso, é imperativo compreender quem são os utilizadores-alvo, quais as suas necessidades, e como é que os mesmo interagem com os dados e ferramentas disponívies \cite{courage2005understanding}.
+Para garantirmos a maior eficácia da visualização, precisamos de garantir que esta está alinhada aos interesses dos utilizadores. Para isso, é imperativo compreender quem são os utilizadores-alvo, quais as suas necessidades, e como é que os mesmo interagem com os dados e ferramentas disponíveis \cite{courage2005understanding}.
 
 O segundo nível do modelo é o nível que traça a ponte entre a compreensão do domínio e o design concreto da visualização, mantendo como foco principal a abstração dos dados e tarefas  do contexto específico. Este nível tem como objetivo transformar as necessidades e questões dos utilizadores, identificadas no nível superior, em abstrações concretas que possam ser resolvidas através de visualizações de dados, para isso, os dados e as intenções dos utilizadores são filtradas e hierarquizadas, de forma a criar uma base para as decisões de design visual. 
-É através destas técnicas e metodologias de filtragem de interesses e questões que é definida de forma clara a estrutura e conteúdo da visualização, ou seja, a que questões a visualização vai responder, e com que dados o fará. Um design bem alcaçado depende diretamente da qualidade da abstração dos dados e tarefas obtidas neste nível.
+É através destas técnicas e metodologias de filtragem de interesses e questões que é definida de forma clara a estrutura e conteúdo da visualização, ou seja, a que questões a visualização vai responder, e com que dados o fará. Um design bem alcançado depende diretamente da qualidade da abstração dos dados e tarefas obtidas neste nível.
 
 O terceiro nível do modelo, \textit{Visual Encoding/interaction idiom}, é o nível onde os dados e tarefas abstraídas do processo aplicado no nível anterior são transformados em representações visuais interativas. Este nível define a estrutura e organização dos dados a serem representados visualmente, bem como a forma como os utilizadores podem interargir com os mesmos.
 A codificação visual é uma técnica focada na representação dos dados, através de propriedades visuais, como posição, cor e tamanho. A escolha dos elementos visuais a utilizar e como os mesmos são organizados são a chave para uma visualização bem sucedida, evitando assim sobrecarregar os utilizadores com designs complexos e confusos.
@@ -55,50 +55,31 @@ Este nível estabelece uma ligação direta entre os dados abstraídos do nível
 
 O último nível do diagrama da Figura \ref{fig:tamara-munzner-principles}, foca na implementação técnica das visualizações através do desenvolvimento de algoritmos e técnicas de interação. Este nível junta todas as escolhas feitas dos níveis anteriores, tranformando-as em processos computacionais que permitam as visualizações e interações serem executadas corretamente.
 
-%\subsection{Elementos de interação na Visualização de Dados}
 \subsection{Interação na Visualização de Dados} % (fold)  
 \label{sub:elem_int}
 
-Com o constante progresso da ciência, estudos mostram que os humanos são mais propicios de captar informação quando interagem diretamente com a mesma através de filtragens e destaques face à simples interação com visualizações estáticas \cite{heer2012interactive}. 
+Com o constante progresso da ciência, estudos mostram que os humanos são mais propícios de captar informação quando interagem diretamente com a mesma através de filtragens e destaques face à simples interação com visualizações estáticas \cite{heer2012interactive}. 
 
 Os sistemas de \gls{InfoVis} são compostos essencialmente por duas componentes principais: representação e interação. A componente de representação é centrada na representação gráfica computacional dos elementos e onde os mesmo se vão situar no \textit{display}. A componente de interação é relatada como o diálogo entre o utilizador e o sistema enquanto o utilizador explora padrões e relações nos dados exibidos \cite{yi2007toward}. 
 
-Apesar destas componentes seram definidas em separado, as mesmas estão interligadas, dependendo uma da outra. A interação desempenha um papel crucial na visualiação de informação. A omissão da componente interativa num sistema \gls{InfoVis} resulta numa visualização estática. Este tipo de visualizações estática tornam-se mais limitadas com o aumento de informação a ser disponibilizada.
+Apesar destas componentes seram definidas em separado, as mesmas estão interligadas, dependendo uma da outra. A interação desempenha um papel crucial na visualização de informação. A omissão da componente interativa num sistema \gls{InfoVis} resulta numa visualização estática. Este tipo de visualizações estáticas tornam-se mais limitadas com o aumento de informação a ser disponibilizada.
 
-A forma como interagimos com os dados nem sempre depende da técnologia utilizada, mas da maneira como o nosso cérebro processa informação. O cérebro humano processa imagens e interações visuais de forma mais rápida e informativa em comparação com texto ou informação isolada \cite{ware2019information}.
+A forma como interagimos com os dados não depende apenas da tecnologia utilizada, mas da maneira como o nosso cérebro processa informação. O cérebro humano processa imagens e interações visuais de forma mais rápida e informativa em comparação com texto ou informação isolada \cite{ware2019information}.
 
 Segundo John Sweller, o modelo da carga cognitiva revela que quando um utilizador é exposto a uma grande quantidade de informação, o cérebro tem dificuldade em processar e reter a toda a informação disponibilizada, causando uma sobrecarga cognitiva \cite{sweller1988cognitive}. Para evitar este tipo de sobrecarga, elementos interativos como filtragem, destaque e \textit{drill-down} dão a possibilidade aos utilizadores de explorar os dados de forma gradual, reduzindo assim a complexidade de informação apresentada.
 
 A maneira como os utilizadores interagem com as visualizações é dividida em dois modelos cognitivos: exploração livre e interpretação guiada \cite{munzner2014visualization}.
 
-Com base nestes dois processos cognitivos, a visualização de dados pode ser considerada exploratória ou explicativa. A visualização exploratória é uma abordagem que foca na descoberta e análise dos dados por parte do utilizador. O utilizador tem a possibilidade de interargir de forma livre com os dados procurando erros, \textit{insights}, e padrões presente nos dados. A visualização explicativa tem uma abordagem mais rígida e estática, limitando as interações que o utilizador pode tomar consuante a visualização apresentada. Esta abordagem é mais comum em visualizações que já se encontram implementadas para guiar o utilizador a uma conclusão ou resultado específico \cite{heer2012interactive}. 
+Com base nestes dois processos cognitivos, a visualização de dados pode ser considerada exploratória ou explicativa. A visualização exploratória é uma abordagem que foca na descoberta e análise dos dados por parte do utilizador. O utilizador tem a possibilidade de interargir de forma livre com os dados procurando erros, \textit{insights}, e padrões presente nos dados. A visualização explicativa tem uma abordagem mais rígida e estática, limitando as interações que o utilizador pode tomar consoante a visualização apresentada. Esta abordagem é mais comum em visualizações que já se encontram implementadas para guiar o utilizador a uma conclusão ou resultado específico \cite{heer2012interactive}. 
 
-Ao integrar a interação na visualização de dados, somos por vezes deparados com desafios e limitações nas visualizações de dados. Ao aumentarmos o conjunto de elementos interativos numa visualização, não implica necessáriamente que a mesma melhore a sua qualidade. Por vezes, este aumento de elementos apenas sobrecarga cognitivamente os utilizadores, dificultando a navegação na mesma. Aumentar a qualidade de interação numa visualização implica melhorar a qualidade dos elementos interativos, tendo em análise o contexto inserido, priorizando sempre a interação dos utilizadores com as técnologias usadas e tendo em conta o leque de perfis que os utilizadores alvo podem ter. Este cuidado aumenta o desempenho cognitivo do utilizador, promovendo a usabilidade e compatibilidade no contexto inserido \cite{dimara2019interaction}. 
+Ao integrar a interação na visualização de dados, deparamo-nos com desafios e limitações nas visualizações de dados. Ao aumentarmos o conjunto de elementos interativos numa visualização, não implica necessariamente que a mesma melhore a sua qualidade. Por vezes, este aumento de elementos apenas sobrecarrega cognitivamente os utilizadores, dificultando a navegação na mesma. Aumentar a qualidade de interação numa visualização implica melhorar a qualidade dos elementos interativos, tendo em análise o contexto inserido, priorizando sempre a interação dos utilizadores com as tecnologias usadas e tendo em conta o leque de perfis que os utilizadores alvo podem ter. Este cuidado aumenta o desempenho cognitivo do utilizador, promovendo a usabilidade e compatibilidade no contexto inserido \cite{dimara2019interaction}. 
 
 \subsection{Taxonomias de interação} % (fold)
 \label{sub:taxonomias_interacao}
 
 Apesar da interação apresentar um papel importante nos sistemas de visualização de dados, tem vindo a receber pouca atenção na comunidade \gls{InfoVis}. Poucas \textit{frameworks} e taxonomias de interação existem sendo que, as existentes tipicamente centralizam-se em tarefas abstratas de alto nível, não se preocupando com os benfícios que a interação nos sistemas de visualização de dados pode trazer. Segundo Foley e outros, as técnicas de interação são muitas vezes definidas pela forma como os dispositivos físicos de entrada e saída são usados para resolver tarefas de diálogo entre os humanos e computadores \cite{foley1996computer}. No entanto, no contexto dos sistemas \gls{InfoVis}, as técnicas de interação são defendidas como sendo mais apropriadas no que toca a sua capacidade de modificar, ajustar ou criar representações visuais. A implementação e definição de taxonomias de interação é crucial para a compreensão e desenvolvimento de sistemas de visualização de dados. No entando, segundo Yi e outros, definir uma taxonomia é algo desafiante uma vez que a mesmo se pode tornar obsoleta se uma nova técnica de interação que não se enquadre na taxonomia definida for descoberta.
 
-Desta forma, após a extensa revisão dos sistemas \gls{InfoVis} e das suas técnicas de interação, estudos foram realizados sobre as propostas de taxonomias de interação. Segundo Ana Figueiras, para que seja possível estudar o impacto que a interatividade tem nos sistemas \gls{InfoVis}, é necessáro estudarmos e analisarmos as técnicas de interação que podem ser impostas nestes tipos de visualização, levando-nos à conslusão que muitas das taxonomias existentes não englobam técnicas de interação novas como é o exemplo da gamificação \cite{figueiras2015towards}. Ao analisar as taxonomias propostas por Yi et al., D.A. Keim  e Ben Shneiderman, Ana propôs 11 categorias de interação que englobam as técnicas mais usadas por este tipo de sistemas:
-
-\begin{comment}
-
-\begin{itemize}
-  \item \textbf{Seleção}: Selecionar dados de interesse.
-  \item \textbf{Exploração}: Explorar os dados.
-  \item \textbf{Reconfiguração}: Mudar a organização da informação disponibilizada.
-  \item \textbf{Codificação}: Mostrar uma representação diferente.
-  \item \textbf{Abstração/Elaboração}: Ajustar o nível de detalhe.
-  \item \textbf{Filtro}: Mostrar algo segundo uma condição.
-  \item \textbf{Conexão}: Mostrar dados relacionados.
-  \item \textbf{Histórico}: Possibilidade de retornar ações. %shneiderman
-  \item \textbf{Extração de funcionalidades}: Extrair dados de interesse. %shneiderman
-  \item \textbf{Participação/Colaboração}: Contribuição dos utilizadores nos dados.
-  \item \textbf{Gamificação}: Mostrar informação de uma forma mais lúdica.
-\end{itemize}
-
-\end{comment}
+Desta forma, após a extensa revisão dos sistemas \gls{InfoVis} e das suas técnicas de interação, estudos foram realizados sobre as propostas de taxonomias de interação. Segundo Figueiras, para que seja possível estudar o impacto que a interatividade tem nos sistemas \gls{InfoVis}, é necessáro estudarmos e analisarmos as técnicas de interação que podem ser impostas nestes tipos de visualização, levando-nos à conslusão que muitas das taxonomias existentes não englobam técnicas de interação novas como é o exemplo da gamificação \cite{figueiras2015towards}. Ao analisar as taxonomias propostas por Yi et al., Keim  e Shneiderman, Figueiras propôs 11 categorias de interação que englobam as técnicas mais usadas por este tipo de sistemas:
 
 As técnicas de \textbf{Seleção} permitem aos utilizadores selecionar diferentes conjuntos de dados de maior interesse, de forma a conseguir monitorizá-los e mantê-los sob vigilância. Este tipo de técnicas são muitas vezes usadas para auxiliar a cognição dos utilizadores. Ao possibilitar que os items ou conjuntos de dados escolhidos se mantenham destacados, mesmo que os dados ou as visualizações sejam atualizadas, o utilizador consegue perceber facilmente as alterações e acompanhar a informação mais relevante \cite{yi2007toward, figueiras2015towards}.
 
@@ -106,17 +87,17 @@ Nos sistemas \gls{InfoVis}, devido a limitações impostas pelo tamanho dos ecr�
 
 A \textbf{Reconfiguração} é uma técnica que por vezes é também utilizada na categoria de \textbf{Exploração}. É através desta técnica que os utilizadores têm a possibilidade de alterar a disposição espacial dos dados obtendo novas perspetivas sobre a informação disponibilizada \cite{yi2007toward, figueiras2015towards}.
 
-Por vezes, as representações visuais com o mesmo tipo de dados podem ser codificadas de forma diferente. Este tipo de \textbf{Codificação} é uma técnica que permite aos utiilizadores alterarem a forma visual como os dados são representados. Estas alterações podem ocorrer a nível das cores, tamanho, ou até na forma como os dados são apresentados. É através da alteração destes elementos visuais que os utilizadores obtêm diferentes perspetivas sobre os dados, facilitando a identificação de relacações entre os diferentes conjuntos de dados \cite{yi2007toward}.
+Por vezes, as representações visuais com o mesmo tipo de dados podem ser codificadas de forma diferente. Este tipo de \textbf{Codificação} é uma técnica que permite aos utilizadores alterarem a forma visual como os dados são representados. Estas alterações podem ocorrer a nível das cores, tamanho, ou até na forma como os dados são apresentados. É através da alteração destes elementos visuais que os utilizadores obtêm diferentes perspetivas sobre os dados, facilitando a identificação de relações entre os diferentes conjuntos de dados \cite{yi2007toward}.
 
-Várias técnicas de \textbf{Abstração/Elaboração} são usadas nos sistemas \gls{InfoVis}. Estes tipos de interação oferecem aos utilizadores a possibilidade de ajustar o nível de detalhe nas visualizações apresentadas de acordo com os seus interesses pessoais e objetivos de visualização \cite{yi2007toward, figueiras2015towards}. A técnica de \textit{Zooming} é um exemplo muito comum e bastante utilizado neste contexto. Esta técnica age como um tipo de filtro por navegação, aumentando o nível de detalhe dos elementos selecionados ao mesmo tempo que remove os elementos menos relevantes do plano, mantendo o foco apenas nos elementos selecionados de maior interesse. O uso desta técnica facilita duas tarefas cognitivas em visualizações. Ao efetuar \textit{zoom-in} os utilizadores são deparados com a organização de informações de forma mais detalhada e estruturada deixando de fora elementos externos de menor interesse. Ao efetuar \textit{zoom-out} é possível visualizar informações que estavam inicialmente escondidas ou das quais os utilizadores não se recordava. \textit{Details-on-demand} é outra técnica de interação muito comum nesta categoria. Um exemplo das técnicas mais comuns nas operações \textit{details-on-demand} são as técnias de \textit{drill-down} e \textit{tooltips/popups}. As técnicas de \textit{drill-down} são muito comuns em visualizações \textit{treemap}, uma vez que é possível visualizar apenas os níveis e sub-níveis de maior interesse. Esta técnica permite que as limitações de ecrã e complexidade visual sejam tratadas, mantendo uma representação geral dos dados. As técnicas de \textit{tooltips/popups}, muitas vezes acionadas ao efetuar \textit{hover} ou \textit{click} sobre determinado elemento na visualização, mostram ao utilizador informações adicionais sobre os elementos em análise \cite{figueiras2015towards}.
+Várias técnicas de \textbf{Abstração/Elaboração} são usadas nos sistemas \gls{InfoVis}. Estes tipos de interação oferecem aos utilizadores a possibilidade de ajustar o nível de detalhe nas visualizações apresentadas de acordo com os seus interesses pessoais e objetivos de visualização \cite{yi2007toward, figueiras2015towards}. A técnica de \textit{Zooming} é um exemplo muito comum e bastante utilizado neste contexto. Esta técnica age como um tipo de filtro por navegação, aumentando o nível de detalhe dos elementos selecionados ao mesmo tempo que remove os elementos menos relevantes do plano, mantendo o foco apenas nos elementos selecionados de maior interesse. O uso desta técnica facilita duas tarefas cognitivas em visualizações. Ao efetuar \textit{zoom-in} os utilizadores deparam-se com a organização de informações de forma mais detalhada e estruturada deixando de fora elementos externos de menor interesse. Ao efetuar \textit{zoom-out} é possível visualizar informações que estavam inicialmente escondidas ou das quais os utilizadores não se recordava. \textit{Details-on-demand} é outra técnica de interação muito comum nesta categoria. Um exemplo das técnicas mais comuns nas operações \textit{details-on-demand} são as técnias de \textit{drill-down} e \textit{tooltips/popups}. As técnicas de \textit{drill-down} são muito comuns em visualizações \textit{treemap}, uma vez que é possível visualizar apenas os níveis e sub-níveis de maior interesse. Esta técnica permite que as limitações de ecrã e complexidade visual sejam tratadas, mantendo uma representação geral dos dados. As técnicas de \textit{tooltips/popups}, muitas vezes acionadas ao efetuar \textit{hover} ou \textit{click} sobre determinado elemento na visualização, mostram ao utilizador informações adicionais sobre os elementos em análise \cite{figueiras2015towards}.
 
-As técnicas utilizadas na categoria de \textbf{Filtro} permitem aos utilizadores mudar o conjunto de dados apresentado consuante condições específicas impostas pelos mesmos, desta forma toda a informação que não cumpra as condições impostas é removida da visualização. Esta forma simplificada de filtrar a informação disponibilizada deixando de parte os elementos de menor interesse é uma forma de reduzir a carga cognitiva dos utilizadores, permitindo-lhes focar apenas no que lhes é relevante visualizar. As implementações destas técnicas requerem uma resposta por parte do sistema imediata, caso contrário, pode afetar negativamente não só experiência do utilizador na visualização como a interpretação dos dados pode ser comprometida. Este tipo de técnicas podem ser enquadradas nas técnicas de seleção, uma vez que possuem características semelhantes ao destacar apenas os elementos de maior interesse durante a sua visualização \cite{figueiras2015towards, yi2007toward}.
+As técnicas utilizadas na categoria de \textbf{Filtro} permitem aos utilizadores mudar o conjunto de dados apresentado consoante condições específicas impostas pelos mesmos, desta forma toda a informação que não cumpra as condições impostas é removida da visualização. Esta forma simplificada de filtrar a informação disponibilizada deixando de parte os elementos de menor interesse é uma forma de reduzir a carga cognitiva dos utilizadores, permitindo-lhes focar apenas no que lhes é relevante visualizar. As implementações destas técnicas requerem uma resposta por parte do sistema imediata, caso contrário, pode afetar negativamente não só a experiência do utilizador na visualização como a interpretação dos dados pode ser comprometida. Este tipo de técnicas podem ser enquadradas nas técnicas de seleção, uma vez que possuem características semelhantes ao destacar apenas os elementos de maior interesse durante a sua visualização \cite{figueiras2015towards, yi2007toward}.
 
 \textbf{Conexão}, ou relacionamento, é a categoria de interação que permite o utilizador visualizar as relações entre os diferentes conjuntos de dados. Este tipo de relação é muitas vezes mostrado através de técnicas como \textit{highlight} onde são destacados os conjuntos de dados que se encontram relacinados com os dados selecionados pelo utilizador. Este tipo de técnicas usadas para distinguir os diferentes conjuntos de dados diminuem a carga cognitiva imposta sobre os utilizadores. Caso este tipo de técnicas de relacionamento não tivessem a capacidade de dar \textit{highlight} nos elementos de maior interesse, seria bastante complicado para o utilizador efetuar comparações devido ao elevado ruído visual imposto pelas visualizações \cite{figueiras2015towards}.
 
 Segundo Shneiderman, a exploração de informação é um processo longo que envolve bastantes passos para a sua análise, desta forma, manter o \textbf{Histórico} das ações efetuadas pelos utilizadores e permitir aos mesmo refazer as suas ações é crucial \cite{heer2012interactive}. Dar a possibilidade de o utilizador efetuar ações como \textit{undo} e \textit{replay} permite não só a recuperação de erros que possam surgir na exploração de informação como progressivamente melhorar a sua análise dos dados. Este tipo de técnicas são muitas vezes desconsideradas e esquecidas no que toca a implementação de sistemas \gls{InfoVis} \cite{figueiras2015towards}. 
 
-Outra técnica menos comum é a \textbf{Extração de funcionalidades}. Explorar os dados por vezes pode ser uma tarefa longa e complexa, desta forma, dar a possibilidade de os utilizadores extrairem informação para a mesma ser compartilhada, repartida ou até visualizada com outras visualizações pode reduzir a complexidade da análise dos dados \cite{figueiras2015towards, heer2012interactive}.
+Outra técnica menos comum é a \textbf{Extração de funcionalidades}. Explorar os dados por vezes pode ser uma tarefa longa e complexa. Desta forma, dar a possibilidade de os utilizadores extrairem informação para a mesma ser compartilhada, repartida ou até visualizada com outras visualizações pode reduzir a complexidade da análise dos dados \cite{figueiras2015towards, heer2012interactive}.
 
 Técnicas como \textbf{Participação/Colaboração} são técnicas que envolvem a direta contribuição dos utilizadores nos dados apre sentados de forma a facilitar a sua interpretação e perceção. Por vezes este tipo de técnicas não chegam a ser implementados devido ao consumo de tempo que a mesma pode tomar \cite{figueiras2015towards}. 
 
@@ -124,21 +105,19 @@ Por fim, a \textbf{Gamificação} é considerada uma das técnicas interativas m
 
 \section{Design de \textit{Dashboard}}
 \label{sec:design_dashboard}
-%Capitulo 3 de "Riding the Technology Wave" pode aprofundar a introdução
-%Os \textit{dashboards} com o passar dos anos têm vindo a ser cada vez mais requisitados no que toca a visualização de dados \cite{sarikaya2018we}. Este tipo de ferramente oferece aos utilizadores a posssibilidade de não só visualizar, como interagir com a informação disponibilizada, facilitando a compreensão e interpretação da informação disponibilizada.
 
 Com o passar dos anos, o uso de \textit{dashboards} tem vindo a ser uma técnica cada vez mais comum no que toca visualização de informação \cite{sarikaya2018we}. 
 
 Num contexto empresarial, o termo "\textit{dashboard}" é usado para descrever um sistema que visualiza informação útil para a tomada de decisões \cite{janes2013effective}. Segundo Few, um \textit{dashboard} é uma representação visual da informação mais importante do conjunto de dados, necessária para atingir um determinado objetivo, consolidadas e ordenadas num único ecrã de forma à informação ser monitorizada num instante \cite{few2005common}. O design deste tipo de ferramentas tem uma enorme influência nos resultados e interações esperadas por parte dos seus utilizadores. 
 
-Com o constante crescimento do volumes de dados, o uso de \textit{dashboards} para a análise e tomada de decisões tem vindo a ser cada vez mais usado. No entanto, a implementação deste tipo de ferramentas é considerada uma tarefa complexa e por vezes incerta. O design deste tipo de ferramentas tem de ser direcionado ao público-alvo pelo qual estamos a considerar, tendo em conta as suas necessidades, sem sobrecarregar o utilizador com informação desnecessária e irrelevante para o contexto inserido. O mau design deste tipo de ferramentas pode muitas vezes levar à má interpretação dos dados por parte do utilizador.
+Com o constante crescimento do volumes de dados, o uso de \textit{dashboards} para a análise e tomada de decisões tem vindo a ser cada vez mais usado. No entanto, a implementação deste tipo de ferramentas é considerada uma tarefa complexa e por vezes incerta. O design deste tipo de ferramentas tem de ser direcionado ao público-alvo que estamos a considerar, tendo em conta as suas necessidades, sem sobrecarregar o utilizador com informação desnecessária e irrelevante para o contexto inserido. O mau design deste tipo de ferramentas pode muitas vezes levar à má interpretação dos dados por parte do utilizador.
 
 De forma a que o design da \textit{dashboard} se encontre enquadrada com as necessidades do utilizador, é necessário que num primeiro cenário se conheça o público-alvo, ou seja, os seus objetivos com a visualização, e as respostas que pretendem ver respondidas. Para este design se alinhar com os objetivos impostos, definir métricas como que visualizações utilizar, e que técnicas de interação implementar, são fatores chave para o sucesso da visualização. Uma \textit{dashboard} que cumpra os objetivos impostos pelo utilizador, é uma \textit{dashboard} que é visualizada sem sobrecarregar os utilizadores, esclarecendo todos as questões impostas pelos mesmos \cite{pappas2011riding}. Desta forma, podemos utilizar o modelo \glsentryfull{GQM}, uma abordagem estruturada que orienta a definição de objetivos através da formulação de questões relevantes e da identificação das métricas necessárias para alcançar os objetivos propostos \cite{janes2013effective}. Este modelo é composto por 3 níveis como é mostrado na Figura \ref{fig:gqm-model}.
 
 \begin{itemize}
   \item Nível Conceptual: Define os \textbf{objetivos} que se pretendem atingir tendo em conta questões como "O que é que se pretende alcançar com a visualização?".
   \item Nível Operacional: Define as \textbf{questões} que são necessárias para averiguar quais os aspetos relevantes para atingir os objetivos propostos. 
-  \item Nível Quantitativo: Dtermina as \textbf{medidas} que definem que dados iram ser utilizados para responder às questões propostas.
+  \item Nível Quantitativo: Determina as \textbf{medidas} que definem que dados irão ser utilizados para responder às questões propostas.
 \end{itemize}
 
 \begin{figure}[htbp]
@@ -151,61 +130,26 @@ De forma a que o design da \textit{dashboard} se encontre enquadrada com as nece
 \subsection{Tipos de Dashboards} % (fold)
 \label{sub:tipos_dashboards}
 
-%De forma a uma \textit{dashboard} ser considerada uma ferramenta útil para a visualização de informação, é necessário apresentar a informação de forma eficaz, e dar ao utilizador a possibilidade de interagir de forma direta e natural com a informação apresentada. Desta forma, para alcançar este nível de eficácia numa visualização, determinar parâmetros como o público-alvo e o objetivo da visualização são fundamentais \cite{pappas2011riding}.
-
 Os \textit{dashboards} podem assmumir diferentes formas e propósitos, dependendo do contexto inserido e das necessidades dos seus utilizadores. A compreensão dos diferentes tipos de \textit{dashboards} é crucial para garantir que o seu design responde de forma eficaz aos objetivos dos seus utilizadores \cite{eckerson2010performance}.
 
-\textit{Dashboards} que apoiam esta tomada de decisão podem ser divididos em três categorias:
+Os \textit{dashboards} que apoiam esta tomada de decisão podem ser divididos em três categorias diferentes.
 
-\begin{itemize}
-  \item \textbf{Estratégicos}: ~\ref{fig:strat-dash}
-  \item \textbf{Operacionais}: ~\ref{fig:op-dash}
-  \item \textbf{Analíticos}: ~\ref{fig:anal-dash}
-\end{itemize}
-
-Os \textit{dashboards} \textbf{estratégicos} são \textit{dashbords} que reportam aos diferentes departamentes de uma organização qual a situação geral de uma empresa. A representação neste tipo de \textit{dashboards} é de alto nível, focando-se nos diferentes \gls{KPI} e métricas de negócio a longo prazo. Ao apresentarem uma representação alto nível, este tipo de \textit{dashboards} não possuem visualizações que entrem em detalhe sobre os dados apresentados, agregando os diferentes dados apresentados de forma a criar uma visualização global sobre a situação atual da organização. Ao apresentarem uma janela temporal bastante alargada, o design deste tipo de \textit{dashboards} ter de ser claro e bem estruturado, de forma a facilitar a interpretação dos dados por parte dos seus utilizadores \cite{pappas2011riding}. 
+Os \textit{dashboards} \textbf{estratégicos} são \textit{dashboards} que reportam aos diferentes departamentes de uma organização qual a situação geral de uma empresa. A representação neste tipo de \textit{dashboards} é de alto nível, focando-se nos diferentes \gls{KPI} e métricas de negócio a longo prazo. Ao apresentarem uma representação alto nível, este tipo de \textit{dashboards} não possuem visualizações que entrem em detalhe sobre os dados apresentados, agregando os diferentes dados apresentados de forma a criar uma visualização global sobre a situação atual da organização. Ao apresentarem uma janela temporal bastante alargada, o design deste tipo de \textit{dashboards} ter de ser claro e bem estruturado, de forma a facilitar a interpretação dos dados por parte dos seus utilizadores \cite{pappas2011riding}. 
 
 Os \textit{dashboards} \textbf{operacionais}, de forma semelhante aos \textit{dashboards} estratégicos, necessitam de ter um design simples e organizado de forma a que os seus utilizadores possam, através da rápida visualização da informação disponibilizada, identificar medidas e métricas que se encontrem fora dos limites normais definidos pela organização, necessitando uma intervenção imediata \cite{pappas2011riding}. Este tipo de \textit{dashboards}, em comparação com os \textit{dashboards} estratégicos, necessitam de um nível mais detalhado e atualizado de informação, uma vez que a principal função deste tipo de \textit{dashboards} é controlar, e monitorizar as operações e processos envolventes numa organização em tempo real. Ao necessitar de uma quantidade elevada de informação em tempo real, \textit{performance} é uma característica crucial neste tipo de visualizações, uma vez que, com o constante fluxo de informação, se o design for algo complexo e pouco eficiente, a interpretação da informação pode ficar comprometida, atrasando a tomada de decisão dos utilizadores, o que pode comprometer o funcionamente da organização.
 
-Os \textit{dashboards} \textbf{analíticos} partilham atributos comuns com os \textit{dashboards} estratégicos e operacionais, uma vez que podem apresentar informação consuante um grande espaço temporal como as \textit{dashboards} estratégicas, e informação detalhada como as \textit{dashboards} operacionais. No entando, o principal propósito deste tipo de \textit{dashboard} é a decoberta de padrões e tendências nos dados, através da constante interação e exploração de informação, consuante diferentes janelas temporais.
+Os \textit{dashboards} \textbf{analíticos} partilham atributos comuns com os \textit{dashboards} estratégicos e operacionais, uma vez que podem apresentar informação consoante um grande espaço temporal como os \textit{dashboards} estratégicos, e informação detalhada como os \textit{dashboards} operacionais. No entando, o principal propósito deste tipo de \textit{dashboard} é a descoberta de padrões e tendências nos dados, através da constante interação e exploração de informação, consoante diferentes janelas temporais.
 
-Em relação ao nível de interatividade que cada tipo de \textit{dashboards} necessita de ter, este varia de forma crescente consuante as categorias mencionadas. Os \textit{dashboards} estratégicos uma vez que apresentam uma visão geral da organização, num espaço temporal alargado não necessitam de ter um nível de interatividade elevado. As \textit{dashboards} operacionais necessitam de apresentar um nível de interação mais moderado, desta forma, é possível monitorizar as operações da organização em tempo real. O tipo de \textit{dashboard} que necessita de ter um nível de interativadade mais elevado são as \textit{dashboards} analíticas. Este tipo de dashboards ao apresentarem diferentes janelas temporais, e com o principal objetivo de encontrar tendências e padrões nos dados, é crucial que nas suas visualizações estejam incorporados elementos de interação como \textit{drill-down}, \textit{filtering} e \textit{highlighting}, de forma a facilitar a navegação do utilizador pela \textit{dashboard}.
-
-\begin{figure}[htbp]
-  \begin{subfigure}{0.5\textwidth}
-    \includegraphics[width=0.9\linewidth, height=5cm]{strategic-dashboard.png} 
-    \caption{Exemplo de um \textit{dashboard} estratégico \cite{IntrafocusKPIDashboard}.}
-    \label{fig:strat-dash}
-  \end{subfigure}
-  \begin{subfigure}{0.5\textwidth}
-    \includegraphics[width=0.9\linewidth, height=5cm]{operational-dashboard.jpg}
-    \caption{Exemplo de um \textit{dashboard} operacional \cite{RegendusPowerBIAlternatives}.}
-    \label{fig:op-dash}
-  \end{subfigure}
-  \begin{subfigure}{0.5\textwidth}
-    \includegraphics[width=0.9\linewidth, height=5cm]{analytical-dashboard3-remake.png}
-    \caption{Exemplo de um \textit{dashboard} analítico \cite{QlikAnalyticsDashboard}.}
-    \label{fig:anal-dash}
-  \end{subfigure}
-  
-  \caption{Diferentes tipos de \textit{Dashboards}}
-  \label{fig:image2}
-\end{figure}
+Em relação ao nível de interatividade que cada tipo de \textit{dashboards} necessita de ter, este varia de forma crescente consoante as categorias mencionadas. Os \textit{dashboards} estratégicos uma vez que apresentam uma visão geral da organização, num espaço temporal alargado não necessitam de ter um nível de interatividade elevado. Os \textit{dashboards} operacionais necessitam de apresentar um nível de interação mais moderado, desta forma, é possível monitorizar as operações da organização em tempo real. O tipo de \textit{dashboard} que necessita de ter um nível de interativadade mais elevado são os \textit{dashboards} analíticos. Este tipo de \textit{dashboards} ao apresentarem diferentes janelas temporais, e com o principal objetivo de encontrar tendências e padrões nos dados, é crucial que nas suas visualizações estejam incorporados elementos de interação como \textit{drill-down}, \textit{filtering} e \textit{highlighting}, de forma a facilitar a navegação do utilizador pelo \textit{dashboard}.
 
 \subsection{Recomendações para o Design de Dashboards} % (fold)
 \label{sub:recomendacoes_design}
-% Aqui no notebooklm eles falaram que um documento suporta o contar historias na dashboard, o que melhorou bastante a compreensão e reduziu a quantidade de erros tomados
-% Posso fazer como o Ferreira fez no capitulo 1.2 Descrição do problema onde falo sobre o documento "10 principios..." e apenas falo sobre as 3 categorias que ele falou e exploro cada uma em detalhe com exemplos e tal
-
-%Fazer alguma referência ao que é dito em cima
-%Introduzir os conceitos e recomendações de design de dashboards (aqui secalhar posso citar uma coisa ou outra do novo docjmento que o stor mandou)
-%listar as 3 técnicaas que o documento fala
 
 O design de \textit{dashboards} pode se tornar uma tarefa complexa e desafiante senão forem consideradas e seguidas boas práticas de design. Muitos criadores de \textit{software} continuam a dar prioridade à vertente estática e ao volume de visualizações, em vez de se focarem na eficácia informativa e na clareza da informação a ser exibida, originando uma sobrecarga visual e cognitiva por parte dos utilizadores \cite{abduldaem2019principles}.
 
 Para garantir que o design de \textit{dashboards} tenha em consideração boas práticas de design, existem alguns princípios que devem ser tomados em consideração que tornam a sua criação e desenvolvimento mais eficientes. Podemos dividir estes princípios em três categorias principais: planeamento cuidadoso, design informado e olho crítico \cite{Tableau2020}.
 
-O primeiro passo a seguir para obtermos um design de \textit{dashboard} bem sucedido é o \textbf{planeamento cuidadoso}. Este planeamento defende que numa primeira fase, é crucial conhecermos as necessidades e perfil do público-alvo. Diferentes perfis de utilizador requerem diferentes níveis de detalhe e formas de representação diferentes. Além disso, aspetos como o tamanho do ecrã e o tempo de carregamento devem ser estipulados nesta fase ínicial. Esta antecipação dos requisitos técnicos garante uma experiência mais fluida e adequada ao ambiente real de utilização.
+O primeiro passo a seguir para obtermos um design de \textit{dashboard} bem sucedido é o \textbf{planeamento cuidadoso}. Este planeamento defende que numa primeira fase, é crucial conhecermos as necessidades e perfil do público-alvo. Diferentes perfis de utilizador requerem diferentes níveis de detalhe e formas de representação diferentes. Além disso, aspetos como o tamanho do ecrã e o tempo de carregamento devem ser estipulados nesta fase inicial. Esta antecipação dos requisitos técnicos garante uma experiência mais fluida e adequada ao ambiente real de utilização.
 
 O \textbf{design informado} defende que o design de \textit{dashboards} deve ir para além da componente estética, dando um maior foco à clareza e eficácia da informação apresentada. Para evitar a sobrecarga cognitiva dos utilizadores, o número de visualizações e cores a serem exibidas numa \textit{dashboard} devem ser limitados, focando a atenção nos elementos essenciais para a visualização. A informação deve ser organizada segundo uma hierarquia visual coerente, dando relevância aos elementos mais importantes e relevantes para o utilizador.  
 
@@ -237,55 +181,12 @@ O \textbf{\textit{Tableau}} \cite{tableau} é uma das ferramentas líderes no qu
 
 O \textbf{\textit{Google Data Studio}} \cite{googleStudio} é uma ferramenta \textit{cloud-based} que ajuda na criação colaborativa de \textit{dashboards} e relatório interativos. Através da sua integração com serviçoes Google, esta ferramenta torna-se muito utilizada por equipas que procuram rapidez, acessibilidade e colaboração em tempo real \cite{richardson2020magic}.
 
-Por fim, o \textbf{\textit{Qlik Sense}} \cite{qlikSense} é uma plataforma que utiliza um motor associativo para efetuar a exploração dos dados. O seu motor associativo oferece sugestões associadas ao contexto em que os dados são inseridos. Este ferramente oferece uma interface intuitiva, facilitando a descoberta e geração automatíca de \textit{insights} \cite{richardson2020magic}.
-
-\begin{comment}
-O \textbf{\textit{Tableau}} \cite{tableau} é também uma das ferramentas mais reconhecidas e utilizadas no mercado, reconhecida pela sua interface intuitiva baseada em \textit{drag-and-drop}. Esta ferramente permite a criação de \textit{dashboards} interativos e personalizáveis, com a capacidade de se conectar a uma ampla variedade de fontes de dados e suporte para análises avançadas \cite{richardson2020magic}.
-
-O \textbf{\textit{Google Data Studio}} \cite{googleStudio} é uma ferramenta \textit{cloud-based} que facilita a criação de \textit{dashboards} e relatórios interativos. A sua escolha é muitas vezes motivada pela sua integração com outras ferramentas Google \cite{richardson2020magic}.
-
-Por fim, o \textbf{\textit{Qlik Sense}} \cite{qlikSense} é uma plataforma que utiliza um motor associativo para efetuar a exploração dos dados. O seu motor associativo oferece sugestões associadas ao contexto em que os dados são inseridos. Este ferramente oferece uma interface intuitiva, facilitando a descoberta e geração automatíca de \textit{insights} \cite{richardson2020magic}.
-\end{comment}
-
-\begin{comment}
-
-\subsubsection{Figma} % (fold) 
-\label{ssub:figma}
-
-O \textbf{\textit{Figma}} \cite{figma} é uma ferramenta de desenho de interfaces de utilizador criada em 2012 com o principal intuito de resolver as limitações impostas pelas ferramentas tradicionais de design, sendo estas apenas ferramentas de \textit{software} com instalação e armazenamento local, impossibilitando a possibilidade de colaboração remota. O Figma é então uma ferramenta "\textit{cloud-based}", muito usada no que toca o design de interfaces e prototipagem interativa. Esta ferramenta é bastante utilizada a nível empresarial e escolar uma vez que, permite a colaboração conjunta de diferentes utilizadores num mesmo projeto de forma simultânea. O Figma é uma ferramenta cujo foco principal é a criação de interfaces, através da utilização de elementos de design já desenvolvidos, facilitando a implementação de interfaces mais complexas. A nível de interatividade, ao apresentar um design centralizado no utilizador, isto é, um design simples que não sobrecarrega o utilizador com informação desnecessária, torna a que a sua utilização e implementação de interfaces se torne numa tarefa de fácil execução. Ao apresentar também uma abordagem \textit{drag and drop}, é dado ao utilizador um sentimento de controlo e personalização maior, o que torna a implementação das diferentes interfaces mais eficiente e interativa.  %CITAR FIGMA
-
-\subsubsection{Microsoft Power BI} % (fold)
-\label{ssub:microsoft}
-
-O \textbf{\textit{Power BI}} \cite{powerBI} é uma ferramenta de \textit{business intelligence} criada pela \textit{Microsoft}. Inicialmente esta ferramenta foi desenvolvida como uma extensão do \textit{Excel}, ajudando os utilizadores a analisar e visualizar informação de forma intuitiva. O \textit{Power BI} foi criado de forma a que os seus utilizadores pudessem criar relatórios e visualizações interativas através da transformação de grandes volumes de dados sem necessidade de programação por parte dos utilizadores, oferecendo a possibilidade de explorar os dados através de técnicas filtragem personalizadas com o uso de parâmetros definidos pelos utilizadores para que as visualizações estejam direcionadas com os interesses impostos pelos mesmos. Esta conversão dos dados é feita através de um motor de tranformação \textit{Power Query}, uma ferramente integrada no \textit{Power BI} que permite a importação e tranformação dos dados apresentados sem necessidade de programação. O \textit{Power BI} é uma ferramenta com um design bastante intuitivo e de fácil utilização, através de técnicas como \textit{drag and drop} para ajudar o utilizador no processo de criação de visualizações. Uma funcionalidade característica desta ferramenta é a possibilidade de compartilhamento de ficheiros e relatórios com outros utilizadores através da combinação do \textit{Power BI Service} e \textit{Power BI Desktop}. Esta partilha de ficheiros e relatórios permite que os utilizadores possam trabalhar de forma remota num mesmo projeto. %CITAR POWER BI
-
-\subsubsection{Google Data Studio} % (fold)
-\label{ssub:google}
-
-O \textbf{\textit{Google Data Studio}} \cite{googleStudio}, mais conhecido como \textit{Looker Studio}, é uma ferramenta criada pela \textit{Google} com o principal intuito de criar relatórios e visualizações de dados sem necessidade de programação. Ao apresentar uma interface bastante simplista e estruturada, a sua utilização torna-se uma tarefa de fácil execução, sem grande esforço por parte do utilizador. A ferramenta apresenta uma abordagem \textit{drag and drop}, dando a possibilidade de o utilizador personalizar as diferentes visualizações e conjuntos de dados, de forma a que os mesmo se enquadrem com objetivos impostos. A nível de intertaividade, o \textit{Looker Studio} oferece ao utilizador diferentes filtros de personalização da informação e controlo de período, tornando os dados mais flexiveis de forma a responder às necessidades dos utilizadores. Por ser uma ferramenta \textit{Google}, a importação dos dados pode ser feita através de outras ferramentas já existentes como o \textit{Google Analytics}, \textit{Google Ads}, e \textit{Youtube}, desta forma, deixa de ser necessário a constante atualização manual dos dados, estando os mesmos sempre atualizados quando surgem alterações. Para além desta ferramentas, o \textit{Looker Studio} tem acesso a grandes bancos de dados, incluindo \textit{BigQuery}, \textit{MySQL}, e \textit{PostgreSQL}, permitindo os utilizadores importarem informação de diferentes fontes confiáveis de informação. O \textit{Looker Studio} ao ser uma ferramenta \textit{cloud-based}, é bastante utilizada a nível empresarial, uma vez que é permitida a colaboração simultânea dos diferentes utilizadores.
-
-\subsubsection{Tableau} % (fold)
-\label{ssub:tableau}
-
-O \textbf{\textit{Tableau}} \cite{tableau} é uma ferramenta altamente utilizada e conhecida no mundo da visualização e criação de interfaces visuais, sendo dividida entre vários softwares, nomeadamente \textit{Tableau Prep}, \textit{Tableau Desktop} e \textit{Tableau Mobile}.
-
-O \textit{Tableau Prep}, de forma semelhante ao \textit{Power Query} do \textit{Power BI}, é uma ferramenta cujo principal objetivo é a filtragem e limpeza dos dados. Esta ferramenta fornece ao utilizador uma imagem completa dos dados a analisar, de forma a que possa ser efetuada a sua limpeza e tranformação antes de serem utilizadas nas visualizações. Esta ferramenta encontr-se conectada com múltiplas fontes de dados tais como \textit{Excel}, \textit{SQL}, e \textit{BigQuery}, permitindo a importação de dados de diferentes fontes de informação. Com a ajuda do \textit{Hyper Engine}, o \textit{Tableau Prep} permite a que esta importação de dados seja feita de forma eficiente, não prejudicando a performance do sistema.
-
-O \textit{Tableau Desktop} é uma ferramenta desenvolvida para facilitar a análise e a visualização de dados através da criação de dashboards interativos. Esta ferramenta tem como objetivo permitir que diferentes utilizadores de diferentes áreas consigam analisar grandes volumes de dados através de visualizações interativas sem ser necessário programar para o fazer. Através da sua interfaces gráfica simplista, e com uma abordagem \textit{drag and drop}, torna a criação de visualizações e relatórios uma tarefa de fácil execução, permitindo a integração de diferentes fontes de informação tais como \textit{Excel}, \textit{SQL Server}, e \textit{Google BigQuery}. Esta ferramenta utiliza técnologias como \textit{VizQl (Visual Query Language)} que faz a conversão direta dos dados em visualizações, permitindo uma análise mais rápida e intuitiva. Com a coloboração do \textit{Tableau Online}, é possível os diferentes utilizadores trabalharem de forma simultânea num mesmo projeto, sem a necessidade de instalação de um \textit{software} adicional, podendo também efetuar a partilha de documentos e visualizações entre os diferentes orgãos na mesma organização.
-
-O \textit{Tableau Mobile} é uma aplicação desenvolvida para permitir a visualização de dashboards e relatórios em dispositivos móvies, tais como smartphones e tablets. Com o suporte de notificaações e alertas, os utilizadores podem ser notificados sempre que ocorram alterações nos dados ou visualizações, mantendo-se sempre atualizados.
-
-\subsubsection{Qlik Sense} % (fold)
-\label{ssub:qlik}
-
-O \textbf{\textit{Qlik Sense}} \cite{qlik} é uma ferramenta que permite explorar e visualizar dados de forma intuitiva e interativa. Esta ferramenta possui uma ferramenta chamada \textit{Qlik cognitive engine} onde através da sua utilização são facilitadas a descobertas de relações entre os diferentes conjuntos de dados no sistema. Ao possuir uma interface \textit{drag and drop}, é permitida a criação de \textit{dashboards} personalizados sem haver necessidade de programação, facilitando a integração de utilizadores não experientes na área de visualização. O \textit{Qlik} combina inteligência artificial com a intuição humana para ajudar os seus utilizadores a descobrir padrões e tendências nos dados, facilitando a análise e interpretação da informação presente. Esta interação também é suportada através de técnicas de interação como \textit{drill-down}, \textit{filtering} e \textit{highlighting}, facilitando a navegação do utilizador nas \textit{dashboards} em análise. 
-
-\end{comment}
+Por fim, o \textbf{\textit{Qlik Sense}} \cite{qlik} é uma plataforma que utiliza um motor associativo para efetuar a exploração dos dados. O seu motor associativo oferece sugestões associadas ao contexto em que os dados são inseridos. Este ferramente oferece uma interface intuitiva, facilitando a descoberta e geração automatíca de \textit{insights} \cite{richardson2020magic}.
 
 \section{Design de Interfaces de Utilizador (UI Design)} % (fold)
 \label{sec:ui_design}
 
-Uma interface estabelece o ponto de contacto entre o utilizador e o sistema, sendo esta a principal responsável pela forma como os utilizadores interagem com o sistema. O design de interfaces de utilizador é considerado o elemento mais importante de um sistema de visualização de informação, uma vez que este design possui um impacto direto na forma como os utilizadores iram comunicar com o sistema. Esta interação pode ser considerada pobre, resultando numa má análise de informação e num esforço cognitivo para realizar as tarefas propostas por parte do utilizador, ou ser uma implementação bastante rica e simplista, ao apresentar um design orientado para o público-alvo, nunca dificultando as tarefas a realizar pelo utilizador. De forma a criarmos um design orientado para o público-alvo que queremos atingir, Sridevi implementou três regras de "ouro" indispensáveis no que toca a implementação de interfaces de utilizador. \cite{sridevi2014user}.
+Uma interface estabelece o ponto de contacto entre o utilizador e o sistema, sendo esta a principal responsável pela forma como os utilizadores interagem com o sistema. O design de interfaces de utilizador é considerado o elemento mais importante de um sistema de visualização de informação, uma vez que este design possui um impacto direto na forma como os utilizadores irão comunicar com o sistema. Esta interação pode ser considerada pobre, resultando numa má análise de informação e num esforço cognitivo para realizar as tarefas propostas por parte do utilizador, ou ser uma implementação bastante rica e simplista, ao apresentar um design orientado para o público-alvo, nunca dificultando as tarefas a realizar pelo utilizador. De forma a criarmos um design orientado para o público-alvo que queremos atingir, Sridevi implementou três regras de "ouro" indispensáveis no que toca a implementação de interfaces de utilizador. \cite{sridevi2014user}.
 
 \begin{enumerate}
   \item O utilizador deve estar sempre no controlo.
@@ -299,40 +200,12 @@ No âmbito do ponto 2, uma interface que exija que o utilizador se lembre e reco
 
 Relacionado com o ponto 3, a interface deve apresentar e obter a informação sempre de forma consistente. De modo a ter uma interface consistente, é necessário que toda a informação a nível visual seja organizada de acordo um padrão de design que deve ser mantido em todas as interfaces implementadas, os mecanismos de \textit{input} devem ser limitados e utilizados de forma consistente em toda a aplicação, e os mecanismos de navegação entre tarefas devem ser definidos e implementados de forma consistente. O design de uma interface só deve ser alterado caso exista um motivo de extrema importância, uma vez que mudar o design e consistência de uma interface implica que o utilizador tenha de a reaprender \cite{sridevi2014user}.
 
-%\subsection{Princípios de Usabilidade e Experiência do Utilizador em Interfaces Interativas (Ainda não implementei, secalhar não faz sentido implementar)} % (fold)
-%\label{sub:principios_usabilidade}
-%ta guardado no consensus o que devo falar aqui neste capitulo
-%Neste capítulo irei falar sobre os princípios de usabilidade e experiência do utilizador em interfaces interativas.
-
-%Este subcapítulo permitir-te-á alargar a análise para além de Sridevi, abordando conceitos-chave da usabilidade e da experiência do utilizador (UX) aplicados a interfaces interativas, sem depender ainda do IVML Designer.
-
-%Neste subcapítulo poderás explorar:
-%  Heurísticas de Nielsen (como visibilidade do estado do sistema, liberdade de controlo, prevenção de erros, flexibilidade, estética e design minimalista);
-%  Design centrado no utilizador (UCD) como filosofia de base;
-%  O papel da feedback visual e acessibilidade em interfaces gráficas;
-%  A importância da hierarquia visual, affordances, consistência e mapeamento natural.
-
-%Com esta abordagem, solidificas o capítulo com uma base teórica transversal e reconhecida academicamente, que mais tarde poderá ser retomada quando introduzires o IVML Designer no Capítulo 3.
-
 \section{Avaliação da usabilidade de linguagens visuais} % (fold)
 \label{sec:avaliacao_usabilidade}
 
 A eficiência de uma linguagem visual depende não só da forma como a exibimos e implementamos, mas também da forma como os utilizadores e interagem com ela. No contexto de visualização interativa de dados, é essencial garantir que a linguagens utilizada comunica de forma clara e eficiente com o utilizador, facilitando assim a sua interação com a mesma. 
 
 Para isso, é necessário avaliar a usabilidade das linguagens visuais utilizadas, nomeadamente a clareza da sua sintaxe visual, a facilidade com que os utilizadores interagem com as suas componentes, e o impacto que estas têm na realização de tarefas cognitivas complexas. Este tipo de avaliação torna-se bastante relevante no desenvolvimento de linguagens como a \gls{IVML}, onde as \textit{dashboards} não representam apenas informação sobre determinado tema, mas também as possíveis interações que os utilizadores podem efetuar no sistema.
-
-%\subsection{\textit{Physics of Notation}} % (fold)
-%\label{sub:physics_notation}
-
-% Diagrmas, fluxogramas, etc
-% Temos de parar para pensar se este tipo de diagramas são realmente eficazes para a visualização de informação, ou se são apenas uma forma de representar a informação de forma gráfica.
-% A forma como os diagramas são representados e desenhados tem um impacto direto na forma como os utilizadores interagem com a informação, e na forma como a mesma é interpretada.
-
-% porque é que eu preciso de uma física das notaçoes?
-% O artigo aponta que usamos imenso este tipo de diagramas para aproveitar o nosso sistema visual que é muito potente
-% mas por vezes o design e a parte visual destes diagrmas muitas vezes é deixada ao acaso, o que pode levar a uma má interpretação da informação
-% Moody diz que há determinados diagramas usados especificamente para determinados contextos mas que por vezes a sua representação visual não é a mais adequada
-% Um mesmo fluxo de dados pode ser desenhado de diferentes formas, a investigação mostra que pequenas alterações visuais que por vezes podem parecer triviais podem ter um impacto significativo na forma como os utilizadores compreendem a informação
 
 A \textit{Physics of Notation} foi proposta por Moody no ano de 2009 como apenas uma teoria descritiva, que evoluiu para um referencial para a avaliação e construção de linguagens visuais. O seu objetivo é maximizar a eficiência cognitiva das linguagens visuais, isto é, assegurar que estas são compreendidas com rapidez, precisão e mínimo esforço cognitivo por parte dos utilizadores. 
 
@@ -341,22 +214,6 @@ A teoria responde a uma lacuna histórica no que toca o design de linguagens vis
 Por norma, quando queremos observar um determinado tipo de informação, existem já representações e conceitos visuais já pre-definidos para representar essa informação. No entanto, a forma como esses conceitos visuais são representados e desenhados tem um impacto direto na forma como os utilizadores interagem com a informação, e na forma como a mesma é interpretada. Moody refere que que existem vários diagramas usados especificamente para determinados contextos mas que por vezes a sua representação visual não é a mais adequada. Um mesmo diagrama pode ser desenhado de diferentes formas, resultando em diferentes interpretações por parte dos utilizadores \cite{moody2009physics}. 
 
 Tal como é mencionado anteriormente, a toeria \textit{Physics of Notation} é baseada em 9 princípios que devem ser tidos em consideração para atingir um maior nível de eficiência cognitiva \cite{moody2009physics}.
-
-\begin{comment}
-
-\begin{itemize}
-  \item \textbf{Clareza Semiótica (Semiotic Clarity)}
-  \item \textbf{Distinção Perceptual (Perceptual Distinction) Ver se o nome é mm este}
-  \item \textbf{Transparência Semiótica (Semiotic Transparency)}
-  \item \textbf{Gestão da Complexidade (Complexity Management)}
-  \item \textbf{Integração Cognitiva (Cognitive Integration)}
-  \item \textbf{Expressão Visual (Visual Expression)}
-  \item \textbf{Codificação Dupla (Dual Coding)}
-  \item \textbf{Economia Gráfica (Graphical Economy)}
-  \item \textbf{Enquadramaento Cognitivo (Cognitive Fit)}
-\end{itemize}
-
-\end{comment}
 
 De acordo com a teoria de símbolos defendida por Goodman \cite{goodman1976languages}, a \textbf{clareza semiótica} refere que numa linguagem visual deve existir sempre uma correspondência 1:1 entre os símbolos e os conceitos que estes representam. O objetivo principal deste príncipio é garantir que cada elemento da notação visual tenha um significado claro e que não haja confusão na sua interpretação por parte do utilizador. Caso esta correspondência não seja respeitada, o utilizador pode ter dificuldade em interpretar a informação apresentada, levando a uma má análise da mesma. Outras anomalias que podem surgir quando não é respeitada a correespondência de 1:1 ao nível dos símbolos e conceitos que os mesmos representam são: redundância de símbolos, onde diferentes símbolos gráficos representam o mesmo conceito semântico; sobrecarga de símbolos, onde o mesmo símbolo gráfico representa diferentes conceitos semânticos; excesso de símbolos, referindo-se a um símbolo gráfico que não corresponde a nenhum conceito semântico; e défice de símbolos, onde um conceito semântico não possui uma representação gráfica correspondente \cite{moody2009physics}.
 
@@ -385,29 +242,12 @@ O último princípio estipulado na teoria do \textit{physics of notation} é o \
 
 \section{Descrição Técnica IVML} % (fold)
 \label{sec:esp_ivml}
-% Tipos de Diagramas da IVML -> Componentes da Linguagem -> Exemplo de Aplicação -> Limitações da Linguagem
 
 A criação da linguagem \gls{IVML} surge para dar suporte à documentação e modelação de \textit{dashboards} analíticos. Atualmente, as ferramentas mais utilizadas para a visualização e implementação de \textit{dashboards} concentram as suas funcionalidades maioritariamente a nível visual e de representação, ignorando a implementação de funcionalidades ao nível de prototipagem e documentação das diferentes formas de interações, tooltips e estrutura analítica que esta possui \cite{Ferreira2023IVML}.
 
 Neste contexto, a \gls{IVML} apresenta-se como uma proposta para uma linguagem visual que tem como principal objetivo responder à lacuna que as grandes ferramentas de desenho apresentam. A linguagem \gls{IVML} permite não só desenhar o layout estrutural de um \textit{dashboard}, como também permite documentar todas as interações, tooltips e relações entre as componentes que a compõem \cite{Ferreira2023IVML}. 
 
-% basear me no documento para expandir melhor o que é cada componente
 A \gls{IVML} é composta por dois tipos de diagramas: o \textbf{Diagrama de Interações} (Figura \ref{fig:interacao}), que tem como objetivo modelar as interações dos utilizadores com os diferentes elementos que compõem o \textit{dashboard} bem como as relações que podem existir entre elementos; e o \textbf{Diagrama de Tooltips} (Figura \ref{fig:tooltip}), que tem como objetivo representar as diferentes \textit{tooltips} associadas às visualizações. Esta separação entre diferentes diagramas promove a modularidade e evita a sobrecarga visual quando lidamos com \textit{dashboards} de alta complexidade \cite{Ferreira2023IVML}.
-
-%\begin{figure}[htbp]
-%  \includegraphics[width=\textwidth]{ivml/diagrama_interacao}
-%  \centering
-%  \caption{Exemplo de diagrama de interações.}
-%  \label{fig:interacao}
-%\end{figure}
-
-%\begin{figure}[htbp]
-%  \includegraphics[width=\textwidth]{ivml/diagrama_tooltip}
-%  \centering
-%  \caption{Exemplo de diagrama de tooltips.}
-%  \label{fig:tooltip}
-%\end{figure}
-
 
 \begin{figure}[htbp]
   \centering
@@ -441,7 +281,6 @@ A linguagem é composta por diferentes componentes, estas componentes representa
   \label{fig:exemplo}
 \end{figure}
 
-% Aqui agora é fazer uma descrição breve sobre as componentes de cada diagrama
 Na Figura \ref{fig:exemplo} podemos observar a implementação de uma \textit{dashboard} real. Esta \textit{dashboard} é desenvolvida e suportada pelos diferentes diagramas já mencionados anteriormente, respetivamente, pelo seu diagrama de interações (Figura \ref{fig:interacao}) e pelo seu diagrama de \textit{tooltips} (Figura \ref{fig:tooltip}). 
 
 No diagrama de interações, conseguimos ver que dentro da componente \textit{dashboard} (D1) destacam-se quatro visualizações diferentes (V1 a V4). Na visualização V1 os diferentes dados a serem mostrados são apresentados sobre forma textual, um tipo de representação característico que a entidade visualização suporta. A visualização V2 já nos é apresentada sob a forma de um mapa geográfico com a distribuição da lucratividade por estado. As visualizações V3 e V4 mostram gráficos temporais das vendas por segmento. Estas últimas três visualizações fazem uso de variáveis visuais, respetivamente cor, de forma a ajudar a interpretação e análise da informação a ser mostrada segundo a legenda definida L1. À direita, encontam-se três filtros (F1 a F3), que têm como objetivo filtrar os dados com base na região, data de encomenda e lucro. Por fim, existe a implementação de uma componente de navegação acionada por B1 através de um clique, originando numa navegação interna para um novo \textit{dashboard} D2. 
