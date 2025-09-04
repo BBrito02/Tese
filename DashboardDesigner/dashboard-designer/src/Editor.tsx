@@ -13,10 +13,37 @@ import NodeClass from './canvas/NodeClass';
 import type { NodeData, NodeKind } from './domain/types';
 import { canConnect } from './domain/rules';
 import SideMenu from './components/SideMenu';
+import {
+  DndContext,
+  PointerSensor,
+  useSensors,
+  useSensor,
+  DragOverlay,
+} from '@dnd-kit/core';
+import type {
+  DragEndEvent,
+  DragStartEvent,
+  DragCancelEvent,
+} from '@dnd-kit/core';
+import NodeGhost from './components/NodeGhost';
 
 type DragData = { kind: NodeKind; title?: string };
 
 const NODE_TYPES = { class: NodeClass };
+
+/** Safe helper: compute drag center (translated OR initial+delta) */
+function getDragCenter(e: DragEndEvent): { x: number; y: number } | null {
+  const { current } = e.active.rect;
+  if (current.translated) {
+    const { left, top, width, height } = current.translated;
+    return { x: left + width / 2, y: top + height / 2 };
+  }
+  if (current.initial) {
+    const { left, top, width, height } = current.initial;
+    return { x: left + e.delta.x + width / 2, y: top + e.delta.y + height / 2 };
+  }
+  return null;
+}
 
 export default function Editor() {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
@@ -38,60 +65,97 @@ export default function Editor() {
     [nodes, setEdges]
   );
 
-  const onDragOver = (ev: React.DragEvent) => {
-    ev.preventDefault();
-    ev.dataTransfer.dropEffect = 'move';
+  // dnd-kit sensors & overlay
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } })
+  );
+  const [isDraggingFromPalette, setIsDraggingFromPalette] = useState(false);
+  const [dragPreview, setDragPreview] = useState<DragData | null>(null);
+
+  const handleDragStart = (e: DragStartEvent) => {
+    setIsDraggingFromPalette(true);
+    setDragPreview((e.active.data.current as DragData) ?? null);
   };
 
-  const onDrop = (ev: React.DragEvent) => {
-    ev.preventDefault();
-    if (!rf || !wrapperRef.current) return;
+  const handleDragCancel = (_e: DragCancelEvent) => {
+    setIsDraggingFromPalette(false);
+    setDragPreview(null);
+  };
 
+  const handleDragEnd = (e: DragEndEvent) => {
+    setIsDraggingFromPalette(false);
+    const payload = e.active.data.current as DragData | undefined;
+    setDragPreview(null);
+
+    if (!payload || !rf || !wrapperRef.current) return;
+
+    const center = getDragCenter(e);
+    if (!center) return;
+
+    // viewport -> flow coords
     const bounds = wrapperRef.current.getBoundingClientRect();
-    const pos = rf.project({
-      x: ev.clientX - bounds.left,
-      y: ev.clientY - bounds.top,
+    const flowPos = rf.project({
+      x: center.x - bounds.left,
+      y: center.y - bounds.top,
     });
 
-    const dataStr = ev.dataTransfer.getData('application/reactflow');
-    if (!dataStr) return;
-    const payload = JSON.parse(dataStr) as DragData;
+    // If you later add container droppables (NodeClass already registers for containers),
+    // you can use e.over?.id to detect the parent and set parentNode/extent here.
 
     const data: NodeData = {
       kind: payload.kind,
       title: payload.title ?? payload.kind,
     };
 
+    const defaultSizeFor = (kind: NodeKind) => { //aqui tenho de ver depois os sizes para o resto
+      if (kind === 'Dashboard') return { width: 900, height: 480 };
+      if (kind === 'Visualization') return { width: 420, height: 260 };
+      return { width: 240, height: 120 }; // Legend, Tooltip, Button, etc.
+    };
+
     setNodes((nds) =>
       nds.concat({
         id: nanoid(),
         type: 'class',
-        position: pos,
+        position: flowPos,
         data,
+        style: defaultSizeFor(data.kind),
       })
     );
   };
 
   return (
     <div id="editor-root" style={{ display: 'flex', height: '100vh' }}>
-      <SideMenu></SideMenu>
-      <div className="canvas" ref={wrapperRef} style={{ flex: 1 }}>
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onInit={setRf}
-          nodeTypes={NODE_TYPES}
-          onDrop={onDrop}
-          onDragOver={onDragOver}
-          fitView
-        >
-          <Background />
-          <Controls />
-        </ReactFlow>
-      </div>
+      <DndContext
+        sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragCancel={handleDragCancel}
+        onDragEnd={handleDragEnd}
+      >
+        <SideMenu />
+
+        <div className="canvas" ref={wrapperRef} style={{ flex: 1 }}>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onInit={setRf}
+            nodeTypes={NODE_TYPES}
+            panOnDrag={!isDraggingFromPalette} // smoother while dragging from menu
+            fitView
+          >
+            <Background />
+            <Controls />
+          </ReactFlow>
+        </div>
+
+        {/* Live preview while dragging from the palette */}
+        <DragOverlay dropAnimation={{ duration: 150 }}>
+          {dragPreview ? <NodeGhost payload={dragPreview} /> : null}
+        </DragOverlay>
+      </DndContext>
     </div>
   );
 }

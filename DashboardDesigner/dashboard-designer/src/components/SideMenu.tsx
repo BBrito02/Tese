@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo } from 'react';
 import type { NodeKind } from '../domain/types';
+import { useDraggable } from '@dnd-kit/core';
 
 type DragData = { kind: NodeKind; title?: string };
 
@@ -16,51 +16,51 @@ const PALETTE: DragData[] = [
   { kind: 'Placeholder' },
 ];
 
-const SideMenu = () => {
-  const onDragStart = useCallback((ev: React.DragEvent, payload: DragData) => {
-    ev.dataTransfer.setData('application/reactflow', JSON.stringify(payload));
-    ev.dataTransfer.effectAllowed = 'move';
-  }, []);
+function PaletteItem({ payload }: { payload: DragData }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `palette-${payload.kind}`,
+    data: payload,
+  });
 
-  const sidebar = useMemo(
-    () => (
-      <div
-        className="sidebar"
-        style={{ width: 260, background: '#eee', padding: 12, height: '100vh' }}
-      >
-        <div style={{ fontWeight: 700, marginBottom: 8, textAlign: 'center' }}>
-          MENU
-        </div>
-        {PALETTE.map((p) => (
-          <div
-            key={p.kind}
-            draggable
-            onDragStart={(e) => onDragStart(e, p)}
-            style={{
-              userSelect: 'none',
-              padding: '10px 12px',
-              marginBottom: 8,
-              background: '#fff',
-              borderRadius: 12,
-              border: '1px solid #ddd',
-              cursor: 'grab',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textAlign: 'center',
-              minHeight: 40,
-            }}
-            title={`Arrastar ${p.kind}`}
-          >
-            {p.kind}
-          </div>
-        ))}
-      </div>
-    ),
-    [onDragStart]
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      style={{
+        userSelect: 'none',
+        padding: '10px 12px',
+        marginBottom: 8,
+        background: '#fff',
+        borderRadius: 12,
+        border: '1px solid #ddd',
+        cursor: 'grab',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        textAlign: 'center',
+        minHeight: 40,
+        opacity: isDragging ? 0.6 : 1,
+      }}
+      title={`Arrastar ${payload.kind}`}
+    >
+      {payload.kind}
+    </div>
   );
+}
 
-  return <div>{sidebar}</div>;
-};
-
-export default SideMenu;
+export default function SideMenu() {
+  return (
+    <div
+      className="sidebar"
+      style={{ width: 260, background: '#eee', padding: 12, height: '100vh' }}
+    >
+      <div style={{ fontWeight: 700, marginBottom: 8, textAlign: 'center' }}>
+        MENU
+      </div>
+      {PALETTE.map((p) => (
+        <PaletteItem key={p.kind} payload={p} />
+      ))}
+    </div>
+  );
+}

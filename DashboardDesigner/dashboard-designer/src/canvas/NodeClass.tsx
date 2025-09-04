@@ -2,6 +2,8 @@ import { Handle, Position } from 'reactflow';
 import type { NodeProps } from 'reactflow';
 import { useDroppable } from '@dnd-kit/core';
 import type { NodeData } from '../domain/types';
+import { NodeResizer } from '@reactflow/node-resizer';
+import '@reactflow/node-resizer/dist/style.css';
 
 export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
   const isContainer =
@@ -14,22 +16,36 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
     <div
       ref={isContainer ? setNodeRef : undefined}
       style={{
-        width: isContainer ? 920 : undefined,
-        height: isContainer ? 480 : undefined,
-        padding: isContainer ? 12 : 10,
+        width: '100%',
+        height: '100%',
+        position: 'relative',
+        boxSizing: 'border-box',
         borderRadius: 12,
         background: '#fff',
         border: `2px solid ${
           isOver ? '#38bdf8' : selected ? '#60a5fa' : '#e5e7eb'
         }`,
         boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-        overflow: isContainer ? 'hidden' : 'visible',
-        minWidth: isContainer ? undefined : 180,
+        overflow: 'visible',
+        minWidth: isContainer ? 260 : 160,
+        minHeight: isContainer ? 120 : 60,
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
-      <div style={{ fontWeight: 700 }}>{data.title || data.kind}</div>
-      <div style={{ fontSize: 12, opacity: 0.65 }}>{data.kind}</div>
+      <NodeResizer
+        isVisible={selected}
+        minWidth={isContainer ? 260 : 160}
+        minHeight={isContainer ? 120 : 60}
+        handleStyle={{ width: 16, height: 16, borderRadius: 8 }}
+        lineStyle={{ strokeWidth: 1.5 }}
+      />
+      <div style={{ padding: 10 }}>
+        <div style={{ fontWeight: 700 }}>{data.title || data.kind}</div>
+        <div style={{ fontSize: 12, opacity: 0.65 }}>{data.kind}</div>
+      </div>
 
+      <div style={{ flex: 1 }} />
       {/* Basic handles */}
       <Handle type="target" position={Position.Left} />
       <Handle type="source" position={Position.Right} />
