@@ -53,7 +53,16 @@ export default function SideMenu() {
   return (
     <div
       className="sidebar"
-      style={{ width: 260, background: '#eee', padding: 12, height: '100vh' }}
+      style={{
+        width: 260,
+        background: '#eee',
+        padding: 12,
+        height: 'calc(100vh - 14px)',
+        marginLeft: '7px',
+        marginTop: '7px',
+        marginBottom: '7px',
+        borderRadius: '20px',
+      }}
     >
       <div style={{ fontWeight: 700, marginBottom: 8, textAlign: 'center' }}>
         MENU

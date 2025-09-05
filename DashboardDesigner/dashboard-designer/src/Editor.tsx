@@ -107,7 +107,8 @@ export default function Editor() {
       title: payload.title ?? payload.kind,
     };
 
-    const defaultSizeFor = (kind: NodeKind) => { //aqui tenho de ver depois os sizes para o resto
+    const defaultSizeFor = (kind: NodeKind) => {
+      //aqui tenho de ver depois os sizes para o resto
       if (kind === 'Dashboard') return { width: 900, height: 480 };
       if (kind === 'Visualization') return { width: 420, height: 260 };
       return { width: 240, height: 120 }; // Legend, Tooltip, Button, etc.
@@ -125,7 +126,10 @@ export default function Editor() {
   };
 
   return (
-    <div id="editor-root" style={{ display: 'flex', height: '100vh' }}>
+    <div
+      id="editor-root"
+      style={{ display: 'flex', height: '100vh', backgroundColor: '#5eb5cd' }}
+    >
       <DndContext
         sensors={sensors}
         onDragStart={handleDragStart}
