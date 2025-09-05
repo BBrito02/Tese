@@ -1,7 +1,7 @@
 import type { NodeKind } from './types';
 
-// Regras simples de ligação (MVP). Vamos evoluir isto mais à frente.
-export const ALLOWED_TO: Record<NodeKind, NodeKind[]> = {
+// Regraas de dependencia, falta me meter aqui os atributos como size, color, shape
+export const ALLOWED_TO: Record<NodeKind, NodeKind[]> = { 
   Dashboard: [
     'Visualization',
     'Legend',

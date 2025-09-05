@@ -3,7 +3,7 @@
 /** Kinds that belong to the Interaction_Comp family */
 // export type InteractionCompKind = 'Button' | 'Filter' | 'Parameter';
 
-export type NodeKind = //Rever melhor se sao so estes os tipos de nos
+export type NodeKind = //Rever melhor se sao so estes os tipos de nos (size, color, shape)?
 
     | 'Dashboard'
     | 'Visualization'

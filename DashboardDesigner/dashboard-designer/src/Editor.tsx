@@ -59,6 +59,7 @@ export default function Editor() {
       const targetKind = nodes.find((n) => n.id === c.target)?.data.kind as
         | NodeKind
         | undefined;
+      console.log(canConnect(sourceKind, targetKind));
       if (!canConnect(sourceKind, targetKind)) return;
       setEdges((eds) => addEdge({ ...c, animated: false }, eds));
     },
@@ -147,7 +148,7 @@ export default function Editor() {
             onConnect={onConnect}
             onInit={setRf}
             nodeTypes={NODE_TYPES}
-            panOnDrag={!isDraggingFromPalette} // smoother while dragging from menu
+            panOnDrag={!isDraggingFromPalette}
             fitView
           >
             <Background />
