@@ -274,34 +274,6 @@ function ButtonMenu(p: KindProps) {
   );
 }
 
-function DataMenu(p: KindProps) {
-  const d: any = p.node.data;
-  return (
-    <>
-      <BaseMenu {...p} />
-      <div style={{ fontWeight: 700, marginBottom: 8 }}>Data</div>
-      <label style={{ display: 'block', fontSize: 12, opacity: 0.8 }}>
-        Source
-      </label>
-      <select
-        value={d.source ?? ''}
-        disabled={p.disabled}
-        style={{
-          width: '100%',
-          padding: '6px 8px',
-          borderRadius: 8,
-          border: '1px solid #e5e7eb',
-        }}
-      >
-        <option value="">—</option>
-        <option value="csv">CSV</option>
-        <option value="json">JSON</option>
-        <option value="api">API</option>
-      </select>
-    </>
-  );
-}
-
 /* legend/tooltip currently use base only; extend anytime */
 const LegendMenu = BaseMenu;
 const TooltipMenu = BaseMenu;

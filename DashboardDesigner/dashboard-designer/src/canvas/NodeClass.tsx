@@ -40,9 +40,34 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
         handleStyle={{ width: 16, height: 16, borderRadius: 8 }}
         lineStyle={{ strokeWidth: 1.5 }}
       />
-      <div style={{ padding: 10 }}>
-        <div style={{ fontWeight: 700 }}>{data.title || data.kind}</div>
-        <div style={{ fontSize: 12, opacity: 0.65 }}>{data.kind}</div>
+      <div
+        style={{ padding: 10, display: 'flex', alignItems: 'center', gap: 8 }}
+      >
+        {data.badge && (
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 22,
+              height: 22,
+              padding: '0 4px',
+              borderRadius: 3,
+              background: '#fde047',
+              fontWeight: 800,
+              fontSize: 11,
+              lineHeight: '18px',
+            }}
+            title={data.badge}
+          >
+            {data.badge}
+          </span>
+        )}
+
+        <div>
+          <div style={{ fontWeight: 700 }}>{data.title || data.kind}</div>
+          <div style={{ fontSize: 12, opacity: 0.65 }}>{data.kind}</div>
+        </div>
       </div>
 
       <div style={{ flex: 1 }} />

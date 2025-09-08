@@ -27,6 +27,7 @@ import type {
   DragCancelEvent,
 } from '@dnd-kit/core';
 import NodeGhost from './components/NodeGhost';
+import { nextBadgeFor } from './domain/types';
 
 type DragData = { kind: NodeKind; title?: string };
 
@@ -157,7 +158,7 @@ export default function Editor() {
         id: nanoid(),
         type: 'class',
         position: flowPos,
-        data,
+        data: { ...data, badge: nextBadgeFor(data.kind, nds) },
         style: defaultSizeFor(data.kind),
       })
     );

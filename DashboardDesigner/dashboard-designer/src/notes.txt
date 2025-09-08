@@ -11,3 +11,5 @@
 
 
 - SideMenu.tsx tenho de alterar para fazer como no protótipo (por classes de interação) (agrupar classes de interação)
+
+- Os badges têm em conta o indice do max badge, e não incrementam +1 sempre, se tiver D0, D1 e eliminar o D1, vai continuar D1 o próxima, mas se eliminar D0 vai aaparecer D2
