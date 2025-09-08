@@ -25,7 +25,9 @@ import type {
   DragEndEvent,
   DragStartEvent,
   DragCancelEvent,
+  DragMoveEvent,
 } from '@dnd-kit/core';
+
 import NodeGhost from './components/NodeGhost';
 import { nextBadgeFor } from './domain/types';
 
@@ -60,12 +62,47 @@ export default function Editor() {
     [nodes, selectedId]
   );
 
+  const centerNode = useCallback(
+    (id: string) => {
+      if (!rf) return;
+      const n = rf.getNode(id);
+      if (!n) return;
+
+      const ax = n.positionAbsolute?.x ?? n.position.x;
+      const ay = n.positionAbsolute?.y ?? n.position.y;
+
+      // use measured size if available, else measure DOM and convert by zoom
+      let w = n.width ?? 0;
+      let h = n.height ?? 0;
+      if (w === 0 || h === 0) {
+        const el = document.querySelector<HTMLElement>(
+          `.react-flow__node[data-id="${
+            CSS?.escape ? CSS.escape(n.id) : n.id
+          }"]`
+        );
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          const zoom = rf.getZoom();
+          w = rect.width / zoom;
+          h = rect.height / zoom;
+        }
+      }
+
+      const cx = ax + (w ? w / 2 : 0);
+      const cy = ay + (h ? h / 2 : 0);
+      rf.setCenter(cx, cy, { zoom: rf.getZoom(), duration: 220 });
+    },
+    [rf]
+  );
+
   // React Flow will call this whenever selection changes
   const handleSelectionChange = useCallback(
-    ({ nodes: selNodes }: { nodes: RFNode<NodeData>[]; edges: any[] }) => {
-      setSelectedId(selNodes[0]?.id ?? null);
+    ({ nodes: sel }: { nodes: RFNode<NodeData>[]; edges: any[] }) => {
+      const id = sel[0]?.id ?? null;
+      setSelectedId(id); // <-- keep this for ComponentsMenu
+      if (id) requestAnimationFrame(() => centerNode(id));
     },
-    []
+    [centerNode] // <-- capture latest rf via centerNode
   );
 
   const onConnect = useCallback(
@@ -111,14 +148,53 @@ export default function Editor() {
   const [isDraggingFromPalette, setIsDraggingFromPalette] = useState(false);
   const [dragPreview, setDragPreview] = useState<DragData | null>(null);
 
+  const [dragStartPoint, setDragStartPoint] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [cursorPoint, setCursorPoint] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+
+  function getPointFromEvent(ev: Event): { x: number; y: number } | null {
+    // mouse/pointer
+    if ('clientX' in ev && 'clientY' in ev) {
+      const e = ev as unknown as { clientX: number; clientY: number };
+      return { x: e.clientX, y: e.clientY };
+    }
+    // touch
+    if ('touches' in ev && (ev as TouchEvent).touches[0]) {
+      const t = (ev as TouchEvent).touches[0];
+      return { x: t.clientX, y: t.clientY };
+    }
+    return null;
+  }
+
   const handleDragStart = (e: DragStartEvent) => {
     setIsDraggingFromPalette(true);
     setDragPreview((e.active.data.current as DragData) ?? null);
+
+    // starting cursor position
+    const p = getPointFromEvent(e.activatorEvent);
+    setDragStartPoint(p);
+    setCursorPoint(p);
+  };
+
+  const handleDragMove = (e: DragMoveEvent) => {
+    if (!dragStartPoint) return;
+    // cursor = start + delta
+    setCursorPoint({
+      x: dragStartPoint.x + e.delta.x,
+      y: dragStartPoint.y + e.delta.y,
+    });
   };
 
   const handleDragCancel = (_e: DragCancelEvent) => {
     setIsDraggingFromPalette(false);
     setDragPreview(null);
+    setDragStartPoint(null);
+    setCursorPoint(null);
   };
 
   const handleDragEnd = (e: DragEndEvent) => {
@@ -128,18 +204,17 @@ export default function Editor() {
 
     if (!payload || !rf || !wrapperRef.current) return;
 
-    const center = getDragCenter(e);
-    if (!center) return;
+    // use tracked cursor; if missing, fall back to element-center computation
+    const viewportPt = cursorPoint ?? getDragCenter(e);
+    setDragStartPoint(null);
+    setCursorPoint(null);
+    if (!viewportPt) return;
 
-    // viewport -> flow coords
     const bounds = wrapperRef.current.getBoundingClientRect();
-    const flowPos = rf.project({
-      x: center.x - bounds.left,
-      y: center.y - bounds.top,
+    const flowCenter = rf.project({
+      x: viewportPt.x - bounds.left,
+      y: viewportPt.y - bounds.top,
     });
-
-    // If you later add container droppables (NodeClass already registers for containers),
-    // you can use e.over?.id to detect the parent and set parentNode/extent here.
 
     const data: NodeData = {
       kind: payload.kind,
@@ -147,19 +222,25 @@ export default function Editor() {
     };
 
     const defaultSizeFor = (kind: NodeKind) => {
-      //aqui tenho de ver depois os sizes para o resto
       if (kind === 'Dashboard') return { width: 700, height: 380 };
       if (kind === 'Visualization') return { width: 320, height: 200 };
-      return { width: 180, height: 100 }; // Legend, Tooltip, Button, etc.
+      return { width: 180, height: 100 };
+    };
+    const size = defaultSizeFor(data.kind);
+
+    // center the node at the cursor
+    const position = {
+      x: flowCenter.x - size.width / 2,
+      y: flowCenter.y - size.height / 2,
     };
 
     setNodes((nds) =>
       nds.concat({
         id: nanoid(),
         type: 'class',
-        position: flowPos,
+        position,
         data: { ...data, badge: nextBadgeFor(data.kind, nds) },
-        style: defaultSizeFor(data.kind),
+        style: size,
       })
     );
   };
@@ -172,6 +253,7 @@ export default function Editor() {
       <DndContext
         sensors={sensors}
         onDragStart={handleDragStart}
+        onDragMove={handleDragMove}
         onDragCancel={handleDragCancel}
         onDragEnd={handleDragEnd}
       >
