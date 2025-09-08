@@ -1,5 +1,5 @@
 - Quando estou a arrastar uma componente do SideMenu podia dar display de um simbolo do lixo para não meter nada no ecrã, isto para o caso da pessoa se engaanar a dar drag
-    - Também tenho de fazer o mesmo caso a pessoa queria eliminar uma componente já no Editor
+    - O de cima já está feito no menu lateral, o simbolo de lixo quando dou drag falta fazer
 
 
 - função onConnect funciona sim, as ligações têm é de ser estabelecidas desta forma:
@@ -10,4 +10,4 @@
     - Se manter da forma como está tenho de alterar o estilo e cores das ligações !!!
 
 
-- SideMenu.tsx tenho de alterar para fazer como no protótipo (por classes de interação)
+- SideMenu.tsx tenho de alterar para fazer como no protótipo (por classes de interação) (agrupar classes de interação)

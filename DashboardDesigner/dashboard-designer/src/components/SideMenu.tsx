@@ -12,7 +12,6 @@ const PALETTE: DragData[] = [
   { kind: 'Filter' },
   { kind: 'Parameter' },
   { kind: 'DataAction' },
-  { kind: 'Datum' },
   { kind: 'Placeholder' },
 ];
 
@@ -54,7 +53,7 @@ export default function SideMenu() {
     <div
       className="sidebar"
       style={{
-        width: 260,
+        width: 200,
         background: '#eee',
         padding: 12,
         height: 'calc(100vh - 14px)',

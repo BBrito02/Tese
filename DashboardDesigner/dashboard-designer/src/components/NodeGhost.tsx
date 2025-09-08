@@ -1,4 +1,3 @@
-
 import type { NodeKind } from '../domain/types';
 
 export default function NodeGhost({

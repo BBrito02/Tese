@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -6,13 +6,14 @@ import ReactFlow, {
   useEdgesState,
   useNodesState,
 } from 'reactflow';
-import type { ReactFlowInstance, Connection } from 'reactflow';
+import type { ReactFlowInstance, Connection, Node as RFNode } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { nanoid } from 'nanoid';
 import NodeClass from './canvas/NodeClass';
 import type { NodeData, NodeKind } from './domain/types';
 import { canConnect } from './domain/rules';
 import SideMenu from './components/SideMenu';
+import ComponentsMenu from './components/ComponentsMenu';
 import {
   DndContext,
   PointerSensor,
@@ -51,6 +52,21 @@ export default function Editor() {
   const [rf, setRf] = useState<ReactFlowInstance | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
+  // --- track current selection ---
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selectedNode = useMemo(
+    () => nodes.find((n) => n.id === selectedId),
+    [nodes, selectedId]
+  );
+
+  // React Flow will call this whenever selection changes
+  const handleSelectionChange = useCallback(
+    ({ nodes: selNodes }: { nodes: RFNode<NodeData>[]; edges: any[] }) => {
+      setSelectedId(selNodes[0]?.id ?? null);
+    },
+    []
+  );
+
   const onConnect = useCallback(
     (c: Connection) => {
       const sourceKind = nodes.find((n) => n.id === c.source)?.data.kind as
@@ -59,12 +75,33 @@ export default function Editor() {
       const targetKind = nodes.find((n) => n.id === c.target)?.data.kind as
         | NodeKind
         | undefined;
-      console.log(canConnect(sourceKind, targetKind));
       if (!canConnect(sourceKind, targetKind)) return;
       setEdges((eds) => addEdge({ ...c, animated: false }, eds));
     },
     [nodes, setEdges]
   );
+
+  // Update node data from the inspector
+  const updateSelectedNode = useCallback(
+    (patch: Partial<NodeData>) => {
+      if (!selectedId) return;
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === selectedId ? { ...n, data: { ...n.data, ...patch } } : n
+        )
+      );
+    },
+    [selectedId, setNodes]
+  );
+
+  const deleteSelectedNode = useCallback(() => {
+    if (!selectedId) return;
+    setNodes((nds) => nds.filter((n) => n.id !== selectedId));
+    setEdges((eds) =>
+      eds.filter((e) => e.source !== selectedId && e.target !== selectedId)
+    );
+    setSelectedId(null);
+  }, [selectedId, setNodes, setEdges]);
 
   // dnd-kit sensors & overlay
   const sensors = useSensors(
@@ -110,9 +147,9 @@ export default function Editor() {
 
     const defaultSizeFor = (kind: NodeKind) => {
       //aqui tenho de ver depois os sizes para o resto
-      if (kind === 'Dashboard') return { width: 900, height: 480 };
-      if (kind === 'Visualization') return { width: 420, height: 260 };
-      return { width: 240, height: 120 }; // Legend, Tooltip, Button, etc.
+      if (kind === 'Dashboard') return { width: 700, height: 380 };
+      if (kind === 'Visualization') return { width: 320, height: 200 };
+      return { width: 180, height: 100 }; // Legend, Tooltip, Button, etc.
     };
 
     setNodes((nds) =>
@@ -143,18 +180,29 @@ export default function Editor() {
           <ReactFlow
             nodes={nodes}
             edges={edges}
-            onNodesChange={onNodesChange}
+            onNodesChange={(chs) => {
+              onNodesChange(chs);
+              // keep selectedId in sync if node gets removed externally
+              if (selectedId && !nodes.find((n) => n.id === selectedId))
+                setSelectedId(null);
+            }}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onInit={setRf}
             nodeTypes={NODE_TYPES}
             panOnDrag={!isDraggingFromPalette}
+            onSelectionChange={handleSelectionChange}
             fitView
           >
             <Background />
             <Controls />
           </ReactFlow>
         </div>
+        <ComponentsMenu
+          node={selectedNode}
+          onChange={updateSelectedNode}
+          onDelete={deleteSelectedNode}
+        />
 
         {/* Live preview while dragging from the palette */}
         <DragOverlay dropAnimation={{ duration: 150 }}>
