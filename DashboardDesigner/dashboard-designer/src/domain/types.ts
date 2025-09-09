@@ -8,14 +8,14 @@ export type NodeKind =
   | 'DataAction'
   | 'Placeholder';
 
-export interface NodeDataBase {
+interface NodeDataBase {
   title: string;
   description?: string;
   kind: NodeKind;
   badge?: string;
 }
 
-export const KIND_PREFIX = {
+const KIND_PREFIX = {
   Dashboard: 'D',
   Visualization: 'V',
   Legend: 'L',
@@ -25,13 +25,13 @@ export const KIND_PREFIX = {
   Parameter: 'P',
 } as const satisfies Partial<Record<NodeKind, string>>;
 
-export type BadgeableKind = keyof typeof KIND_PREFIX;
+type BadgeableKind = keyof typeof KIND_PREFIX;
 
-export function isBadgeable(kind: NodeKind): kind is BadgeableKind {
+function isBadgeable(kind: NodeKind): kind is BadgeableKind {
   return Object.prototype.hasOwnProperty.call(KIND_PREFIX, kind);
 }
 
-export function nextIndexFor(
+function nextIndexFor(
   kind: NodeKind,
   nodes: Array<{ data?: { kind?: NodeKind; badge?: string } | undefined }>
 ): number | undefined {
@@ -56,48 +56,48 @@ export function nextBadgeFor(
   return `${KIND_PREFIX[kind as BadgeableKind]}${idx}`;
 }
 
-export interface DashboardNodeData extends NodeDataBase {
+interface DashboardNodeData extends NodeDataBase {
   kind: 'Dashboard';
   objectives?: string[];
 }
 
-export interface VisualizationNodeData extends NodeDataBase {
+interface VisualizationNodeData extends NodeDataBase {
   kind: 'Visualization';
   dataRef?: string;
   objectives?: string[];
 }
 
-export interface LegendNodeData extends NodeDataBase {
+interface LegendNodeData extends NodeDataBase {
   kind: 'Legend';
 }
-export interface TooltipNodeData extends NodeDataBase {
+interface TooltipNodeData extends NodeDataBase {
   kind: 'Tooltip';
 }
 
-export interface ButtonNodeData extends NodeDataBase {
+interface ButtonNodeData extends NodeDataBase {
   kind: 'Button';
   label?: string;
 }
 
-export interface FilterNodeData extends NodeDataBase {
+interface FilterNodeData extends NodeDataBase {
   kind: 'Filter';
   field?: string;
   values?: string[];
 }
 
-export interface ParameterNodeData extends NodeDataBase {
+interface ParameterNodeData extends NodeDataBase {
   kind: 'Parameter';
   options?: string[];
   selected?: string;
 }
 
-export interface DataActionNodeData extends NodeDataBase {
+interface DataActionNodeData extends NodeDataBase {
   kind: 'DataAction';
   actionType?: 'Filtering' | 'Highlight';
   targetDataRef?: string;
 }
 
-export interface PlaceholderNodeData extends NodeDataBase {
+interface PlaceholderNodeData extends NodeDataBase {
   kind: 'Placeholder';
   image?: string;
 }

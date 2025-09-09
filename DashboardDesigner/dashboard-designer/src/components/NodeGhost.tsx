@@ -16,8 +16,8 @@ export default function NodeGhost({
         border: '2px solid #60a5fa',
         boxShadow: '0 8px 24px rgba(0,0,0,.15)',
         opacity: 0.9,
-        width: isContainer ? 320 : 200,
-        minHeight: isContainer ? 120 : 60,
+        width: isContainer ? 260 : 160,
+        height: isContainer ? 120 : 60,
         padding: 10,
       }}
     >

@@ -13,6 +13,7 @@ import NodeClass from './canvas/NodeClass';
 import type { NodeData, NodeKind } from './domain/types';
 import { canConnect } from './domain/rules';
 import SideMenu from './components/SideMenu';
+import type { DragData } from './components/SideMenu';
 import ComponentsMenu from './components/ComponentsMenu';
 import {
   DndContext,
@@ -31,31 +32,13 @@ import type {
 import NodeGhost from './components/NodeGhost';
 import { nextBadgeFor } from './domain/types';
 
-type DragData = { kind: NodeKind; title?: string };
-
 const NODE_TYPES = { class: NodeClass };
-
-/** Safe helper: compute drag center (translated OR initial+delta) */
-function getDragCenter(e: DragEndEvent): { x: number; y: number } | null {
-  const { current } = e.active.rect;
-  if (current.translated) {
-    const { left, top, width, height } = current.translated;
-    return { x: left + width / 2, y: top + height / 2 };
-  }
-  if (current.initial) {
-    const { left, top, width, height } = current.initial;
-    return { x: left + e.delta.x + width / 2, y: top + e.delta.y + height / 2 };
-  }
-  return null;
-}
 
 export default function Editor() {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [rf, setRf] = useState<ReactFlowInstance | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
-
-  // --- track current selection ---
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selectedNode = useMemo(
     () => nodes.find((n) => n.id === selectedId),
@@ -71,7 +54,6 @@ export default function Editor() {
       const ax = n.positionAbsolute?.x ?? n.position.x;
       const ay = n.positionAbsolute?.y ?? n.position.y;
 
-      // use measured size if available, else measure DOM and convert by zoom
       let w = n.width ?? 0;
       let h = n.height ?? 0;
       if (w === 0 || h === 0) {
@@ -99,10 +81,10 @@ export default function Editor() {
   const handleSelectionChange = useCallback(
     ({ nodes: sel }: { nodes: RFNode<NodeData>[]; edges: any[] }) => {
       const id = sel[0]?.id ?? null;
-      setSelectedId(id); // <-- keep this for ComponentsMenu
+      setSelectedId(id);
       if (id) requestAnimationFrame(() => centerNode(id));
     },
-    [centerNode] // <-- capture latest rf via centerNode
+    [centerNode]
   );
 
   const onConnect = useCallback(
@@ -119,7 +101,6 @@ export default function Editor() {
     [nodes, setEdges]
   );
 
-  // Update node data from the inspector
   const updateSelectedNode = useCallback(
     (patch: Partial<NodeData>) => {
       if (!selectedId) return;
@@ -141,7 +122,6 @@ export default function Editor() {
     setSelectedId(null);
   }, [selectedId, setNodes, setEdges]);
 
-  // dnd-kit sensors & overlay
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } })
   );
@@ -158,15 +138,29 @@ export default function Editor() {
   } | null>(null);
 
   function getPointFromEvent(ev: Event): { x: number; y: number } | null {
-    // mouse/pointer
     if ('clientX' in ev && 'clientY' in ev) {
       const e = ev as unknown as { clientX: number; clientY: number };
       return { x: e.clientX, y: e.clientY };
     }
-    // touch
     if ('touches' in ev && (ev as TouchEvent).touches[0]) {
       const t = (ev as TouchEvent).touches[0];
       return { x: t.clientX, y: t.clientY };
+    }
+    return null;
+  }
+
+  function getDragCenter(e: DragEndEvent): { x: number; y: number } | null {
+    const { current } = e.active.rect;
+    if (current.translated) {
+      const { left, top, width, height } = current.translated;
+      return { x: left + width / 2, y: top + height / 2 };
+    }
+    if (current.initial) {
+      const { left, top, width, height } = current.initial;
+      return {
+        x: left + e.delta.x + width / 2,
+        y: top + e.delta.y + height / 2,
+      };
     }
     return null;
   }
@@ -204,7 +198,6 @@ export default function Editor() {
 
     if (!payload || !rf || !wrapperRef.current) return;
 
-    // use tracked cursor; if missing, fall back to element-center computation
     const viewportPt = cursorPoint ?? getDragCenter(e);
     setDragStartPoint(null);
     setCursorPoint(null);
@@ -228,7 +221,6 @@ export default function Editor() {
     };
     const size = defaultSizeFor(data.kind);
 
-    // center the node at the cursor
     const position = {
       x: flowCenter.x - size.width / 2,
       y: flowCenter.y - size.height / 2,
@@ -265,7 +257,6 @@ export default function Editor() {
             edges={edges}
             onNodesChange={(chs) => {
               onNodesChange(chs);
-              // keep selectedId in sync if node gets removed externally
               if (selectedId && !nodes.find((n) => n.id === selectedId))
                 setSelectedId(null);
             }}
@@ -287,7 +278,6 @@ export default function Editor() {
           onDelete={deleteSelectedNode}
         />
 
-        {/* Live preview while dragging from the palette */}
         <DragOverlay dropAnimation={{ duration: 150 }}>
           {dragPreview ? <NodeGhost payload={dragPreview} /> : null}
         </DragOverlay>

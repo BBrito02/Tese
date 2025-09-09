@@ -71,7 +71,6 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
       </div>
 
       <div style={{ flex: 1 }} />
-      {/* Basic handles */}
       <Handle type="target" position={Position.Left} />
       <Handle type="source" position={Position.Right} />
     </div>

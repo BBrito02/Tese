@@ -8,7 +8,6 @@ type Props = {
   onDelete?: () => void;
 };
 
-/* ---------- small helpers (no children) ---------- */
 const toArr = (s?: string) =>
   (s ?? '')
     .split(',')
@@ -72,7 +71,6 @@ function BaseMenu({ node, onChange, disabled }: KindProps) {
   );
 }
 
-/* ---------- per-kind menus (no children anywhere) ---------- */
 function DashboardMenu(p: KindProps) {
   const d: any = p.node.data;
   return (
@@ -274,12 +272,10 @@ function ButtonMenu(p: KindProps) {
   );
 }
 
-/* legend/tooltip currently use base only; extend anytime */
 const LegendMenu = BaseMenu;
 const TooltipMenu = BaseMenu;
 const DataActionMenu = BaseMenu;
 
-/* ---------- registry: kind -> menu ---------- */
 const MENUS: Partial<Record<NodeKind, (p: KindProps) => JSX.Element>> = {
   Dashboard: DashboardMenu,
   Visualization: VisualizationMenu,

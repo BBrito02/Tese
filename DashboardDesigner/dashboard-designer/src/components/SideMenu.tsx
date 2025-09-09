@@ -1,7 +1,7 @@
 import type { NodeKind } from '../domain/types';
 import { useDraggable } from '@dnd-kit/core';
 
-type DragData = { kind: NodeKind; title?: string };
+export type DragData = { kind: NodeKind; title?: string };
 
 const PALETTE: DragData[] = [
   { kind: 'Dashboard' },
