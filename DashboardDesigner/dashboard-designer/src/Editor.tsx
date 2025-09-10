@@ -32,6 +32,10 @@ import type {
 import NodeGhost from './components/NodeGhost';
 import { nextBadgeFor } from './domain/types';
 
+import type { Edge, Node } from 'reactflow';
+import type { SaveFile, ExportNode } from './domain/saveFormat';
+import { SAVE_VERSION } from './domain/saveFormat';
+
 const NODE_TYPES = { class: NodeClass };
 
 export default function Editor() {
@@ -237,6 +241,87 @@ export default function Editor() {
     );
   };
 
+  const buildSave = useCallback((): SaveFile => {
+    const vp = (rf && (rf as any).getViewport?.()) || { x: 0, y: 0, zoom: 1 };
+
+    const exNodes: ExportNode[] = nodes.map((n) => ({
+      id: n.id,
+      type: n.type ?? 'class',
+      position: n.position,
+      data: n.data,
+      style: {
+        width: (n as any).width ?? (n.style as any)?.width,
+        height: (n as any).height ?? (n.style as any)?.height,
+      },
+      ...(n.parentNode ? { parentNode: n.parentNode } : {}),
+      ...(n.extent === 'parent' ? { extent: 'parent' as const } : {}), // 👈 guard
+    }));
+
+    return {
+      version: SAVE_VERSION,
+      createdAt: new Date().toISOString(),
+      viewport: vp,
+      nodes: exNodes,
+      edges: edges as Edge[],
+    };
+  }, [rf, nodes, edges]);
+
+  // Replace state from a SaveFile
+  const loadSave = useCallback(
+    (save: SaveFile) => {
+      const restoredNodes: Node[] = save.nodes.map((n) => ({
+        id: n.id,
+        type: n.type,
+        position: n.position,
+        data: n.data,
+        style: { width: n.style?.width, height: n.style?.height },
+        parentNode: n.parentNode,
+        extent: n.extent,
+      }));
+
+      setNodes(restoredNodes);
+      setEdges(save.edges);
+      // restore viewport if available
+      if (rf && save.viewport) {
+        (rf as any).setViewport?.(save.viewport, { duration: 0 });
+      }
+      setSelectedId(null);
+    },
+    [rf, setNodes, setEdges]
+  );
+
+  // Download file
+  const downloadJSON = useCallback((obj: unknown, filename: string) => {
+    const blob = new Blob([JSON.stringify(obj, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }, []);
+
+  // File input handler
+  const openJSONFile: React.ChangeEventHandler<HTMLInputElement> = async (
+    e
+  ) => {
+    const file = e.target.files?.[0];
+    e.currentTarget.value = ''; // reset input for next open
+    if (!file) return;
+    const text = await file.text();
+    const data = JSON.parse(text) as SaveFile;
+    if (!('version' in data)) {
+      alert('Invalid file');
+      return;
+    }
+    // here you could add migration if version !== SAVE_VERSION
+    loadSave(data);
+  };
+
   return (
     <div
       id="editor-root"
@@ -250,6 +335,47 @@ export default function Editor() {
         onDragEnd={handleDragEnd}
       >
         <SideMenu />
+
+        <div
+          style={{
+            position: 'absolute',
+            right: 12,
+            top: 12,
+            zIndex: 10,
+            display: 'flex',
+            gap: 8,
+          }}
+        >
+          <button
+            onClick={() => downloadJSON(buildSave(), 'dashboard-designer.json')}
+            style={{
+              padding: '6px 10px',
+              borderRadius: 8,
+              border: '1px solid #ddd',
+              background: '#fff',
+            }}
+          >
+            Save
+          </button>
+
+          <label
+            style={{
+              padding: '6px 10px',
+              borderRadius: 8,
+              border: '1px solid #ddd',
+              background: '#fff',
+              cursor: 'pointer',
+            }}
+          >
+            Load
+            <input
+              type="file"
+              accept="application/json,.json"
+              onChange={openJSONFile}
+              style={{ display: 'none' }}
+            />
+          </label>
+        </div>
 
         <div className="canvas" ref={wrapperRef} style={{ flex: 1 }}>
           <ReactFlow
