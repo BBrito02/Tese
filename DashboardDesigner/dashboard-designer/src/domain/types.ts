@@ -63,47 +63,57 @@ export function nextBadgeFor(
   return `${KIND_PREFIX[kind as BadgeableKind]}${idx}`;
 }
 
-interface DashboardNodeData extends NodeDataBase { //interacoes[]
+interface DashboardNodeData extends NodeDataBase {
   kind: 'Dashboard';
   objectives?: string[];
+  interactions?: string[];
 }
 
-interface VisualizationNodeData extends NodeDataBase { //dados[], objetivos[], interacoes[], tootips[]
+interface VisualizationNodeData extends NodeDataBase {
   kind: 'Visualization';
   objectives?: string[];
+  data?: string[]; //when adding display the data on the bottom of the component
+  tooltips?: string[]; //will be added thru the tooltip menu(to be done later)
+  interactions?: string[]; //will be added thru the interactions menu(to be done later)
 }
 
-interface LegendNodeData extends NodeDataBase { //dados[], interacoes[]
+interface LegendNodeData extends NodeDataBase {
   kind: 'Legend';
-}
-interface TooltipNodeData extends NodeDataBase { //dados[]
-  kind: 'Tooltip';
+  data?: string[]; //when adding display the data on the bottom of the component
+  interactions?: string[]; //will be added thru the interactions menu(to be done later)
 }
 
-interface ButtonNodeData extends NodeDataBase { //interacoes[]
+interface TooltipNodeData extends NodeDataBase {
+  kind: 'Tooltip';
+  data?: string[]; //when adding display the data on the bottom of the component
+}
+
+interface ButtonNodeData extends NodeDataBase {
   kind: 'Button';
   label?: string;
+  interactions?: string[]; //will be added thru the interactions menu(to be done later)
 }
 
-interface FilterNodeData extends NodeDataBase { //dados[], interacoes[]
+interface FilterNodeData extends NodeDataBase {
   kind: 'Filter';
-  field?: string;
-  values?: string[];
+  data?: string[]; //when adding display the data on the bottom of the component
+  interactions?: string[]; //will be added thru the interactions menu(to be done later)
 }
 
-interface ParameterNodeData extends NodeDataBase { //opcoes[](paramteros), interacoes[]
+interface ParameterNodeData extends NodeDataBase {
   kind: 'Parameter';
-  options?: string[];
-  selected?: string;
+  options?: string[]; //when adding display the different options on the center of the component in a drop-down menu
+  interactions?: string[]; //will be added thru the interactions menu(to be done later)
 }
 
-interface DataActionNodeData extends NodeDataBase { //????
+interface DataActionNodeData extends NodeDataBase {
+  //Ver o que fazer com esta componente, realidade e que eu ainda nao percebi muito bem o que e que ela faz
   kind: 'DataAction';
   actionType?: 'Filtering' | 'Highlight';
   targetDataRef?: string;
 }
 
-interface PlaceholderNodeData extends NodeDataBase { //descricao
+interface PlaceholderNodeData extends NodeDataBase {
   kind: 'Placeholder';
   image?: string;
 }

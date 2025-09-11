@@ -242,17 +242,6 @@ function ParameterMenu(p: KindProps) {
           </span>
         ))}
       </div>
-      <label
-        style={{ display: 'block', fontSize: 12, opacity: 0.8, marginTop: 10 }}
-      >
-        Selected
-      </label>
-      <input
-        value={d.selected ?? ''}
-        onChange={(e) => p.onChange({ selected: e.target.value })}
-        disabled={p.disabled}
-        style={{ width: '100%' }}
-      />
     </>
   );
 }
@@ -266,21 +255,6 @@ function FilterMenu(p: KindProps) {
       <label style={{ display: 'block', fontSize: 12, opacity: 0.8 }}>
         Field
       </label>
-      <input
-        value={d.field ?? ''}
-        onChange={(e) => p.onChange({ field: e.target.value })}
-        disabled={p.disabled}
-        style={{ width: '100%', marginBottom: 10 }}
-      />
-      <label style={{ display: 'block', fontSize: 12, opacity: 0.8 }}>
-        Values
-      </label>
-      <input
-        value={(d.values ?? []).join(', ')}
-        onChange={(e) => p.onChange({ values: toArr(e.target.value) })}
-        disabled={p.disabled}
-        style={{ width: '100%' }}
-      />
     </>
   );
 }
