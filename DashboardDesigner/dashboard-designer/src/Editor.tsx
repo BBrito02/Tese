@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -40,6 +40,11 @@ import { FaCloudDownloadAlt, FaCloudUploadAlt } from 'react-icons/fa';
 
 const NODE_TYPES = { class: NodeClass };
 
+const PANEL_WIDTH = 280;
+const PANEL_MARGIN = 7;
+const PANEL_GAP = 8;
+const PANEL_ANIM_MS = 200;
+
 export default function Editor() {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -50,6 +55,28 @@ export default function Editor() {
     () => nodes.find((n) => n.id === selectedId),
     [nodes, selectedId]
   );
+
+  const lastSelectedIdRef = useRef<string | null>(null);
+  const [menuExiting, setMenuExiting] = useState(false);
+
+  useEffect(() => {
+    let t: ReturnType<typeof setTimeout> | undefined;
+
+    if (!selectedId && lastSelectedIdRef.current) {
+      setMenuExiting(true);
+      t = setTimeout(() => setMenuExiting(false), PANEL_ANIM_MS);
+    }
+    lastSelectedIdRef.current = selectedId;
+
+    return () => {
+      if (t) clearTimeout(t);
+    };
+  }, [selectedId]);
+
+  const menuActive = Boolean(selectedId) || menuExiting;
+  const buttonsOffset = menuActive
+    ? -(PANEL_WIDTH + PANEL_MARGIN + PANEL_GAP)
+    : 0;
 
   const centerNode = useCallback(
     (id: string) => {
@@ -341,6 +368,9 @@ export default function Editor() {
             zIndex: 10,
             display: 'flex',
             gap: 8,
+            transform: `translateX(${buttonsOffset}px)`,
+            transition: `transform ${PANEL_ANIM_MS}ms ease`,
+            willChange: 'transform',
           }}
         >
           <button
