@@ -78,7 +78,7 @@ function DashboardMenu(p: KindProps) {
       <BaseMenu {...p} />
       <div style={{ fontWeight: 700, marginBottom: 8 }}>Objectives</div>
       <input
-        placeholder="type objective and press Enter"
+        placeholder="Type objective and press Enter"
         disabled={p.disabled}
         onKeyDown={(e) => {
           if (p.disabled) return;
@@ -135,23 +135,55 @@ function VisualizationMenu(p: KindProps) {
       <BaseMenu {...p} />
       <div style={{ fontWeight: 700, marginBottom: 8 }}>Visualization</div>
       <label style={{ display: 'block', fontSize: 12, opacity: 0.8 }}>
-        Data Ref (node id)
-      </label>
-      <input
-        value={d.dataRef ?? ''}
-        onChange={(e) => p.onChange({ dataRef: e.target.value })}
-        disabled={p.disabled}
-        style={{ width: '100%', marginBottom: 10 }}
-      />
-      <label style={{ display: 'block', fontSize: 12, opacity: 0.8 }}>
         Objectives
       </label>
       <input
-        value={(d.objectives ?? []).join(', ')}
-        onChange={(e) => p.onChange({ objectives: toArr(e.target.value) })}
+        placeholder="Type objective and press Enter"
         disabled={p.disabled}
+        onKeyDown={(e) => {
+          if (p.disabled) return;
+          if (e.key === 'Enter') {
+            const v = (e.target as HTMLInputElement).value.trim();
+            if (!v) return;
+            const next = [...(d.objectives ?? []), v];
+            p.onChange({ objectives: next });
+            (e.target as HTMLInputElement).value = '';
+          }
+        }}
         style={{ width: '100%' }}
       />
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+        {[...(d.objectives ?? [])].map((v: string, i: number) => (
+          <span
+            key={`${v}-${i}`}
+            style={{
+              padding: '3px 8px',
+              borderRadius: 999,
+              background: '#eef2ff',
+              border: '1px solid #c7d2fe',
+              fontSize: 12,
+            }}
+          >
+            {v}{' '}
+            <button
+              onClick={() => {
+                const next = [...(d.objectives ?? [])];
+                next.splice(i, 1);
+                p.onChange({ objectives: next });
+              }}
+              disabled={p.disabled}
+              style={{
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+              }}
+              title="remove"
+            >
+              ×
+            </button>
+          </span>
+        ))}
+      </div>
     </>
   );
 }

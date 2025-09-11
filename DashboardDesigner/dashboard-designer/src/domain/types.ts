@@ -63,48 +63,47 @@ export function nextBadgeFor(
   return `${KIND_PREFIX[kind as BadgeableKind]}${idx}`;
 }
 
-interface DashboardNodeData extends NodeDataBase {
+interface DashboardNodeData extends NodeDataBase { //interacoes[]
   kind: 'Dashboard';
   objectives?: string[];
 }
 
-interface VisualizationNodeData extends NodeDataBase {
+interface VisualizationNodeData extends NodeDataBase { //dados[], objetivos[], interacoes[], tootips[]
   kind: 'Visualization';
-  dataRef?: string;
   objectives?: string[];
 }
 
-interface LegendNodeData extends NodeDataBase {
+interface LegendNodeData extends NodeDataBase { //dados[], interacoes[]
   kind: 'Legend';
 }
-interface TooltipNodeData extends NodeDataBase {
+interface TooltipNodeData extends NodeDataBase { //dados[]
   kind: 'Tooltip';
 }
 
-interface ButtonNodeData extends NodeDataBase {
+interface ButtonNodeData extends NodeDataBase { //interacoes[]
   kind: 'Button';
   label?: string;
 }
 
-interface FilterNodeData extends NodeDataBase {
+interface FilterNodeData extends NodeDataBase { //dados[], interacoes[]
   kind: 'Filter';
   field?: string;
   values?: string[];
 }
 
-interface ParameterNodeData extends NodeDataBase {
+interface ParameterNodeData extends NodeDataBase { //opcoes[](paramteros), interacoes[]
   kind: 'Parameter';
   options?: string[];
   selected?: string;
 }
 
-interface DataActionNodeData extends NodeDataBase {
+interface DataActionNodeData extends NodeDataBase { //????
   kind: 'DataAction';
   actionType?: 'Filtering' | 'Highlight';
   targetDataRef?: string;
 }
 
-interface PlaceholderNodeData extends NodeDataBase {
+interface PlaceholderNodeData extends NodeDataBase { //descricao
   kind: 'Placeholder';
   image?: string;
 }
