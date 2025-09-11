@@ -1,11 +1,18 @@
-export type InteractionCompKind = 'Button' | 'Filter' | 'Parameter';
-export type ContainerKind = 'Dashboard' | 'Visualization' | 'Tooltip';
+export type VisualizationCompKind =
+  | 'Dashboard'
+  | 'Visualization'
+  | 'Tooltip'
+  | 'Legend';
+
+export type InteractionCompKind =
+  | 'Button'
+  | 'Filter'
+  | 'Parameter'
+  | 'DataAction';
 
 export type NodeKind =
-  | ContainerKind
-  | 'Legend'
+  | VisualizationCompKind
   | InteractionCompKind
-  | 'DataAction'
   | 'Placeholder';
 
 interface NodeDataBase {

@@ -36,6 +36,8 @@ import type { Edge, Node } from 'reactflow';
 import type { SaveFile, ExportNode } from './domain/saveFormat';
 import { SAVE_VERSION } from './domain/saveFormat';
 
+import { FaCloudDownloadAlt, FaCloudUploadAlt } from 'react-icons/fa';
+
 const NODE_TYPES = { class: NodeClass };
 
 export default function Editor() {
@@ -348,9 +350,15 @@ export default function Editor() {
               borderRadius: 8,
               border: '1px solid #ddd',
               background: '#fff',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              cursor: 'pointer',
             }}
+            title="Save"
           >
-            Save
+            <FaCloudDownloadAlt size={16} aria-hidden="true" />
+            <span>Save</span>
           </button>
 
           <label
@@ -360,9 +368,14 @@ export default function Editor() {
               border: '1px solid #ddd',
               background: '#fff',
               cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
             }}
+            title="Load"
           >
-            Load
+            <FaCloudUploadAlt size={16} aria-hidden="true" />
+            <span>Load</span>
             <input
               type="file"
               accept="application/json,.json"
