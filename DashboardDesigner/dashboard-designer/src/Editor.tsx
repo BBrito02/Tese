@@ -266,7 +266,6 @@ export default function Editor() {
     };
   }, [rf, nodes, edges]);
 
-  // Replace state from a SaveFile
   const loadSave = useCallback(
     (save: SaveFile) => {
       const restoredNodes: Node[] = save.nodes.map((n) => ({
@@ -281,7 +280,6 @@ export default function Editor() {
 
       setNodes(restoredNodes);
       setEdges(save.edges);
-      // restore viewport if available
       if (rf && save.viewport) {
         (rf as any).setViewport?.(save.viewport, { duration: 0 });
       }
@@ -290,7 +288,6 @@ export default function Editor() {
     [rf, setNodes, setEdges]
   );
 
-  // Download file
   const downloadJSON = useCallback((obj: unknown, filename: string) => {
     const blob = new Blob([JSON.stringify(obj, null, 2)], {
       type: 'application/json',
@@ -305,7 +302,6 @@ export default function Editor() {
     URL.revokeObjectURL(url);
   }, []);
 
-  // File input handler
   const openJSONFile: React.ChangeEventHandler<HTMLInputElement> = async (
     e
   ) => {
@@ -318,7 +314,6 @@ export default function Editor() {
       alert('Invalid file');
       return;
     }
-    // here you could add migration if version !== SAVE_VERSION
     loadSave(data);
   };
 

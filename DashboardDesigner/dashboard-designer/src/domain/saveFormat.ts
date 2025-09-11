@@ -5,9 +5,9 @@ export const SAVE_VERSION = 1 as const;
 
 export type ExportNode = {
   id: string;
-  type: Node['type']; // "class"
-  position: { x: number; y: number }; // top-left in flow coords
-  data: NodeData; // your discriminated payload
+  type: Node['type'];
+  position: { x: number; y: number };
+  data: NodeData;
   style?: { width?: number; height?: number };
   parentNode?: string;
   extent?: 'parent';
@@ -23,4 +23,4 @@ export type SaveFileV1 = {
   edges: ExportEdge[];
 };
 
-export type SaveFile = SaveFileV1; // future versions can union here
+export type SaveFile = SaveFileV1;
