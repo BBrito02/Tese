@@ -90,7 +90,6 @@ interface TooltipNodeData extends NodeDataBase {
 
 interface ButtonNodeData extends NodeDataBase {
   kind: 'Button';
-  label?: string;
   interactions?: string[]; //will be added thru the interactions menu(to be done later)
 }
 
