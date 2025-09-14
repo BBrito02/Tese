@@ -10,6 +10,7 @@ import {
   LuSlidersHorizontal,
   LuZap,
   LuImageOff,
+  LuChartColumnDecreasing
 } from 'react-icons/lu';
 
 export type DragData = { kind: NodeKind; title?: string };
@@ -29,7 +30,7 @@ const SECTIONS: Section[] = [
     title: 'Componentes de Visualização',
     items: [
       { kind: 'Dashboard', label: 'Dashboard', Icon: LuLayoutDashboard },
-      { kind: 'Visualization', label: 'Visualização', Icon: LuLayoutDashboard },
+      { kind: 'Visualization', label: 'Visualização', Icon: LuChartColumnDecreasing },
       { kind: 'Tooltip', label: 'Tooltip', Icon: LuInfo },
       { kind: 'Legend', label: 'Legenda', Icon: LuList },
     ],

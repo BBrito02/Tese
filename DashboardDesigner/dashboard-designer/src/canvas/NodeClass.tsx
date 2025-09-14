@@ -34,7 +34,7 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
   }) => (
     <div
       style={{
-        width: '100%', // keep inside the card
+        width: '100%', 
         padding: '6px 10px',
         borderRadius: 8,
         border: '1px solid #e5e7eb',
@@ -77,7 +77,6 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
   })();
 
   return (
-    // OUTER node box: allow resizer handles outside
     <div
       ref={isContainer ? setNodeRef : undefined}
       style={{
@@ -142,7 +141,7 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
           )}
           <div>
             <div style={{ fontWeight: 700 }}>{data.title}</div>
-            <div style={{ fontSize: 12, opacity: 0.65 }}>{data.kind}</div>
+            {/* <div style={{ fontSize: 12, opacity: 0.65 }}>{data.kind}</div> */}
           </div>
         </div>
 
