@@ -1,74 +1,185 @@
 import type { NodeKind } from '../domain/types';
 import { useDraggable } from '@dnd-kit/core';
+import type { IconType } from 'react-icons';
+import {
+  LuLayoutDashboard,
+  LuInfo,
+  LuList,
+  LuMousePointerClick,
+  LuFilter,
+  LuSlidersHorizontal,
+  LuZap,
+  LuImageOff,
+} from 'react-icons/lu';
 
 export type DragData = { kind: NodeKind; title?: string };
 
-const PALETTE: DragData[] = [
-  { kind: 'Dashboard' },
-  { kind: 'Visualization' },
-  { kind: 'Legend' },
-  { kind: 'Tooltip' },
-  { kind: 'Button' },
-  { kind: 'Filter' },
-  { kind: 'Parameter' },
-  { kind: 'DataAction' },
-  { kind: 'Placeholder' },
+// ---- layout constants (tweak to taste) ----
+const SIDEBAR_W = 240;
+const TILE_H = 76;
+const TILE_RADIUS = 12;
+
+type Section = {
+  title: string;
+  items: Array<{ kind: NodeKind; label: string; Icon: IconType }>;
+};
+
+const SECTIONS: Section[] = [
+  {
+    title: 'Componentes de Visualização',
+    items: [
+      { kind: 'Dashboard', label: 'Dashboard', Icon: LuLayoutDashboard },
+      { kind: 'Visualization', label: 'Visualização', Icon: LuLayoutDashboard },
+      { kind: 'Tooltip', label: 'Tooltip', Icon: LuInfo },
+      { kind: 'Legend', label: 'Legenda', Icon: LuList },
+    ],
+  },
+  {
+    title: 'Componentes de Interação',
+    items: [
+      { kind: 'Button', label: 'Botão', Icon: LuMousePointerClick },
+      { kind: 'Filter', label: 'Filtro', Icon: LuFilter },
+      { kind: 'Parameter', label: 'Parâmetro', Icon: LuSlidersHorizontal },
+      { kind: 'DataAction', label: 'Ação de Dados', Icon: LuZap },
+    ],
+  },
+  {
+    title: 'Outros',
+    items: [{ kind: 'Placeholder', label: 'Placeholder', Icon: LuImageOff }],
+  },
 ];
 
-function PaletteItem({ payload }: { payload: DragData }) {
+function PaletteTile({
+  payload,
+  label,
+  Icon,
+}: {
+  payload: DragData;
+  label: string;
+  Icon: IconType;
+}) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `palette-${payload.kind}`,
     data: payload,
   });
 
   return (
-    <div
+    <button
       ref={setNodeRef}
       {...attributes}
       {...listeners}
+      type="button"
+      title={`Arrastar ${label}`}
       style={{
-        userSelect: 'none',
-        padding: '10px 12px',
-        marginBottom: 8,
-        background: '#fff',
-        borderRadius: 12,
-        border: '1px solid #ddd',
+        width: '100%',
+        height: TILE_H,
+        boxSizing: 'border-box',
         cursor: 'grab',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+
+        background: '#fff',
+        border: '1px solid #e5e7eb',
+        borderRadius: TILE_RADIUS,
+        boxShadow: '0 1px 1px rgba(0,0,0,0.06)',
+
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        textAlign: 'center',
-        minHeight: 40,
+        gap: 6,
+        padding: 10,
+
         opacity: isDragging ? 0.6 : 1,
       }}
-      title={`Arrastar ${payload.kind}`}
     >
-      {payload.kind}
-    </div>
+      <Icon size={18} />
+      <span
+        style={{
+          fontSize: 12,
+          fontWeight: 600,
+          lineHeight: 1,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          maxWidth: '100%',
+        }}
+      >
+        {label}
+      </span>
+    </button>
   );
 }
 
 export default function SideMenu() {
   return (
-    <div
-      className="sidebar"
+    <aside
+      className="sidebar no-scrollbar"
       style={{
-        width: 200,
+        width: SIDEBAR_W,
         background: '#eee',
         padding: 12,
         height: 'calc(100vh - 14px)',
-        marginLeft: '7px',
-        marginTop: '7px',
-        marginBottom: '7px',
-        borderRadius: '20px',
+        marginLeft: 7,
+        marginTop: 7,
+        marginBottom: 7,
+        borderRadius: 20,
+        overflowY: 'auto',
+        boxSizing: 'border-box',
       }}
     >
-      <div style={{ fontWeight: 700, marginBottom: 8, textAlign: 'center' }}>
+      <div style={{ fontWeight: 700, textAlign: 'center', marginBottom: 10 }}>
         MENU
       </div>
-      {PALETTE.map((p) => (
-        <PaletteItem key={p.kind} payload={p} />
+
+      {SECTIONS.map((sec) => (
+        <section
+          key={sec.title}
+          style={{
+            background: '#f3f4f6',
+            border: '1px solid #e5e7eb',
+            borderRadius: 14,
+            padding: 10,
+            marginBottom: 12,
+            boxSizing: 'border-box',
+          }}
+        >
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 700,
+              background: '#d1d5db',
+              padding: '6px 10px',
+              borderRadius: 8,
+              marginBottom: 8,
+              textAlign: 'center',
+              boxSizing: 'border-box',
+            }}
+          >
+            {sec.title}
+          </div>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', // never overflow
+              gap: 8,
+              // make sure children don't expand their grid tracks
+              // (helps when labels are long)
+            }}
+          >
+            {sec.items.map((it) => (
+              <div key={it.kind} style={{ minWidth: 0 }}>
+                <PaletteTile
+                  payload={{ kind: it.kind }}
+                  label={it.label}
+                  Icon={it.Icon}
+                />
+              </div>
+            ))}
+          </div>
+        </section>
       ))}
-    </div>
+    </aside>
   );
 }
