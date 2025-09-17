@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react';
 import type { Node as RFNode } from 'reactflow';
 import type { NodeData, NodeKind } from '../domain/types';
-import { MENUS, type KindProps } from './menus';
+import { MENUS } from './menus';
+import { BaseMenu } from './menus/common';
 
 type Props = {
   node?: RFNode<NodeData>;
   onChange: (patch: Partial<NodeData>) => void;
   onDelete?: () => void;
+  onOpen?: (type: 'data' | 'interactions' | 'tooltips') => void; // ← add
 };
 
-export default function ComponentsMenu({ node, onChange, onDelete }: Props) {
+export default function ComponentsMenu({ node, onChange, onDelete, onOpen }: Props) {
   const [shouldRender, setShouldRender] = useState(!!node);
   const [visible, setVisible] = useState(!!node);
   const [lastNode, setLastNode] = useState<RFNode<NodeData> | undefined>(node);
@@ -37,8 +39,7 @@ export default function ComponentsMenu({ node, onChange, onDelete }: Props) {
   const panelNode = node ?? lastNode!;
   const disabled = !node;
 
-  const Menu =
-    MENUS[panelNode.data.kind as NodeKind] ?? ((p: KindProps) => null);
+  const Menu = MENUS[panelNode.data.kind as NodeKind] ?? BaseMenu;
 
   return (
     <aside
@@ -60,7 +61,12 @@ export default function ComponentsMenu({ node, onChange, onDelete }: Props) {
         pointerEvents: visible ? 'auto' : 'none',
       }}
     >
-      <Menu node={panelNode} onChange={onChange} disabled={disabled} />
+      <Menu
+        node={panelNode}
+        onChange={onChange}
+        disabled={disabled}
+        onOpen={onOpen}
+      />
 
       {onDelete && (
         <button

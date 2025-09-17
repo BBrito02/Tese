@@ -4,6 +4,7 @@ import { useDroppable } from '@dnd-kit/core';
 import type { NodeData } from '../domain/types';
 import { NodeResizer } from '@reactflow/node-resizer';
 import '@reactflow/node-resizer/dist/style.css';
+import type { DataItem } from '../domain/types';
 
 const MIN_SIZE: Record<NodeData['kind'], { w: number; h: number }> = {
   Dashboard: { w: 320, h: 180 },
@@ -17,6 +18,56 @@ const MIN_SIZE: Record<NodeData['kind'], { w: number; h: number }> = {
   Placeholder: { w: 140, h: 80 },
 };
 
+function DataPills({
+  items,
+  onClick,
+}: {
+  items: (string | DataItem)[];
+  onClick?: (index: number) => void;
+}) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        justifyContent: 'center', // ← center per row
+        alignItems: 'center',
+        gap: 8,
+        width: '100%', // ← use full width to center properly
+      }}
+    >
+      {items.map((it, i) => {
+        const label = typeof it === 'string' ? it : it.name;
+        const title = typeof it === 'string' ? it : `${it.name} · ${it.dtype}`;
+        return (
+          <button
+            key={`${label}-${i}`}
+            title={title}
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={() => onClick?.(i)}
+            className="nodrag nopan"
+            style={{
+              padding: '6px 10px',
+              borderRadius: 10,
+              border: '1px solid #e5e7eb',
+              background: '#f8fafc',
+              fontWeight: 700,
+              fontSize: 12,
+              cursor: onClick ? 'pointer' : 'default',
+              maxWidth: '100%',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
   const isContainer =
     data.kind === 'Dashboard' || data.kind === 'Visualization';
@@ -25,56 +76,16 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
   const minW = MIN_SIZE[data.kind].w;
   const minH = MIN_SIZE[data.kind].h;
 
-  const DadosBox = ({
-    items,
-    placeholder = 'Dados',
-  }: {
-    items?: string[];
-    placeholder?: string;
-  }) => (
-    <div
-      style={{
-        width: '100%', 
-        padding: '6px 10px',
-        borderRadius: 8,
-        border: '1px solid #e5e7eb',
-        background: '#fff',
-        textAlign: 'center',
-        fontWeight: 700,
-        overflow: 'hidden',
-        whiteSpace: 'nowrap',
-        textOverflow: 'ellipsis',
-        boxSizing: 'border-box',
-      }}
-      title={items?.join(', ')}
-    >
-      {items && items.length ? items.join(', ') : placeholder}
-    </div>
-  );
+  // choose footer items for kinds that support `data`
+  const footerItems: (string | DataItem)[] | undefined =
+    data.kind === 'Visualization' ||
+    data.kind === 'Legend' ||
+    data.kind === 'Tooltip' ||
+    data.kind === 'Filter'
+      ? ((data as any).data as (string | DataItem)[] | undefined)
+      : undefined;
 
-  const footerContent = (() => {
-    switch (data.kind) {
-      case 'Visualization':
-        return (data as any).data?.length ? (
-          <DadosBox items={(data as any).data} />
-        ) : null;
-      case 'Legend':
-        return (data as any).data?.length ? (
-          <DadosBox items={(data as any).data} />
-        ) : null;
-      case 'Tooltip':
-        return (data as any).data?.length ? (
-          <DadosBox items={(data as any).data} />
-        ) : null;
-      case 'Filter':
-        return (data as any).data?.length ? (
-          <DadosBox items={(data as any).data} />
-        ) : null;
-      case 'Dashboard':
-      default:
-        return null;
-    }
-  })();
+  const hasFooter = Array.isArray(footerItems) && footerItems.length > 0;
 
   return (
     <div
@@ -84,7 +95,7 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
         height: '100%',
         position: 'relative',
         boxSizing: 'border-box',
-        overflow: 'visible',
+        overflow: 'visible', // keep resizer handles visible
         minWidth: minW,
         minHeight: minH,
       }}
@@ -97,14 +108,14 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
         lineStyle={{ strokeWidth: 1.5 }}
       />
 
-      {/* INNER card: constrained grid so footer never escapes */}
+      {/* INNER card: header | body | footer */}
       <div
         style={{
           position: 'absolute',
           inset: 0,
           display: 'grid',
-          gridTemplateRows: 'auto 1fr auto', // header | body | footer
-          minHeight: 0, // allow grid to shrink
+          gridTemplateRows: 'auto 1fr auto',
+          minHeight: 0,
           borderRadius: 12,
           background: '#fff',
           border: `2px solid ${
@@ -145,10 +156,10 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
           </div>
         </div>
 
-        {/* Body (center) */}
+        {/* Body */}
         <div
           style={{
-            minHeight: 0, // critical in grid to prevent overflow
+            minHeight: 0, // allow grid-child to shrink
             display: 'flex',
             alignItems: data.kind === 'Parameter' ? 'center' : 'stretch',
             justifyContent: 'center',
@@ -184,8 +195,8 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
           ) : null}
         </div>
 
-        {/* Footer (only if there is content) */}
-        {footerContent ? (
+        {/* Footer */}
+        {hasFooter ? (
           <div
             style={{
               padding: 10,
@@ -194,10 +205,13 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
               boxSizing: 'border-box',
             }}
           >
-            {footerContent}
+            <DataPills
+              items={footerItems!}
+              // onClick={(idx) => { /* later: open Data inspector for this item */ }}
+            />
           </div>
         ) : (
-          // if no footer, keep the last grid row at 0 to avoid extra space
+          // if no footer content, collapse the last grid row
           <div style={{ height: 0 }} />
         )}
       </div>

@@ -38,6 +38,9 @@ import { SAVE_VERSION } from './domain/saveFormat';
 
 import { FaCloudDownloadAlt, FaCloudUploadAlt } from 'react-icons/fa';
 
+import Modal from './components/ui/Modal';
+import DataPopup from './components/popups/DataPopup';
+
 const NODE_TYPES = { class: NodeClass };
 
 const PANEL_WIDTH = 280;
@@ -58,6 +61,25 @@ export default function Editor() {
 
   const lastSelectedIdRef = useRef<string | null>(null);
   const [menuExiting, setMenuExiting] = useState(false);
+
+  type ModalSpec =
+    | { type: 'data'; nodeId: string }
+    | { type: 'interactions'; nodeId: string }
+    | { type: 'tooltips'; nodeId: string };
+
+  const [modal, setModal] = useState<ModalSpec | null>(null);
+
+  // helper to patch a node by id
+  const updateNodeById = useCallback(
+    (id: string, patch: Partial<NodeData>) => {
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === id ? { ...n, data: { ...n.data, ...patch } } : n
+        )
+      );
+    },
+    [setNodes]
+  );
 
   useEffect(() => {
     let t: ReturnType<typeof setTimeout> | undefined;
@@ -440,7 +462,26 @@ export default function Editor() {
           node={selectedNode}
           onChange={updateSelectedNode}
           onDelete={deleteSelectedNode}
+          onOpen={(t) =>
+            selectedId && setModal({ type: t, nodeId: selectedId })
+          }
         />
+
+        {modal?.type === 'data' && (
+          <Modal title="Data menu" onClose={() => setModal(null)}>
+            <DataPopup
+              initial={
+                (nodes.find((n) => n.id === modal.nodeId)?.data as any)?.data ??
+                []
+              }
+              onCancel={() => setModal(null)}
+              onSave={(items) => {
+                updateNodeById(modal.nodeId, { data: items });
+                setModal(null);
+              }}
+            />
+          </Modal>
+        )}
 
         <DragOverlay dropAnimation={{ duration: 150 }}>
           {dragPreview ? <NodeGhost payload={dragPreview} /> : null}

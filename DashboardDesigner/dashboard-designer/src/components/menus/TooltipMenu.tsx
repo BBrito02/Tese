@@ -2,11 +2,12 @@ import React from 'react';
 import { LuPlus, LuPencil, LuTag } from 'react-icons/lu';
 import type { KindProps } from './common';
 import { WhiteField, GhostLine } from './common';
+import type { DataItem } from '../../domain/types';
 
 export default function TooltipMenu(p: KindProps) {
   const d: any = p.node.data;
   const disabled = p.disabled;
-  const dataList: string[] = d.data ?? [];
+  const dataList: (string | DataItem)[] = d.data ?? [];
 
   const headerRow: React.CSSProperties = {
     display: 'flex',
@@ -35,6 +36,37 @@ export default function TooltipMenu(p: KindProps) {
     color: '#fff',
     background: '#38bdf8',
   };
+
+  const labelOf = (v: string | DataItem) =>
+    typeof v === 'string' ? v : v.name;
+
+  const Chips = ({ items }: { items: Array<string | DataItem> }) =>
+    items.length === 0 ? (
+      <div style={{ marginTop: 8 }}>
+        <div style={GhostLine} />
+      </div>
+    ) : (
+      <div style={{ marginTop: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        {items.map((it, i) => {
+          const label = labelOf(it);
+          return (
+            <span
+              key={`${label}-${i}`}
+              style={{
+                fontSize: 12,
+                padding: '4px 8px',
+                borderRadius: 999,
+                background: '#eef2ff',
+                border: '1px solid #c7d2fe',
+              }}
+              title={label}
+            >
+              {label}
+            </span>
+          );
+        })}
+      </div>
+    );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -99,39 +131,15 @@ export default function TooltipMenu(p: KindProps) {
           <label style={{ fontSize: 12, opacity: 0.8 }}>Data list</label>
           <button
             type="button"
-            title="Associate data (not implemented)"
+            title="Associate data"
             disabled={disabled}
             style={{ ...roundIconBtn, opacity: disabled ? 0.6 : 1 }}
-            // onClick={() => {}}
+            onClick={() => p.onOpen?.('data')}
           >
             <LuPlus size={16} />
           </button>
         </div>
-
-        {/* list or single blank placeholder */}
-        <div style={{ marginTop: 8 }}>
-          {dataList.length === 0 ? (
-            <div style={GhostLine} />
-          ) : (
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {dataList.map((it, i) => (
-                <span
-                  key={`${it}-${i}`}
-                  style={{
-                    fontSize: 12,
-                    padding: '4px 8px',
-                    borderRadius: 999,
-                    background: '#eef2ff',
-                    border: '1px solid #c7d2fe',
-                  }}
-                  title={it}
-                >
-                  {it}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
+        <Chips items={dataList} />
       </div>
 
       {/* Description */}

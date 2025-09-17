@@ -1,3 +1,10 @@
+export type DataType = 'Binary' | 'Continuous' | 'Discrete' | 'Other';
+
+export interface DataItem {
+  name: string;
+  dtype: DataType;
+}
+
 export type VisualizationCompKind =
   | 'Dashboard'
   | 'Visualization'
@@ -72,20 +79,20 @@ interface DashboardNodeData extends NodeDataBase {
 interface VisualizationNodeData extends NodeDataBase {
   kind: 'Visualization';
   objectives?: string[];
-  data?: string[]; //when adding display the data on the bottom of the component
+  data?: DataItem[]; //when adding display the data on the bottom of the component
   tooltips?: string[]; //will be added thru the tooltip menu(to be done later)
   interactions?: string[]; //will be added thru the interactions menu(to be done later)
 }
 
 interface LegendNodeData extends NodeDataBase {
   kind: 'Legend';
-  data?: string[]; //when adding display the data on the bottom of the component
+  data?: DataItem[]; //when adding display the data on the bottom of the component
   interactions?: string[]; //will be added thru the interactions menu(to be done later)
 }
 
 interface TooltipNodeData extends NodeDataBase {
   kind: 'Tooltip';
-  data?: string[]; //when adding display the data on the bottom of the component
+  data?: DataItem[]; //when adding display the data on the bottom of the component
 }
 
 interface ButtonNodeData extends NodeDataBase {
@@ -95,7 +102,7 @@ interface ButtonNodeData extends NodeDataBase {
 
 interface FilterNodeData extends NodeDataBase {
   kind: 'Filter';
-  data?: string[]; //when adding display the data on the bottom of the component
+  data?: DataItem[]; //when adding display the data on the bottom of the component
   interactions?: string[]; //will be added thru the interactions menu(to be done later)
 }
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LuPlus, LuPencil } from 'react-icons/lu';
+import { LuPlus, LuPencil, LuTag } from 'react-icons/lu';
 import type { KindProps } from './common';
 import { WhiteField, GhostLine } from './common';
 
@@ -35,15 +35,6 @@ export default function ParameterMenu(p: KindProps) {
     cursor: 'pointer',
     color: '#fff',
     background: '#38bdf8',
-  };
-
-  const PillStyle: React.CSSProperties = {
-    display: 'inline-block',
-    background: '#cffafe',
-    color: '#0f172a',
-    fontWeight: 700,
-    padding: '6px 14px',
-    borderRadius: 999,
   };
 
   const options: string[] = d.options ?? [];
@@ -91,9 +82,31 @@ export default function ParameterMenu(p: KindProps) {
         </div>
       </div>
 
-      {/* Category (visual pill) */}
-      <div style={{ display: 'flex', justifyContent: 'center' }}>
-        <span style={PillStyle}>Category</span>
+      <div>
+        <label
+          style={{
+            display: 'block',
+            fontSize: 12,
+            opacity: 0.8,
+            marginBottom: 6,
+          }}
+        >
+          Component type
+        </label>
+        <div style={{ position: 'relative' }}>
+          <input
+            value="Parameter"
+            readOnly
+            disabled
+            style={{
+              ...WhiteField,
+              paddingRight: 34,
+              opacity: 1,
+              color: '#0f172a',
+            }}
+          />
+          <LuTag size={16} style={smallIconRight} />
+        </div>
       </div>
 
       {/* Options (enter option → displayed in component dropdown) */}
