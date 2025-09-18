@@ -10,7 +10,7 @@ import type { ReactFlowInstance, Connection, Node as RFNode } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { nanoid } from 'nanoid';
 import NodeClass from './canvas/NodeClass';
-import type { NodeData, NodeKind } from './domain/types';
+import type { DataItem, NodeData, NodeKind } from './domain/types';
 import { canConnect } from './domain/rules';
 import SideMenu from './components/SideMenu';
 import type { DragData } from './components/SideMenu';
@@ -40,6 +40,7 @@ import { FaCloudDownloadAlt, FaCloudUploadAlt } from 'react-icons/fa';
 
 import Modal from './components/ui/Modal';
 import DataPopup from './components/popups/DataPopup';
+import TooltipPopup from './components/popups/TooltipPopup';
 
 const NODE_TYPES = { class: NodeClass };
 
@@ -480,6 +481,24 @@ export default function Editor() {
                 setModal(null);
               }}
             />
+          </Modal>
+        )}
+
+        {modal?.type === 'tooltips' && (
+          <Modal title="Tooltip menu" onClose={() => setModal(null)}>
+            {(() => {
+              const n = nodes.find((x) => x.id === modal.nodeId);
+              const available = ((n?.data as any)?.data ?? []) as Array<
+                string | DataItem
+              >;
+              return (
+                <TooltipPopup
+                  availableData={available}
+                  onCancel={() => setModal(null)}
+                  // no onSave for now (UI-only as requested)
+                />
+              );
+            })()}
           </Modal>
         )}
 

@@ -1,9 +1,5 @@
-- Supostamente é impossível eu ter componentes fora da componente Dashboard, ou seja, talvez tenha de ter um alerta para meter a componente Dashboard primeiro ou assim para depois arrastar as outras 
-componentes lá para dentro
-    - Ou então deixo estar como está, pode ser que os designer gostem desta abordagem, para criar cenários hipotéticos.
-
-- Quando estou a arrastar uma componente do SideMenu podia dar display de um simbolo do lixo para não meter nada no ecrã, isto para o caso da pessoa se engaanar a dar drag
-    - O de cima já está feito no menu lateral, o simbolo de lixo quando dou drag falta fazer
+- Quando estou a arrastar uma componente do SideMenu podia dar display de um simbolo do lixo para não meter nada no ecrã, isto para o caso da pessoa se enganar a dar drag
+    - O de cima já está feito no menu lateral, o simbolo de lixo quando dou drag falta fazer    
 
 
 - função onConnect funciona sim, as ligações têm é de ser estabelecidas desta forma:

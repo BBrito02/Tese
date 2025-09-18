@@ -187,6 +187,7 @@ export default function VisualizationMenu(p: KindProps) {
             title="Associate tooltip (not implemented)"
             disabled={disabled}
             style={{ ...roundIconBtn, opacity: disabled ? 0.6 : 1 }}
+            onClick={() => p.onOpen?.('tooltips')}
           >
             <LuPlus size={16} />
           </button>
