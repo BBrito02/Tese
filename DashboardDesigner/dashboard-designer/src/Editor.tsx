@@ -488,14 +488,27 @@ export default function Editor() {
           <Modal title="Tooltip menu" onClose={() => setModal(null)}>
             {(() => {
               const n = nodes.find((x) => x.id === modal.nodeId);
-              const available = ((n?.data as any)?.data ?? []) as Array<
+              const availableData = ((n?.data as any)?.data ?? []) as Array<
                 string | DataItem
               >;
+
+              const availableTooltips = nodes
+                .filter((x) => x.data?.kind === 'Tooltip')
+                .map((x) => ({
+                  id: x.id,
+                  title: x.data.title,
+                  description: x.data.description,
+                  data: (x.data as any).data as
+                    | Array<string | DataItem>
+                    | undefined,
+                }));
+
               return (
                 <TooltipPopup
-                  availableData={available}
+                  availableData={availableData}
+                  availableTooltips={availableTooltips}
                   onCancel={() => setModal(null)}
-                  // no onSave for now (UI-only as requested)
+                  // onSave stays unimplemented for now
                 />
               );
             })()}
