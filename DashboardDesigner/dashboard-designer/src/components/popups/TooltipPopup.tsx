@@ -236,13 +236,10 @@ export default function TooltipPopup({
                     fontWeight: 700,
                   }}
                 >
-                  <option value="csv">CSV</option>
-                  <option value="json">JSON</option>
-                  <option value="api">API</option>
-                  <option value="database">Database</option>
-                  <option value="excel">Excel</option>
-                  <option value="parquet">Parquet</option>
-                  <option value="other">Other</option>
+                  <option value="Binary">Binary</option>
+                  <option value="Continuous">Continuous</option>
+                  <option value="Discrete">Discrete</option>
+                  <option value="Other">Other</option>
                 </select>
                 <button
                   type="button"

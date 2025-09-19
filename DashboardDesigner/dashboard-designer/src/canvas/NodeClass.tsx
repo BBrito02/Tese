@@ -18,6 +18,39 @@ const MIN_SIZE: Record<NodeData['kind'], { w: number; h: number }> = {
   Placeholder: { w: 140, h: 80 },
 };
 
+const dataLabel = (v: string | DataItem) =>
+  typeof v === 'string' ? v : v.name;
+
+function SingleDataBox({ items }: { items?: (string | DataItem)[] }) {
+  const text = (items ?? []).map(dataLabel).join(', ');
+  if (!text) return null;
+
+  return (
+    <div
+      style={{
+        display: 'inline-block',
+        width: 'auto',
+        maxWidth: '90%',
+        minWidth: 120,
+        boxSizing: 'border-box',
+
+        padding: '10px 12px',
+        border: '1px solid #e5e7eb',
+        borderRadius: 10,
+        background: '#f8fafc',
+        fontWeight: 700,
+        textAlign: 'center',
+
+        whiteSpace: 'normal',
+        wordBreak: 'break-word',
+        lineHeight: 1.3,
+      }}
+    >
+      {text}
+    </div>
+  );
+}
+
 function DataPills({
   items,
   onClick,
@@ -30,10 +63,10 @@ function DataPills({
       style={{
         display: 'flex',
         flexWrap: 'wrap',
-        justifyContent: 'center', // ← center per row
+        justifyContent: 'center',
         alignItems: 'center',
         gap: 8,
-        width: '100%', // ← use full width to center properly
+        width: '100%',
       }}
     >
       {items.map((it, i) => {
@@ -203,15 +236,13 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
               borderTop: '1px solid #eef2f7',
               background: '#f6f7fb',
               boxSizing: 'border-box',
+              display: 'flex',
+              justifyContent: 'center', 
             }}
           >
-            <DataPills
-              items={footerItems!}
-              // onClick={(idx) => { /* later: open Data inspector for this item */ }}
-            />
+            <SingleDataBox items={footerItems} />
           </div>
         ) : (
-          // if no footer content, collapse the last grid row
           <div style={{ height: 0 }} />
         )}
       </div>

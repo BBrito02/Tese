@@ -29,6 +29,9 @@ export default function DataPopup({ initial, onSave, onCancel }: Props) {
     setDtype('Other');
   };
 
+  const removeItem = (idx: number) =>
+    setItems((arr) => arr.filter((_, i) => i !== idx));
+
   return (
     <div style={{ display: 'grid', gap: 16 }}>
       <div style={{ display: 'grid', gap: 10 }}>
@@ -130,9 +133,28 @@ export default function DataPopup({ initial, onSave, onCancel }: Props) {
                   borderRadius: 999,
                   background: '#eef2ff',
                   border: '1px solid #c7d2fe',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
                 }}
+                title={`${it.name} · ${it.dtype}`}
               >
                 {it.name} · {it.dtype}
+                <button
+                  type="button"
+                  onClick={() => removeItem(i)}
+                  aria-label={`Remove ${it.name}`}
+                  title="Remove"
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    fontWeight: 900,
+                    lineHeight: 1,
+                  }}
+                >
+                  ×
+                </button>
               </span>
             ))}
           </div>

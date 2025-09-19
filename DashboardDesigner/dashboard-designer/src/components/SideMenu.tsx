@@ -10,7 +10,7 @@ import {
   LuSlidersHorizontal,
   LuZap,
   LuImageOff,
-  LuChartColumnDecreasing
+  LuChartColumnDecreasing,
 } from 'react-icons/lu';
 
 export type DragData = { kind: NodeKind; title?: string };
@@ -27,25 +27,29 @@ type Section = {
 
 const SECTIONS: Section[] = [
   {
-    title: 'Componentes de Visualização',
+    title: 'Visualization Components',
     items: [
       { kind: 'Dashboard', label: 'Dashboard', Icon: LuLayoutDashboard },
-      { kind: 'Visualization', label: 'Visualização', Icon: LuChartColumnDecreasing },
+      {
+        kind: 'Visualization',
+        label: 'Visualization',
+        Icon: LuChartColumnDecreasing,
+      },
       { kind: 'Tooltip', label: 'Tooltip', Icon: LuInfo },
       { kind: 'Legend', label: 'Legenda', Icon: LuList },
     ],
   },
   {
-    title: 'Componentes de Interação',
+    title: 'Interaction Components',
     items: [
-      { kind: 'Button', label: 'Botão', Icon: LuMousePointerClick },
-      { kind: 'Filter', label: 'Filtro', Icon: LuFilter },
-      { kind: 'Parameter', label: 'Parâmetro', Icon: LuSlidersHorizontal },
-      { kind: 'DataAction', label: 'Ação de Dados', Icon: LuZap },
+      { kind: 'Button', label: 'Button', Icon: LuMousePointerClick },
+      { kind: 'Filter', label: 'Filter', Icon: LuFilter },
+      { kind: 'Parameter', label: 'Parameter', Icon: LuSlidersHorizontal },
+      { kind: 'DataAction', label: 'DataAction', Icon: LuZap },
     ],
   },
   {
-    title: 'Outros',
+    title: 'Others',
     items: [{ kind: 'Placeholder', label: 'Placeholder', Icon: LuImageOff }],
   },
 ];
@@ -70,7 +74,7 @@ function PaletteTile({
       {...attributes}
       {...listeners}
       type="button"
-      title={`Arrastar ${label}`}
+      title={`Drag ${label}`}
       style={{
         width: '100%',
         height: TILE_H,

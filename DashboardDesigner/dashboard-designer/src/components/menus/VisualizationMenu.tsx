@@ -8,6 +8,18 @@ export default function VisualizationMenu(p: KindProps) {
   const d: any = p.node.data;
   const disabled = p.disabled;
 
+  const dtypeBadge: React.CSSProperties = {
+    marginLeft: 6,
+    padding: '2px 6px',
+    borderRadius: 999,
+    border: '1px solid #cbd5e1',
+    background: '#fff',
+    fontSize: 10,
+    fontWeight: 800,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  };
+
   const headerRow: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
@@ -43,6 +55,8 @@ export default function VisualizationMenu(p: KindProps) {
 
   const labelOf = (v: string | DataItem) =>
     typeof v === 'string' ? v : v.name;
+  const typeOf = (v: string | DataItem) =>
+    typeof v === 'string' ? undefined : v.dtype;
 
   const Chips = ({ items }: { items: Array<string | DataItem> }) =>
     items.length === 0 ? (
@@ -53,6 +67,7 @@ export default function VisualizationMenu(p: KindProps) {
       <div style={{ marginTop: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
         {items.map((it, i) => {
           const label = labelOf(it);
+          const dtype = typeOf(it);
           return (
             <span
               key={`${label}-${i}`}
@@ -62,10 +77,13 @@ export default function VisualizationMenu(p: KindProps) {
                 borderRadius: 999,
                 background: '#eef2ff',
                 border: '1px solid #c7d2fe',
+                display: 'inline-flex',
+                alignItems: 'center',
               }}
-              title={label}
+              title={dtype ? `${label} · ${dtype}` : label}
             >
               {label}
+              {dtype && <span style={dtypeBadge}>{dtype}</span>}
             </span>
           );
         })}
