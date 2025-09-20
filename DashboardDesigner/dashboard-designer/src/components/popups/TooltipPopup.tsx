@@ -17,6 +17,7 @@ type ExistingTooltip = {
   title: string;
   description?: string;
   data?: Array<string | DataItem>;
+  badge?: string; // ← added: show T# (label/badge) in the dropdown
 };
 
 type Props = {
@@ -52,6 +53,12 @@ const chip: React.CSSProperties = {
 
 const labelOf = (v: string | DataItem) => (typeof v === 'string' ? v : v.name);
 
+// format option as "<badge> – <name>" or just "<name>" if no badge
+const optionLabel = (t: ExistingTooltip) => {
+  const name = t.title || '(untitled tooltip)';
+  return t.badge ? `${t.badge} – ${name}` : name;
+};
+
 export default function TooltipPopup({
   availableData,
   availableTooltips,
@@ -66,10 +73,6 @@ export default function TooltipPopup({
 
   // existing tooltip selection
   const [selectedTooltipId, setSelectedTooltipId] = useState<string>('');
-  const selectedTooltip = useMemo(
-    () => availableTooltips.find((t) => t.id === selectedTooltipId),
-    [availableTooltips, selectedTooltipId]
-  );
 
   // ---------------- New tooltip form ----------------
   const [name, setName] = useState('');
@@ -146,44 +149,42 @@ export default function TooltipPopup({
         </div>
       </div>
 
-      {/* Existing tooltip selector + preview */}
+      {/* Existing tooltip selector */}
       {source === 'existing' && (
-        <>
-          <div
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '140px 1fr',
+            gap: 10,
+            alignItems: 'center',
+          }}
+        >
+          <div style={pill}>Select</div>
+          <select
+            value={selectedTooltipId}
+            onChange={(e) => setSelectedTooltipId(e.target.value)}
             style={{
-              display: 'grid',
-              gridTemplateColumns: '140px 1fr',
-              gap: 10,
-              alignItems: 'center',
+              padding: '8px 12px',
+              border: '1px solid #e5e7eb',
+              borderRadius: 12,
+              background: '#fff',
+              fontWeight: 700,
+              width: '100%',
             }}
           >
-            <div style={pill}>Select</div>
-            <select
-              value={selectedTooltipId}
-              onChange={(e) => setSelectedTooltipId(e.target.value)}
-              style={{
-                padding: '8px 12px',
-                border: '1px solid #e5e7eb',
-                borderRadius: 12,
-                background: '#fff',
-                fontWeight: 700,
-                width: '100%',
-              }}
-            >
-              <option value="" disabled>
-                Choose a tooltip
+            <option value="" disabled>
+              Choose a tooltip
+            </option>
+            {availableTooltips.map((t) => (
+              <option key={t.id} value={t.id}>
+                {optionLabel(t)} {/* ← shows "T# – Name" */}
               </option>
-              {availableTooltips.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.title || '(untitled tooltip)'}
-                </option>
-              ))}
-            </select>
-          </div>
-        </>
+            ))}
+          </select>
+        </div>
       )}
 
-      {/* New tooltip form (your original UI) */}
+      {/* New tooltip form (unchanged) */}
       {source === 'new' && (
         <>
           {/* Name */}

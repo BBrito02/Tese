@@ -36,14 +36,14 @@ function SingleDataBox({ items }: { items?: (string | DataItem)[] }) {
 
         padding: '10px 12px',
         border: '1px solid #e5e7eb',
-        borderRadius: 10,
+        borderRadius: 5,
         background: '#f8fafc',
         fontWeight: 700,
         textAlign: 'center',
 
         whiteSpace: 'normal',
         wordBreak: 'break-word',
-        lineHeight: 1.3,
+        lineHeight: 0.8,
       }}
     >
       {text}
@@ -232,12 +232,9 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
         {hasFooter ? (
           <div
             style={{
-              padding: 10,
-              borderTop: '1px solid #eef2f7',
-              background: '#f6f7fb',
-              boxSizing: 'border-box',
+              margin: '3px',
               display: 'flex',
-              justifyContent: 'center', 
+              justifyContent: 'center',
             }}
           >
             <SingleDataBox items={footerItems} />

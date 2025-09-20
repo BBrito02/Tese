@@ -493,14 +493,11 @@ export default function Editor() {
               >;
 
               const availableTooltips = nodes
-                .filter((x) => x.data?.kind === 'Tooltip')
-                .map((x) => ({
-                  id: x.id,
-                  title: x.data.title,
-                  description: x.data.description,
-                  data: (x.data as any).data as
-                    | Array<string | DataItem>
-                    | undefined,
+                .filter((n) => n.data?.kind === 'Tooltip')
+                .map((n) => ({
+                  id: n.id,
+                  title: n.data.title,
+                  badge: n.data.badge,
                 }));
 
               return (
