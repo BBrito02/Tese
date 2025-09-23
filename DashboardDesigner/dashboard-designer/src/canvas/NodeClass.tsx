@@ -6,6 +6,7 @@ import { NodeResizer } from '@reactflow/node-resizer';
 import '@reactflow/node-resizer/dist/style.css';
 import type { DataItem } from '../domain/types';
 
+// minimal sizes fixed to avoid overlapping attributes inside the components
 const MIN_SIZE: Record<NodeData['kind'], { w: number; h: number }> = {
   Dashboard: { w: 320, h: 180 },
   Visualization: { w: 240, h: 140 },
@@ -21,6 +22,7 @@ const MIN_SIZE: Record<NodeData['kind'], { w: number; h: number }> = {
 const dataLabel = (v: string | DataItem) =>
   typeof v === 'string' ? v : v.name;
 
+// function to print all the data attrributes in a single box
 function SingleDataBox({ items }: { items?: (string | DataItem)[] }) {
   const text = (items ?? []).map(dataLabel).join(', ');
   if (!text) return null;
@@ -51,6 +53,7 @@ function SingleDataBox({ items }: { items?: (string | DataItem)[] }) {
   );
 }
 
+// function to print all the data attrributes in separate boxes
 function DataPills({
   items,
   onClick,
@@ -101,6 +104,7 @@ function DataPills({
   );
 }
 
+// the node class itself
 export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
   const isContainer =
     data.kind === 'Dashboard' || data.kind === 'Visualization';
@@ -109,7 +113,7 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
   const minW = MIN_SIZE[data.kind].w;
   const minH = MIN_SIZE[data.kind].h;
 
-  // choose footer items for kinds that support `data`
+  // nodes that have data attributes
   const footerItems: (string | DataItem)[] | undefined =
     data.kind === 'Visualization' ||
     data.kind === 'Legend' ||
@@ -128,11 +132,12 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
         height: '100%',
         position: 'relative',
         boxSizing: 'border-box',
-        overflow: 'visible', // keep resizer handles visible
+        overflow: 'visible',
         minWidth: minW,
         minHeight: minH,
       }}
     >
+      {/* React library to resize the nodes dynamically */}
       <NodeResizer
         isVisible={selected}
         minWidth={minW}
@@ -185,14 +190,13 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
           )}
           <div>
             <div style={{ fontWeight: 700 }}>{data.title}</div>
-            {/* <div style={{ fontSize: 12, opacity: 0.65 }}>{data.kind}</div> */}
           </div>
         </div>
 
         {/* Body */}
         <div
           style={{
-            minHeight: 0, // allow grid-child to shrink
+            minHeight: 0,
             display: 'flex',
             alignItems: data.kind === 'Parameter' ? 'center' : 'stretch',
             justifyContent: 'center',

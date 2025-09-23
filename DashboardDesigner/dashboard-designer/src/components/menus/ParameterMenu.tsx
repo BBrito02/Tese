@@ -37,9 +37,13 @@ export default function ParameterMenu(p: KindProps) {
     background: '#38bdf8',
   };
 
+  // array list of the options
   const options: string[] = d.options ?? [];
+
+  // array list of the interactions (to be done)
   const interactions: string[] = d.interactions ?? [];
 
+  // function that adds an option to the parameter node
   const addOption = () => {
     const v = newOption.trim();
     if (!v) return;
@@ -47,6 +51,7 @@ export default function ParameterMenu(p: KindProps) {
     setNewOption('');
   };
 
+  // function that removes an option to the parameter node
   const removeOption = (index: number) => {
     const next = [...options];
     next.splice(index, 1);
@@ -109,7 +114,7 @@ export default function ParameterMenu(p: KindProps) {
         </div>
       </div>
 
-      {/* Options (enter option → displayed in component dropdown) */}
+      {/* Options */}
       <div>
         <label
           style={{
@@ -123,7 +128,7 @@ export default function ParameterMenu(p: KindProps) {
         </label>
         <div style={{ display: 'flex', gap: 8 }}>
           <input
-            placeholder="Enter option and press Enter"
+            placeholder="Enter option"
             value={newOption}
             onChange={(e) => setNewOption(e.target.value)}
             onKeyDown={(e) => {

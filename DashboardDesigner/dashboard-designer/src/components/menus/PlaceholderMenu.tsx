@@ -45,7 +45,7 @@ export default function PlaceholderMenu(p: KindProps) {
         </div>
       </div>
 
-      {/* Component type (read-only) */}
+      {/* Component type */}
       <div>
         <label
           style={{

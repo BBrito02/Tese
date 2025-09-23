@@ -7,6 +7,8 @@ import type { DataItem } from '../../domain/types';
 export default function TooltipMenu(p: KindProps) {
   const d: any = p.node.data;
   const disabled = p.disabled;
+
+  // array list of the data attributes
   const dataList: (string | DataItem)[] = d.data ?? [];
 
   const headerRow: React.CSSProperties = {
@@ -54,6 +56,7 @@ export default function TooltipMenu(p: KindProps) {
   const typeOf = (v: string | DataItem) =>
     typeof v === 'string' ? undefined : v.dtype;
 
+  // funtion that prints the list of attributes
   const Chips = ({ items }: { items: Array<string | DataItem> }) =>
     items.length === 0 ? (
       <div style={{ marginTop: 8 }}>
@@ -91,7 +94,7 @@ export default function TooltipMenu(p: KindProps) {
       {/* Header */}
       <div style={{ fontWeight: 700, textAlign: 'center' }}>MENU</div>
 
-      {/* Component name (editable) */}
+      {/* Component name */}
       <div>
         <label
           style={{
@@ -115,7 +118,7 @@ export default function TooltipMenu(p: KindProps) {
         </div>
       </div>
 
-      {/* Component type (read-only) */}
+      {/* Component type */}
       <div>
         <label
           style={{
@@ -143,7 +146,7 @@ export default function TooltipMenu(p: KindProps) {
         </div>
       </div>
 
-      {/* Data list (header + action button) */}
+      {/* Data list */}
       <div>
         <div style={headerRow}>
           <label style={{ fontSize: 12, opacity: 0.8 }}>Data list</label>

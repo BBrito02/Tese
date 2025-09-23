@@ -35,9 +35,13 @@ export default function DashboardMenu(p: KindProps) {
     background: '#38bdf8',
   };
 
+  // array of objectives (still not implemented)
   const objectives: string[] = d.objectives ?? [];
+
+  // array for interactions (still not implemented)
   const interactions: string[] = d.interactions ?? [];
 
+  // function that prints the list of components (in this case, interactions and objectives)
   const Chips = ({ items }: { items: string[] }) =>
     items.length === 0 ? (
       <div style={{ marginTop: 8 }}>
@@ -68,7 +72,7 @@ export default function DashboardMenu(p: KindProps) {
       {/* Header */}
       <div style={{ fontWeight: 700, textAlign: 'center' }}>MENU</div>
 
-      {/* Component name (editable) */}
+      {/* Component name */}
       <div>
         <label
           style={{
@@ -92,7 +96,7 @@ export default function DashboardMenu(p: KindProps) {
         </div>
       </div>
 
-      {/* Component type (read-only) */}
+      {/* Component type */}
       <div>
         <label
           style={{

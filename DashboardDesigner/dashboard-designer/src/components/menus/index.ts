@@ -14,6 +14,7 @@ import TooltipMenu from './TooltipMenu';
 // import DataActionMenu from './DataActionMenu';
 import PlaceholderMenu from './PlaceholderMenu';
 
+// Associates every component to its respective menu (Data action still has the Base Menu)
 export const MENUS: Partial<Record<NodeKind, (p: KindProps) => JSX.Element>> = {
   Dashboard: DashboardMenu,
   Visualization: VisualizationMenu,

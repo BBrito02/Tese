@@ -48,7 +48,10 @@ export default function FilterMenu(p: KindProps) {
     background: '#38bdf8',
   };
 
+  // array list of the data attributes
   const dataList: (string | DataItem)[] = d.data ?? [];
+
+  // array list of the interactions (to be done)
   const interactions: string[] = d.interactions ?? [];
 
   const labelOf = (v: string | DataItem) =>
@@ -56,6 +59,7 @@ export default function FilterMenu(p: KindProps) {
   const typeOf = (v: string | DataItem) =>
     typeof v === 'string' ? undefined : v.dtype;
 
+  // function that prints the lists of elements
   const Chips = ({ items }: { items: Array<string | DataItem> }) =>
     items.length === 0 ? (
       <div style={{ marginTop: 8 }}>
@@ -117,7 +121,7 @@ export default function FilterMenu(p: KindProps) {
         </div>
       </div>
 
-      {/* Component type (read-only) */}
+      {/* Component type */}
       <div>
         <label
           style={{

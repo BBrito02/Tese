@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import type { DataItem, DataType } from '../../domain/types';
 
 type Props = {
-  initial: DataItem[]; // current list for that node
+  initial: DataItem[];
   onSave: (items: DataItem[]) => void;
   onCancel: () => void;
 };
@@ -16,11 +16,13 @@ const labelPill: React.CSSProperties = {
   textAlign: 'center',
 };
 
+// the data popup class itself
 export default function DataPopup({ initial, onSave, onCancel }: Props) {
   const [items, setItems] = useState<DataItem[]>(initial ?? []);
   const [name, setName] = useState('');
   const [dtype, setDtype] = useState<DataType>('Other');
 
+  //function that adds a data item
   const addItem = () => {
     const n = name.trim();
     if (!n) return;
@@ -29,6 +31,7 @@ export default function DataPopup({ initial, onSave, onCancel }: Props) {
     setDtype('Other');
   };
 
+  // function that removes a data item
   const removeItem = (idx: number) =>
     setItems((arr) => arr.filter((_, i) => i !== idx));
 

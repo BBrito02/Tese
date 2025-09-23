@@ -48,9 +48,16 @@ export default function VisualizationMenu(p: KindProps) {
     background: '#38bdf8',
   };
 
+  // array of objetives
   const objectives: string[] = d.objectives ?? [];
+
+  // array of interactions
   const interactions: string[] = d.interactions ?? [];
+
+  // array of tooltips
   const tooltips: string[] = d.tooltips ?? [];
+
+  // array of data
   const dataList: (string | DataItem)[] = d.data ?? [];
 
   const labelOf = (v: string | DataItem) =>
@@ -58,6 +65,7 @@ export default function VisualizationMenu(p: KindProps) {
   const typeOf = (v: string | DataItem) =>
     typeof v === 'string' ? undefined : v.dtype;
 
+  // funtion that lists all the attributes
   const Chips = ({ items }: { items: Array<string | DataItem> }) =>
     items.length === 0 ? (
       <div style={{ marginTop: 8 }}>
@@ -119,7 +127,7 @@ export default function VisualizationMenu(p: KindProps) {
         </div>
       </div>
 
-      {/* Component type (read-only) */}
+      {/* Component type */}
       <div>
         <label
           style={{

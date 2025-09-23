@@ -11,7 +11,12 @@ type Props = {
   onOpen?: (type: 'data' | 'interactions' | 'tooltips') => void; // ← add
 };
 
-export default function ComponentsMenu({ node, onChange, onDelete, onOpen }: Props) {
+export default function ComponentsMenu({
+  node,
+  onChange,
+  onDelete,
+  onOpen,
+}: Props) {
   const [shouldRender, setShouldRender] = useState(!!node);
   const [visible, setVisible] = useState(!!node);
   const [lastNode, setLastNode] = useState<RFNode<NodeData> | undefined>(node);
@@ -39,7 +44,7 @@ export default function ComponentsMenu({ node, onChange, onDelete, onOpen }: Pro
   const panelNode = node ?? lastNode!;
   const disabled = !node;
 
-  const Menu = MENUS[panelNode.data.kind as NodeKind] ?? BaseMenu;
+  const Menu = MENUS[panelNode.data.kind as NodeKind];
 
   return (
     <aside
@@ -61,12 +66,16 @@ export default function ComponentsMenu({ node, onChange, onDelete, onOpen }: Pro
         pointerEvents: visible ? 'auto' : 'none',
       }}
     >
-      <Menu
-        node={panelNode}
-        onChange={onChange}
-        disabled={disabled}
-        onOpen={onOpen}
-      />
+      {Menu ? (
+        <Menu
+          node={panelNode}
+          onChange={onChange}
+          disabled={disabled}
+          onOpen={onOpen}
+        />
+      ) : (
+        <BaseMenu node={panelNode} onChange={onChange} disabled={disabled} />
+      )}
 
       {onDelete && (
         <button

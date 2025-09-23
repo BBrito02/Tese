@@ -2,6 +2,7 @@
 import React, { useMemo, useState } from 'react';
 import type { DataItem, DataType } from '../../domain/types';
 
+// this graph types will change once i start implementing the graph types directly in the nodes
 type GraphType =
   | 'bar'
   | 'line'
@@ -12,12 +13,13 @@ type GraphType =
   | 'heatmap'
   | 'other';
 
+  // type that helps identify existing tooltips
 type ExistingTooltip = {
   id: string;
   title: string;
   description?: string;
   data?: Array<string | DataItem>;
-  badge?: string; // ← added: show T# (label/badge) in the dropdown
+  badge?: string;
 };
 
 type Props = {

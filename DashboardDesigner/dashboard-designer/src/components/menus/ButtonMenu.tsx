@@ -42,7 +42,7 @@ export default function ButtonMenu(p: KindProps) {
       {/* Header */}
       <div style={{ fontWeight: 700, textAlign: 'center' }}>MENU</div>
 
-      {/* Component name (editable) */}
+      {/* Component name */}
       <div>
         <label
           style={{
@@ -66,7 +66,7 @@ export default function ButtonMenu(p: KindProps) {
         </div>
       </div>
 
-      {/* Component type (read-only) */}
+      {/* Component type */}
       <div>
         <label
           style={{
@@ -94,7 +94,7 @@ export default function ButtonMenu(p: KindProps) {
         </div>
       </div>
 
-      {/* Interaction list (header row + action button) */}
+      {/* Interaction list */}
       <div>
         <div style={headerRow}>
           <label style={{ fontSize: 12, opacity: 0.8 }}>Interaction list</label>
@@ -103,20 +103,21 @@ export default function ButtonMenu(p: KindProps) {
             title="Add interaction (not implemented)"
             disabled={disabled}
             style={{ ...roundIconBtn, opacity: disabled ? 0.6 : 1 }}
-            // onClick={() => {}}
+            // On click is not implemented yet (to be done in the future)
+            onClick={() => {}}
           >
             <LuPlus size={16} />
           </button>
         </div>
 
-        {/* If none, show exactly one blank line; else you can render your list here */}
+        {/* Render empty line of list of interactions */}
         {interactions.length === 0 ? (
           <div style={{ marginTop: 8 }}>
             <div style={GhostLine} />
           </div>
         ) : (
           <div style={{ marginTop: 8 }}>
-            {/* replace with real list/chips when you implement it */}
+            {/* In here list the interaction */}
             <div style={GhostLine} />
           </div>
         )}
