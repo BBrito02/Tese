@@ -1,39 +1,9 @@
-import React from 'react';
-import { LuPlus, LuPencil, LuTag } from 'react-icons/lu';
 import type { KindProps } from './common';
-import { WhiteField, GhostLine } from './common';
+import { NameField, TypeField, ListSection } from './sections';
 
 export default function ButtonMenu(p: KindProps) {
   const d: any = p.node.data;
   const disabled = p.disabled;
-
-  const headerRow: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  };
-
-  const smallIconRight: React.CSSProperties = {
-    position: 'absolute',
-    right: 10,
-    top: '50%',
-    transform: 'translateY(-50%)',
-    color: '#64748b',
-    pointerEvents: 'none',
-  };
-
-  const roundIconBtn: React.CSSProperties = {
-    width: 28,
-    height: 28,
-    borderRadius: 999,
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    border: 'none',
-    cursor: 'pointer',
-    color: '#fff',
-    background: '#38bdf8',
-  };
 
   const interactions: string[] = d.interactions ?? [];
 
@@ -43,85 +13,25 @@ export default function ButtonMenu(p: KindProps) {
       <div style={{ fontWeight: 700, textAlign: 'center' }}>MENU</div>
 
       {/* Component name */}
-      <div>
-        <label
-          style={{
-            display: 'block',
-            fontSize: 12,
-            opacity: 0.8,
-            marginBottom: 6,
-          }}
-        >
-          Component name
-        </label>
-        <div style={{ position: 'relative' }}>
-          <input
-            placeholder="Button name"
-            value={d.title ?? ''}
-            onChange={(e) => p.onChange({ title: e.target.value })}
-            disabled={disabled}
-            style={{ ...WhiteField, paddingRight: 34 }}
-          />
-          <LuPencil size={16} style={smallIconRight} />
-        </div>
-      </div>
+      <NameField
+        value={d.title ?? ''}
+        onChange={(val) => p.onChange({ title: val })}
+        disabled={disabled}
+      />
 
       {/* Component type */}
-      <div>
-        <label
-          style={{
-            display: 'block',
-            fontSize: 12,
-            opacity: 0.8,
-            marginBottom: 6,
-          }}
-        >
-          Component type
-        </label>
-        <div style={{ position: 'relative' }}>
-          <input
-            value="Button"
-            readOnly
-            disabled
-            style={{
-              ...WhiteField,
-              paddingRight: 34,
-              opacity: 1,
-              color: '#0f172a',
-            }}
-          />
-          <LuTag size={16} style={smallIconRight} />
-        </div>
-      </div>
+      <TypeField value="Button" />
 
       {/* Interaction list */}
-      <div>
-        <div style={headerRow}>
-          <label style={{ fontSize: 12, opacity: 0.8 }}>Interaction list</label>
-          <button
-            type="button"
-            title="Add interaction (not implemented)"
-            disabled={disabled}
-            style={{ ...roundIconBtn, opacity: disabled ? 0.6 : 1 }}
-            // On click is not implemented yet (to be done in the future)
-            onClick={() => {}}
-          >
-            <LuPlus size={16} />
-          </button>
-        </div>
-
-        {/* Render empty line of list of interactions */}
-        {interactions.length === 0 ? (
-          <div style={{ marginTop: 8 }}>
-            <div style={GhostLine} />
-          </div>
-        ) : (
-          <div style={{ marginTop: 8 }}>
-            {/* In here list the interaction */}
-            <div style={GhostLine} />
-          </div>
-        )}
-      </div>
+      <ListSection
+        title="Interaction list"
+        items={interactions}
+        onAdd={() => {
+          /* hook later: p.onOpen?.('interactions') */
+        }}
+        addTooltip="Add interaction"
+        disabled={disabled}
+      />
     </div>
   );
 }

@@ -1,79 +1,27 @@
-import React from 'react';
-import { LuPencil, LuTag } from 'react-icons/lu';
 import type { KindProps } from './common';
 import { WhiteField } from './common';
+import { NameField, TypeField } from './sections';
 
 export default function PlaceholderMenu(p: KindProps) {
   const d: any = p.node.data;
   const disabled = p.disabled;
-
-  const iconRight: React.CSSProperties = {
-    position: 'absolute',
-    right: 10,
-    top: '50%',
-    transform: 'translateY(-50%)',
-    color: '#64748b',
-    pointerEvents: 'none',
-  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {/* Header */}
       <div style={{ fontWeight: 700, textAlign: 'center' }}>MENU</div>
 
-      {/* Component name */}
-      <div>
-        <label
-          style={{
-            display: 'block',
-            fontSize: 12,
-            opacity: 0.8,
-            marginBottom: 6,
-          }}
-        >
-          Component name
-        </label>
-        <div style={{ position: 'relative' }}>
-          <input
-            placeholder="Placeholder name"
-            value={d.title ?? ''}
-            onChange={(e) => p.onChange({ title: e.target.value })}
-            disabled={disabled}
-            style={{ ...WhiteField, paddingRight: 34 }}
-          />
-          <LuPencil size={16} style={iconRight} />
-        </div>
-      </div>
+      {/* Name Section */}
+      <NameField
+        value={d.title ?? ''}
+        onChange={(val) => p.onChange({ title: val })}
+        disabled={disabled}
+      />
 
-      {/* Component type */}
-      <div>
-        <label
-          style={{
-            display: 'block',
-            fontSize: 12,
-            opacity: 0.8,
-            marginBottom: 6,
-          }}
-        >
-          Component type
-        </label>
-        <div style={{ position: 'relative' }}>
-          <input
-            value="Placeholder"
-            readOnly
-            disabled
-            style={{
-              ...WhiteField,
-              paddingRight: 34,
-              opacity: 1,
-              color: '#0f172a',
-            }}
-          />
-          <LuTag size={16} style={iconRight} />
-        </div>
-      </div>
+      {/* Type Section */}
+      <TypeField value="Placeholder" />
 
-      {/* Description */}
+      {/* Description Section */}
       <div>
         <label
           style={{
