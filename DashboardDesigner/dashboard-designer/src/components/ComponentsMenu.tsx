@@ -8,7 +8,9 @@ type Props = {
   node?: RFNode<NodeData>;
   onChange: (patch: Partial<NodeData>) => void;
   onDelete?: () => void;
-  onOpen?: (type: 'data' | 'interactions' | 'tooltips') => void; // ← add
+  onOpen?: (
+    type: 'data' | 'interactions' | 'tooltips' | 'add-component'
+  ) => void; // ← add
 };
 
 export default function ComponentsMenu({

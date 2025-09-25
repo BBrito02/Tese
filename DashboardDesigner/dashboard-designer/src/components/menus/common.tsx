@@ -5,7 +5,9 @@ export type KindProps = {
   node: RFNode<NodeData>;
   onChange: (patch: Partial<NodeData>) => void;
   disabled: boolean;
-  onOpen?: (type: 'data' | 'interactions' | 'tooltips') => void;
+  onOpen?: (
+    type: 'data' | 'interactions' | 'tooltips' | 'add-component'
+  ) => void;
 };
 
 export const WhiteField: React.CSSProperties = {

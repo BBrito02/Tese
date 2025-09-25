@@ -1,5 +1,10 @@
 import type { KindProps } from './common';
-import { NameField, TypeField, ListSection } from './sections';
+import {
+  NameField,
+  TypeField,
+  ListSection,
+  AddComponentSection,
+} from './sections';
 
 export default function DashboardMenu(p: KindProps) {
   const d: any = p.node.data;
@@ -22,6 +27,13 @@ export default function DashboardMenu(p: KindProps) {
 
       {/* Component type */}
       <TypeField value="Dashboard" />
+
+      {/* Add Component Section */}
+      <AddComponentSection
+        title="Add component"
+        disabled={disabled}
+        onAdd={() => p.onOpen?.('add-component')}
+      />
 
       {/* Objectives */}
       <ListSection

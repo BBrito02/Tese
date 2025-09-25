@@ -209,19 +209,6 @@ export function OptionsSection({
 }) {
   const [input, setInput] = useState('');
 
-  const roundIconBtn: React.CSSProperties = {
-    width: 28,
-    height: 28,
-    borderRadius: 999,
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    border: 'none',
-    cursor: 'pointer',
-    color: '#fff',
-    background: '#38bdf8',
-  };
-
   const add = () => {
     const v = input.trim();
     if (!v) return;
@@ -309,6 +296,35 @@ export function OptionsSection({
             </span>
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Add new component section
+export function AddComponentSection({
+  title = 'Add component',
+  onAdd,
+  disabled,
+}: {
+  // arguments it receives
+  title?: string;
+  onAdd: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div>
+      <div style={headerRow}>
+        <label style={{ fontSize: 12, opacity: 0.8 }}>{title}</label>
+        <button
+          type="button"
+          title="Create a new component inside this Dashboard"
+          onClick={onAdd}
+          disabled={disabled}
+          style={{ ...roundIconBtn, opacity: disabled ? 0.6 : 1 }}
+        >
+          <LuPlus size={16} />
+        </button>
       </div>
     </div>
   );

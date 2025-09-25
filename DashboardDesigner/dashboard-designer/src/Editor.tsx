@@ -41,6 +41,7 @@ import { FaCloudDownloadAlt, FaCloudUploadAlt } from 'react-icons/fa';
 import Modal from './components/ui/Modal';
 import DataPopup from './components/popups/DataPopup';
 import TooltipPopup from './components/popups/TooltipPopup';
+import AddComponentPopup from './components/popups/ComponentPopup';
 
 const NODE_TYPES = { class: NodeClass };
 
@@ -66,21 +67,21 @@ export default function Editor() {
   type ModalSpec =
     | { type: 'data'; nodeId: string }
     | { type: 'interactions'; nodeId: string }
-    | { type: 'tooltips'; nodeId: string };
+    | { type: 'tooltips'; nodeId: string }
+    | { type: 'add-component'; nodeId: string };
 
   const [modal, setModal] = useState<ModalSpec | null>(null);
 
   // helper to patch a node by id
-  const updateNodeById = useCallback(
-    (id: string, patch: Partial<NodeData>) => {
-      setNodes((nds) =>
+  const updateNodeById = useCallback((id: string, patch: Partial<NodeData>) => {
+    setNodes((nds) =>
+      applyConstraints(
         nds.map((n) =>
           n.id === id ? { ...n, data: { ...n.data, ...patch } } : n
         )
-      );
-    },
-    [setNodes]
-  );
+      )
+    );
+  }, []);
 
   useEffect(() => {
     let t: ReturnType<typeof setTimeout> | undefined;
@@ -161,8 +162,10 @@ export default function Editor() {
     (patch: Partial<NodeData>) => {
       if (!selectedId) return;
       setNodes((nds) =>
-        nds.map((n) =>
-          n.id === selectedId ? { ...n, data: { ...n.data, ...patch } } : n
+        applyConstraints(
+          nds.map((n) =>
+            n.id === selectedId ? { ...n, data: { ...n.data, ...patch } } : n
+          )
         )
       );
     },
@@ -369,6 +372,166 @@ export default function Editor() {
     loadSave(data);
   };
 
+  const CONTENT_PAD = 16; // inner padding on all sides
+  const HEADER_H = 56; // approximate header (badge+title) height inside the card
+  const GRID_GAP = 16; // spacing when auto-laying out children
+
+  function isContainerKind(k: NodeKind | undefined) {
+    return k === 'Dashboard' || k === 'Visualization';
+  }
+
+  type Size = { w: number; h: number };
+  function getNodeSize(n: Node): Size {
+    const w = (n as any).width ?? (n.style as any)?.width ?? 180; // fallback
+    const h = (n as any).height ?? (n.style as any)?.height ?? 100; // fallback
+    return { w: Number(w) || 0, h: Number(h) || 0 };
+  }
+
+  function applyConstraints(input: Node[]): Node[] {
+    // Build quick index
+    const byId = new Map(input.map((n) => [n.id, n]));
+    let changed = false;
+    const out = input.map((n) => ({ ...n })); // shallow clones
+
+    // Helper to update a node in out array by id
+    const touch = (id: string, patch: Partial<Node>) => {
+      const i = out.findIndex((x) => x.id === id);
+      if (i >= 0) {
+        out[i] = { ...out[i], ...patch };
+        changed = true;
+      }
+    };
+
+    // For each container, clamp its children and compute required min size
+    for (const parent of out) {
+      if (!isContainerKind(parent.data?.kind as NodeKind)) continue;
+
+      const { w: pW, h: pH } = getNodeSize(parent);
+      const innerLeft = CONTENT_PAD;
+      const innerTop = HEADER_H + CONTENT_PAD;
+      const innerRight = pW - CONTENT_PAD;
+      const innerBottom = pH - CONTENT_PAD;
+
+      let requiredRight = innerLeft; // track how far children extend
+      let requiredBottom = innerTop;
+
+      // Clamp each child inside content rect
+      for (const child of out) {
+        if (child.parentNode !== parent.id) continue;
+
+        const { w: cW, h: cH } = getNodeSize(child);
+
+        // desired bounds for child inside content
+        const minX = innerLeft;
+        const minY = innerTop;
+        const maxX = Math.max(innerLeft, innerRight - cW);
+        const maxY = Math.max(innerTop, innerBottom - cH);
+
+        const clampedX = Math.min(Math.max(child.position.x, minX), maxX);
+        const clampedY = Math.min(Math.max(child.position.y, minY), maxY);
+
+        if (clampedX !== child.position.x || clampedY !== child.position.y) {
+          touch(child.id, { position: { x: clampedX, y: clampedY } });
+        }
+
+        // how much space do we need to contain this child?
+        requiredRight = Math.max(requiredRight, clampedX + cW);
+        requiredBottom = Math.max(requiredBottom, clampedY + cH);
+      }
+
+      // Compute required parent size from children extents + padding
+      const needW = Math.max(pW, requiredRight + CONTENT_PAD);
+      const needH = Math.max(pH, requiredBottom + CONTENT_PAD);
+
+      // Also respect some base minimums so dashboards can't be tiny
+      const baseMinW = parent.data?.kind === 'Dashboard' ? 320 : 240;
+      const baseMinH = parent.data?.kind === 'Dashboard' ? 180 : 140;
+
+      const targetW = Math.max(needW, baseMinW);
+      const targetH = Math.max(needH, baseMinH);
+
+      // If the parent is smaller than required, expand it
+      if (targetW !== pW || targetH !== pH) {
+        const style = {
+          ...(parent.style || {}),
+          width: targetW,
+          height: targetH,
+        };
+        touch(parent.id, { style });
+      }
+    }
+
+    return changed ? out : input; // don't trigger extra renders if nothing changed
+  }
+
+  const createChildInParent = useCallback(
+    (
+      parentId: string,
+      payload: { kind: NodeKind; title: string; description?: string }
+    ) => {
+      setNodes((nds) => {
+        const parent = nds.find((n) => n.id === parentId);
+        if (!parent) return nds;
+
+        const { w: pW, h: pH } = getNodeSize(parent);
+        const innerLeft = CONTENT_PAD;
+        const innerTop = HEADER_H + CONTENT_PAD;
+        const innerRight = pW - CONTENT_PAD;
+        const innerBottom = pH - CONTENT_PAD;
+        const innerWidth = Math.max(0, innerRight - innerLeft);
+
+        const defaultSizeFor = (kind: NodeKind) => {
+          if (kind === 'Visualization') return { width: 320, height: 200 };
+          if (
+            kind === 'Legend' ||
+            kind === 'Tooltip' ||
+            kind === 'Filter' ||
+            kind === 'Parameter'
+          )
+            return { width: 220, height: 120 };
+          if (kind === 'Button') return { width: 160, height: 90 };
+          if (kind === 'Placeholder') return { width: 180, height: 100 };
+          return { width: 180, height: 100 };
+        };
+        const size = defaultSizeFor(payload.kind);
+
+        // how many columns fit?
+        const cols = Math.max(
+          1,
+          Math.floor((innerWidth + GRID_GAP) / (size.width + GRID_GAP))
+        );
+        const children = nds.filter((n) => n.parentNode === parentId);
+        const idx = children.length;
+        const col = idx % cols;
+        const row = Math.floor(idx / cols);
+
+        const x = innerLeft + col * (size.width + GRID_GAP);
+        const y = innerTop + row * (size.height + GRID_GAP);
+
+        const data: NodeData = {
+          kind: payload.kind,
+          title: payload.title || payload.kind,
+          description: payload.description,
+          badge: nextBadgeFor(payload.kind, nds),
+        };
+
+        return nds.concat({
+          id: nanoid(),
+          type: 'class',
+          position: { x, y }, // relative to parent top-left
+          parentNode: parentId,
+          extent: 'parent',
+          data,
+          style: size,
+        });
+      });
+
+      // after adding, stabilize to enforce all constraints
+      setNodes((nds) => applyConstraints(nds));
+    },
+    [setNodes]
+  );
+
   return (
     <div
       id="editor-root"
@@ -443,7 +606,8 @@ export default function Editor() {
             nodes={nodes}
             edges={edges}
             onNodesChange={(chs) => {
-              onNodesChange(chs);
+              onNodesChange(chs); // let React Flow apply the changes
+              setNodes((nds) => applyConstraints(nds)); // then enforce constraints
               if (selectedId && !nodes.find((n) => n.id === selectedId))
                 setSelectedId(null);
             }}
@@ -509,6 +673,28 @@ export default function Editor() {
                 />
               );
             })()}
+          </Modal>
+        )}
+
+        {modal?.type === 'add-component' && (
+          <Modal title="Component Menu" onClose={() => setModal(null)}>
+            <AddComponentPopup
+              // types of components that i can place inside Dashboard
+              kinds={[
+                'Visualization',
+                'Legend',
+                'Tooltip',
+                'Button',
+                'Filter',
+                'Parameter',
+                'Placeholder',
+              ]}
+              onCancel={() => setModal(null)}
+              onSave={(payload) => {
+                createChildInParent(modal.nodeId, payload);
+                setModal(null);
+              }}
+            />
           </Modal>
         )}
 
