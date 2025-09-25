@@ -373,7 +373,7 @@ export default function Editor() {
   };
 
   const CONTENT_PAD = 16; // inner padding on all sides
-  const HEADER_H = 56; // approximate header (badge+title) height inside the card
+  const HEADER_H = 30; // approximate header (badge+title) height inside the card
   const GRID_GAP = 16; // spacing when auto-laying out children
 
   function isContainerKind(k: NodeKind | undefined) {
@@ -389,7 +389,6 @@ export default function Editor() {
 
   function applyConstraints(input: Node[]): Node[] {
     // Build quick index
-    const byId = new Map(input.map((n) => [n.id, n]));
     let changed = false;
     const out = input.map((n) => ({ ...n })); // shallow clones
 
@@ -477,7 +476,6 @@ export default function Editor() {
         const innerLeft = CONTENT_PAD;
         const innerTop = HEADER_H + CONTENT_PAD;
         const innerRight = pW - CONTENT_PAD;
-        const innerBottom = pH - CONTENT_PAD;
         const innerWidth = Math.max(0, innerRight - innerLeft);
 
         const defaultSizeFor = (kind: NodeKind) => {
