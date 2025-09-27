@@ -5,6 +5,7 @@ import type { NodeData } from '../domain/types';
 import { NodeResizer } from '@reactflow/node-resizer';
 import '@reactflow/node-resizer/dist/style.css';
 import type { DataItem } from '../domain/types';
+import { KIND_STYLES } from './kinds/styles';
 
 // minimal sizes fixed to avoid overlapping attributes inside the components
 const MIN_SIZE: Record<NodeData['kind'], { w: number; h: number }> = {
@@ -162,6 +163,7 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
           boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
           overflow: 'hidden', // clip inside rounded card
           boxSizing: 'border-box',
+          ...(KIND_STYLES[data.kind]?.card || {}),
         }}
       >
         {/* Header */}
