@@ -102,46 +102,47 @@ export default function Editor() {
     ? -(PANEL_WIDTH + PANEL_MARGIN + PANEL_GAP)
     : 0;
 
-  const centerNode = useCallback(
-    (id: string) => {
-      if (!rf) return;
-      const n = rf.getNode(id);
-      if (!n) return;
+  // const centerNode = useCallback(
+  //   (id: string) => {
+  //     if (!rf) return;
+  //     const n = rf.getNode(id);
+  //     if (!n) return;
 
-      const ax = n.positionAbsolute?.x ?? n.position.x;
-      const ay = n.positionAbsolute?.y ?? n.position.y;
+  //     const ax = n.positionAbsolute?.x ?? n.position.x;
+  //     const ay = n.positionAbsolute?.y ?? n.position.y;
 
-      let w = n.width ?? 0;
-      let h = n.height ?? 0;
-      if (w === 0 || h === 0) {
-        const el = document.querySelector<HTMLElement>(
-          `.react-flow__node[data-id="${
-            CSS?.escape ? CSS.escape(n.id) : n.id
-          }"]`
-        );
-        if (el) {
-          const rect = el.getBoundingClientRect();
-          const zoom = rf.getZoom();
-          w = rect.width / zoom;
-          h = rect.height / zoom;
-        }
-      }
+  //     let w = n.width ?? 0;
+  //     let h = n.height ?? 0;
+  //     if (w === 0 || h === 0) {
+  //       const el = document.querySelector<HTMLElement>(
+  //         `.react-flow__node[data-id="${
+  //           CSS?.escape ? CSS.escape(n.id) : n.id
+  //         }"]`
+  //       );
+  //       if (el) {
+  //         const rect = el.getBoundingClientRect();
+  //         const zoom = rf.getZoom();
+  //         w = rect.width / zoom;
+  //         h = rect.height / zoom;
+  //       }
+  //     }
 
-      const cx = ax + (w ? w / 2 : 0);
-      const cy = ay + (h ? h / 2 : 0);
-      rf.setCenter(cx, cy, { zoom: rf.getZoom(), duration: 220 });
-    },
-    [rf]
-  );
+  //     const cx = ax + (w ? w / 2 : 0);
+  //     const cy = ay + (h ? h / 2 : 0);
+  //     rf.setCenter(cx, cy, { zoom: rf.getZoom(), duration: 220 });
+  //   },
+  //   [rf]
+  // );
 
   // React Flow will call this whenever selection changes
   const handleSelectionChange = useCallback(
     ({ nodes: sel }: { nodes: RFNode<NodeData>[]; edges: any[] }) => {
       const id = sel[0]?.id ?? null;
       setSelectedId(id);
-      if (id) requestAnimationFrame(() => centerNode(id));
+      //if (id) requestAnimationFrame(() => centerNode(id));
     },
-    [centerNode]
+    []
+    // [centerNode]
   );
 
   const onConnect = useCallback(

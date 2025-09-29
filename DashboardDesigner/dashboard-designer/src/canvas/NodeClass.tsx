@@ -158,7 +158,7 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
           borderRadius: 12,
           background: '#fff',
           border: `2px solid ${
-            isOver ? '#38bdf8' : selected ? '#60a5fa' : '#e5e7eb'
+            isOver ? '#38bdf8' : selected ? '#60a5fa' : 'transparent'
           }`,
           boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
           overflow: 'hidden', // clip inside rounded card
