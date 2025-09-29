@@ -5,6 +5,8 @@ import ReactFlow, {
   addEdge,
   useEdgesState,
   useNodesState,
+  SelectionMode,
+  ControlButton,
 } from 'reactflow';
 import type { ReactFlowInstance, Connection, Node as RFNode } from 'reactflow';
 import 'reactflow/dist/style.css';
@@ -63,6 +65,16 @@ export default function Editor() {
 
   const lastSelectedIdRef = useRef<string | null>(null);
   const [menuExiting, setMenuExiting] = useState(false);
+
+  const [lassoMode, setLassoMode] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === 'l') setLassoMode((v) => !v);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   type ModalSpec =
     | { type: 'data'; nodeId: string }
@@ -310,7 +322,7 @@ export default function Editor() {
         height: (n as any).height ?? (n.style as any)?.height,
       },
       ...(n.parentNode ? { parentNode: n.parentNode } : {}),
-      ...(n.extent === 'parent' ? { extent: 'parent' as const } : {}), // 👈 guard
+      ...(n.extent === 'parent' ? { extent: 'parent' as const } : {}),
     }));
 
     return {
@@ -534,7 +546,7 @@ export default function Editor() {
   return (
     <div
       id="editor-root"
-      style={{ display: 'flex', height: '100vh', backgroundColor: '#5eb5cd' }}
+      style={{ display: 'flex', height: '100vh', backgroundColor: '#ffffffff' }}
     >
       <DndContext
         sensors={sensors}
@@ -602,6 +614,9 @@ export default function Editor() {
 
         <div className="canvas" ref={wrapperRef} style={{ flex: 1 }}>
           <ReactFlow
+            selectionOnDrag={lassoMode}
+            selectionMode={SelectionMode.Partial}
+            panOnDrag={!lassoMode && !isDraggingFromPalette}
             nodes={nodes}
             edges={edges}
             onNodesChange={(chs) => {
@@ -614,12 +629,22 @@ export default function Editor() {
             onConnect={onConnect}
             onInit={setRf}
             nodeTypes={NODE_TYPES}
-            panOnDrag={!isDraggingFromPalette}
             onSelectionChange={handleSelectionChange}
             fitView
           >
             <Background />
-            <Controls />
+            <Controls showInteractive>
+              <ControlButton
+                title={
+                  lassoMode
+                    ? 'Exit lasso (enable pan)'
+                    : 'Enter lasso (disable pan)'
+                }
+                onClick={() => setLassoMode((v) => !v)}
+              >
+                {lassoMode ? '🔲' : '🖐️'}
+              </ControlButton>
+            </Controls>
           </ReactFlow>
         </div>
         <ComponentsMenu
@@ -674,7 +699,10 @@ export default function Editor() {
             })()}
           </Modal>
         )}
-
+        {/* 
+            Here i am adding the component menu manually fot eh dahsboard, but in the visualization (in the future) i will have different kinds of nodes that are available, 
+            so maybe i will need to allocate this function to a different class for every node 
+        */}
         {modal?.type === 'add-component' && (
           <Modal title="Component Menu" onClose={() => setModal(null)}>
             <AddComponentPopup

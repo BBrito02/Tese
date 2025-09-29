@@ -9,21 +9,24 @@ export type KindStyle = {
 
 export const KIND_STYLES: Partial<Record<NodeData['kind'], KindStyle>> = {
   Visualization: {
-    card: { background: '#cae3ffff' },
+    card: { background: '#deebf7' },
   },
   Button: {
-    card: { background: '#d8d8d8ff' },
+    card: { background: '#e7e6e6' },
   },
   Legend: {
-    card: { background: '#d8d8d8ff' },
+    card: { background: '#e7e6e6' },
   },
   Parameter: {
-    card: { background: '#d8d8d8ff' },
+    card: { background: '#e7e6e6' },
   },
   Filter: {
-    card: { background: '#d8d8d8ff' },
+    card: { background: '#e7e6e6' },
   },
   Placeholder: {
-    card: { background: '#d8d8d8ff' },
+    card: { background: '#e7e6e6' },
+  },
+  Dashboard: {
+    card: { background: '#f5f5f5' },
   },
 };
