@@ -8,23 +8,36 @@ import type { DataItem } from '../domain/types';
 import { KIND_STYLES } from './kinds/styles';
 
 // minimal sizes fixed to avoid overlapping attributes inside the components
-const MIN_SIZE: Record<NodeData['kind'], { w: number; h: number }> = {
-  Dashboard: { w: 320, h: 180 },
-  Visualization: { w: 240, h: 140 },
-  Legend: { w: 200, h: 130 },
-  Tooltip: { w: 200, h: 130 },
-  Button: { w: 160, h: 90 },
-  Filter: { w: 200, h: 130 },
-  Parameter: { w: 200, h: 130 },
-  DataAction: { w: 160, h: 90 },
-  Placeholder: { w: 140, h: 80 },
+// Here i need to make every component smaller because of the vieweing window, its too small if the visualizations are too big and complex
+const MIN_SIZE = {
+  Dashboard: { w: 260, h: 200 },
+  Visualization: { w: 200, h: 110 },
+  Tooltip: { w: 170, h: 110 },
+  Legend: { w: 170, h: 75 },
+  Button: { w: 140, h: 75 },
+  Filter: { w: 170, h: 75 },
+  Parameter: { w: 170, h: 75 },
+  DataAction: { w: 140, h: 75 },
+  Placeholder: { w: 130, h: 40 },
 };
+
+const COMPACT_FOOTER_KINDS = new Set<NodeData['kind']>([
+  'Filter',
+  'Button',
+  'Legend',
+]);
 
 const dataLabel = (v: string | DataItem) =>
   typeof v === 'string' ? v : v.name;
 
 // function to print all the data attrributes in a single box
-function SingleDataBox({ items }: { items?: (string | DataItem)[] }) {
+function SingleDataBox({
+  items,
+  compact = false,
+}: {
+  items?: (string | DataItem)[];
+  compact?: boolean;
+}) {
   const text = (items ?? []).map(dataLabel).join(', ');
   if (!text) return null;
 
@@ -34,19 +47,18 @@ function SingleDataBox({ items }: { items?: (string | DataItem)[] }) {
         display: 'inline-block',
         width: 'auto',
         maxWidth: '90%',
-        minWidth: 120,
+        minWidth: compact ? 100 : 120, // smaller when compact
         boxSizing: 'border-box',
-
-        padding: '10px 12px',
+        padding: compact ? '6px 8px' : '10px 12px',
         border: '1px solid #e5e7eb',
         borderRadius: 5,
         background: '#f8fafc',
         fontWeight: 700,
         textAlign: 'center',
-
         whiteSpace: 'normal',
         wordBreak: 'break-word',
-        lineHeight: 0.8,
+        lineHeight: compact ? 1.05 : 1.2, // avoid clipped glyphs
+        fontSize: compact ? 11 : 12,
       }}
     >
       {text}
@@ -105,10 +117,8 @@ function DataPills({
   );
 }
 
-// the node class itself
+// Node view — all kinds can accept children (droppable)
 export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
-  const isContainer =
-    data.kind === 'Dashboard' || data.kind === 'Visualization';
   const { setNodeRef, isOver } = useDroppable({ id });
 
   const minW = MIN_SIZE[data.kind].w;
@@ -127,7 +137,7 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
 
   return (
     <div
-      ref={isContainer ? setNodeRef : undefined}
+      ref={setNodeRef}
       style={{
         width: '100%',
         height: '100%',
@@ -138,7 +148,7 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
         minHeight: minH,
       }}
     >
-      {/* React library to resize the nodes dynamically */}
+      {/* Resize handles */}
       <NodeResizer
         isVisible={selected}
         minWidth={minW}
@@ -147,13 +157,13 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
         lineStyle={{ strokeWidth: 1.5 }}
       />
 
-      {/* INNER card: header | body | footer */}
+      {/* Card: header | body | footer */}
       <div
         style={{
           position: 'absolute',
           inset: 0,
           display: 'grid',
-          gridTemplateRows: 'auto 1fr auto',
+          gridTemplateRows: 'auto minmax(0, 1fr) auto',
           minHeight: 0,
           borderRadius: 12,
           background: '#fff',
@@ -161,7 +171,7 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
             isOver ? '#38bdf8' : selected ? '#60a5fa' : 'transparent'
           }`,
           boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-          overflow: 'hidden', // clip inside rounded card
+          overflow: 'hidden',
           boxSizing: 'border-box',
           ...(KIND_STYLES[data.kind]?.card || {}),
         }}
@@ -237,20 +247,19 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
         {/* Footer */}
         {hasFooter ? (
           <div
-            style={{
-              margin: '3px',
-              display: 'flex',
-              justifyContent: 'center',
-            }}
+            style={{ margin: '3px', display: 'flex', justifyContent: 'center' }}
           >
-            <SingleDataBox items={footerItems} />
+            <SingleDataBox
+              items={footerItems}
+              compact={COMPACT_FOOTER_KINDS.has(data.kind)}
+            />
           </div>
         ) : (
           <div style={{ height: 0 }} />
         )}
       </div>
 
-      {/* RF handles */}
+      {/* Handles */}
       <Handle type="target" position={Position.Left} />
       <Handle type="source" position={Position.Right} />
     </div>

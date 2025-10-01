@@ -2,18 +2,50 @@ import type { KindProps } from './common';
 import type { DataItem } from '../../domain/types';
 import { NameField, TypeField, ListSection } from './sections';
 
+import { useModal } from '../ui/ModalHost';
+import DataPopup from '../popups/DataPopup';
+
 export default function VisualizationMenu(p: KindProps) {
   const d: any = p.node.data;
   const disabled = p.disabled;
+  const { openModal, closeModal } = useModal();
 
   const objectives: string[] = d.objectives ?? [];
   const interactions: string[] = d.interactions ?? [];
   const tooltips: string[] = d.tooltips ?? [];
   const dataList: (string | DataItem)[] = d.data ?? [];
 
+  // normalize (string | DataItem)[] -> DataItem[]
+  const initialData: DataItem[] = dataList.map((v) =>
+    typeof v === 'string' ? { name: v, dtype: 'Other' } : v
+  );
+
+  const openDataModal = () => {
+    openModal({
+      title: 'Data menu',
+      node: (
+        <DataPopup
+          initial={initialData}
+          onCancel={closeModal}
+          onSave={(items) => {
+            p.onChange({ data: items });
+            closeModal();
+          }}
+        />
+      ),
+    });
+  };
+
+  const openTooltipsModal = () => {
+    window.dispatchEvent(
+      new CustomEvent('designer:open-tooltips', {
+        detail: { nodeId: p.node.id },
+      })
+    );
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {/* Header */}
       <div style={{ fontWeight: 700, textAlign: 'center' }}>MENU</div>
 
       <NameField
@@ -23,42 +55,34 @@ export default function VisualizationMenu(p: KindProps) {
       />
       <TypeField value="Visualization" />
 
-      {/* Data List Section */}
       <ListSection
         title="Data list"
         items={dataList}
-        onAdd={() => p.onOpen?.('data')}
+        onAdd={openDataModal}
         addTooltip="Associate data"
         disabled={disabled}
       />
 
-      {/* Objectives Section */}
       <ListSection
         title="Objectives"
         items={objectives}
-        onAdd={() => {
-          /* hook later */
-        }}
+        onAdd={() => {}}
         addTooltip="Add objective"
         disabled={disabled}
       />
 
-      {/* Interaction Section */}
       <ListSection
         title="Interaction list"
         items={interactions}
-        onAdd={() => {
-          /* hook later */
-        }}
+        onAdd={() => {}}
         addTooltip="Add interaction"
         disabled={disabled}
       />
 
-      {/* Tooltips Section */}
       <ListSection
         title="Tooltips"
         items={tooltips}
-        onAdd={() => p.onOpen?.('tooltips')}
+        onAdd={openTooltipsModal}
         addTooltip="Associate tooltip"
         disabled={disabled}
       />

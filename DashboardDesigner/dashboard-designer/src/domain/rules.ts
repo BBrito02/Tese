@@ -1,6 +1,5 @@
 import type { NodeKind } from './types';
 
-// Confirmar melhor estas dependências
 const ALLOWED_TO: Readonly<Record<NodeKind, readonly NodeKind[]>> = {
   Dashboard: [
     'Visualization',
@@ -32,28 +31,8 @@ export function canConnect(
   return ALLOWED_TO[sourceKind]?.includes(targetKind) ?? false;
 }
 
-/*
-const ALLOWED_PARENTS: Readonly<
-  Partial<Record<NodeKind, readonly NodeKind[]>>
-> = {
-  Visualization: ['Dashboard'],
-  Legend: ['Dashboard', 'Visualization'],
-  Tooltip: ['Visualization'],
-  Button: ['Dashboard', 'Visualization'],
-  Filter: ['Dashboard', 'Visualization'],
-  Parameter: ['Dashboard', 'Visualization'],
-  DataAction: ['Dashboard', 'Visualization'],
-  Placeholder: ['Dashboard', 'Visualization'],
-} as const;
-
-function canNest(childKind?: NodeKind, parentKind?: NodeKind): boolean {
-  if (!childKind || !parentKind) return false;
-  const allowed = ALLOWED_PARENTS[childKind] ?? [];
-  return allowed.includes(parentKind);
+export function allowedChildKinds(parentKind?: NodeKind): NodeKind[] {
+  if (!parentKind) return [];
+  // `as NodeKind[]` is safe because keys/values are NodeKind literals
+  return [...ALLOWED_TO[parentKind]] as NodeKind[];
 }
-
-export const allowedTargetsFor = (k: NodeKind) => [...(ALLOWED_TO[k] ?? [])];
-export const allowedParentsFor = (k: NodeKind) => [
-  ...(ALLOWED_PARENTS[k] ?? []),
-];
-*/

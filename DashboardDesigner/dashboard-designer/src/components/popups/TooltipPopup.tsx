@@ -13,8 +13,8 @@ type GraphType =
   | 'heatmap'
   | 'other';
 
-  // type that helps identify existing tooltips
-type ExistingTooltip = {
+// type that helps identify existing tooltips
+export type ExistingTooltip = {
   id: string;
   title: string;
   description?: string;

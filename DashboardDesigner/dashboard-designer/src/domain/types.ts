@@ -84,15 +84,15 @@ interface VisualizationNodeData extends NodeDataBase {
   interactions?: string[]; //will be added thru the interactions menu(to be done later)
 }
 
+interface TooltipNodeData extends NodeDataBase {
+  kind: 'Tooltip';
+  data?: DataItem[]; //when adding display the data on the bottom of the component
+}
+
 interface LegendNodeData extends NodeDataBase {
   kind: 'Legend';
   data?: DataItem[]; //when adding display the data on the bottom of the component
   interactions?: string[]; //will be added thru the interactions menu(to be done later)
-}
-
-interface TooltipNodeData extends NodeDataBase {
-  kind: 'Tooltip';
-  data?: DataItem[]; //when adding display the data on the bottom of the component
 }
 
 interface ButtonNodeData extends NodeDataBase {

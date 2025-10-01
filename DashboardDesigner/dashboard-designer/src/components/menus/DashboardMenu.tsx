@@ -6,12 +6,42 @@ import {
   AddComponentSection,
 } from './sections';
 
+import { useModal } from '../ui/ModalHost';
+import AddComponentPopup from '../popups/ComponentPopup';
+import { allowedChildKinds } from '../../domain/rules';
+import type { NodeKind } from '../../domain/types';
+
 export default function DashboardMenu(p: KindProps) {
   const d: any = p.node.data;
   const disabled = p.disabled;
+  const { openModal, closeModal } = useModal();
 
   const objectives: string[] = d.objectives ?? [];
   const interactions: string[] = d.interactions ?? [];
+
+  const handleAddComponent = () => {
+    const parentKind = (p.node.data?.kind ?? 'Dashboard') as NodeKind;
+    const kinds = allowedChildKinds(parentKind);
+
+    openModal({
+      title: 'Component Menu',
+      node: (
+        <AddComponentPopup
+          kinds={kinds}
+          onCancel={closeModal}
+          onSave={(payload) => {
+            // notify the Editor to create the child node
+            window.dispatchEvent(
+              new CustomEvent('designer:add-component', {
+                detail: { parentId: p.node.id, payload },
+              })
+            );
+            closeModal();
+          }}
+        />
+      ),
+    });
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -28,11 +58,11 @@ export default function DashboardMenu(p: KindProps) {
       {/* Component type */}
       <TypeField value="Dashboard" />
 
-      {/* Add Component Section */}
+      {/* Add Component (opens modal here) */}
       <AddComponentSection
         title="Add component"
         disabled={disabled}
-        onAdd={() => p.onOpen?.('add-component')}
+        onAdd={handleAddComponent}
       />
 
       {/* Objectives */}
@@ -40,7 +70,7 @@ export default function DashboardMenu(p: KindProps) {
         title="Objectives"
         items={objectives}
         onAdd={() => {
-          /* hook later: p.onOpen?.('objectives') */
+          /* later */
         }}
         addTooltip="Add objective"
         disabled={disabled}
@@ -51,7 +81,7 @@ export default function DashboardMenu(p: KindProps) {
         title="Interaction list"
         items={interactions}
         onAdd={() => {
-          /* hook later: p.onOpen?.('interactions') */
+          /* later */
         }}
         addTooltip="Add interaction"
         disabled={disabled}

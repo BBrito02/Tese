@@ -12,7 +12,7 @@ import type { ReactFlowInstance, Connection, Node as RFNode } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { nanoid } from 'nanoid';
 import NodeClass from './canvas/NodeClass';
-import type { DataItem, NodeData, NodeKind } from './domain/types';
+import type { NodeData, NodeKind } from './domain/types';
 import { canConnect } from './domain/rules';
 import SideMenu from './components/SideMenu';
 import type { DragData } from './components/SideMenu';
@@ -38,12 +38,18 @@ import type { Edge, Node } from 'reactflow';
 import type { SaveFile, ExportNode } from './domain/saveFormat';
 import { SAVE_VERSION } from './domain/saveFormat';
 
-import { FaCloudDownloadAlt, FaCloudUploadAlt } from 'react-icons/fa';
+import TooltipPopup, {
+  type ExistingTooltip,
+} from './components/popups/TooltipPopup';
 
-import Modal from './components/ui/Modal';
-import DataPopup from './components/popups/DataPopup';
-import TooltipPopup from './components/popups/TooltipPopup';
-import AddComponentPopup from './components/popups/ComponentPopup';
+import {
+  FaCloudDownloadAlt,
+  FaCloudUploadAlt,
+  FaRegSquare,
+} from 'react-icons/fa';
+
+import { FaHand } from 'react-icons/fa6';
+import { useModal } from './components/ui/ModalHost';
 
 const NODE_TYPES = { class: NodeClass };
 
@@ -68,13 +74,7 @@ export default function Editor() {
 
   const [lassoMode, setLassoMode] = useState(false);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() === 'l') setLassoMode((v) => !v);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  const { openModal, closeModal } = useModal();
 
   type ModalSpec =
     | { type: 'data'; nodeId: string }
@@ -83,17 +83,6 @@ export default function Editor() {
     | { type: 'add-component'; nodeId: string };
 
   const [modal, setModal] = useState<ModalSpec | null>(null);
-
-  // helper to patch a node by id
-  const updateNodeById = useCallback((id: string, patch: Partial<NodeData>) => {
-    setNodes((nds) =>
-      applyConstraints(
-        nds.map((n) =>
-          n.id === id ? { ...n, data: { ...n.data, ...patch } } : n
-        )
-      )
-    );
-  }, []);
 
   useEffect(() => {
     let t: ReturnType<typeof setTimeout> | undefined;
@@ -114,47 +103,13 @@ export default function Editor() {
     ? -(PANEL_WIDTH + PANEL_MARGIN + PANEL_GAP)
     : 0;
 
-  // const centerNode = useCallback(
-  //   (id: string) => {
-  //     if (!rf) return;
-  //     const n = rf.getNode(id);
-  //     if (!n) return;
-
-  //     const ax = n.positionAbsolute?.x ?? n.position.x;
-  //     const ay = n.positionAbsolute?.y ?? n.position.y;
-
-  //     let w = n.width ?? 0;
-  //     let h = n.height ?? 0;
-  //     if (w === 0 || h === 0) {
-  //       const el = document.querySelector<HTMLElement>(
-  //         `.react-flow__node[data-id="${
-  //           CSS?.escape ? CSS.escape(n.id) : n.id
-  //         }"]`
-  //       );
-  //       if (el) {
-  //         const rect = el.getBoundingClientRect();
-  //         const zoom = rf.getZoom();
-  //         w = rect.width / zoom;
-  //         h = rect.height / zoom;
-  //       }
-  //     }
-
-  //     const cx = ax + (w ? w / 2 : 0);
-  //     const cy = ay + (h ? h / 2 : 0);
-  //     rf.setCenter(cx, cy, { zoom: rf.getZoom(), duration: 220 });
-  //   },
-  //   [rf]
-  // );
-
   // React Flow will call this whenever selection changes
   const handleSelectionChange = useCallback(
     ({ nodes: sel }: { nodes: RFNode<NodeData>[]; edges: any[] }) => {
       const id = sel[0]?.id ?? null;
       setSelectedId(id);
-      //if (id) requestAnimationFrame(() => centerNode(id));
     },
     []
-    // [centerNode]
   );
 
   const onConnect = useCallback(
@@ -543,10 +498,70 @@ export default function Editor() {
     [setNodes]
   );
 
+  useEffect(() => {
+    function onAddComponent(
+      e: CustomEvent<{
+        parentId: string;
+        payload: { kind: NodeKind; title: string; description?: string };
+      }>
+    ) {
+      const { parentId, payload } = e.detail || ({} as any);
+      if (!parentId || !payload) return;
+      createChildInParent(parentId, payload); // your existing helper
+    }
+
+    // TS helper to type the handler properly
+    const handler = onAddComponent as EventListener;
+
+    window.addEventListener('designer:add-component', handler);
+    return () => window.removeEventListener('designer:add-component', handler);
+  }, [createChildInParent]);
+
+  useEffect(() => {
+    function onOpenTooltips(e: Event) {
+      const ce = e as CustomEvent<{ nodeId: string }>;
+      const nodeId = ce.detail?.nodeId;
+      if (!nodeId) return;
+
+      // find the node that asked for the tooltip modal
+      const n = nodes.find((x) => x.id === nodeId);
+
+      // normalize its data list to DataItem[]
+      const availableData = ((n?.data as any)?.data ?? []).map((v: any) =>
+        typeof v === 'string' ? { name: v, dtype: 'Other' } : v
+      );
+
+      // gather all tooltip nodes in the graph
+      const availableTooltips: ExistingTooltip[] = nodes
+        .filter((x) => x.data?.kind === 'Tooltip')
+        .map((t) => ({
+          id: t.id,
+          title: (t.data as any)?.title ?? '',
+          badge: (t.data as any)?.badge ?? '',
+        }));
+
+      openModal({
+        title: 'Tooltip menu',
+        node: (
+          <TooltipPopup
+            availableData={availableData}
+            availableTooltips={availableTooltips}
+            onCancel={closeModal}
+            // onSave={(payload) => { /* wire up later if needed */ closeModal(); }}
+          />
+        ),
+      });
+    }
+
+    const handler = onOpenTooltips as EventListener;
+    window.addEventListener('designer:open-tooltips', handler);
+    return () => window.removeEventListener('designer:open-tooltips', handler);
+  }, [nodes, openModal, closeModal]);
+
   return (
     <div
       id="editor-root"
-      style={{ display: 'flex', height: '100vh', backgroundColor: '#ffffffff' }}
+      style={{ display: 'flex', height: '100vh', backgroundColor: '#aedbe6ff' }}
     >
       <DndContext
         sensors={sensors}
@@ -614,6 +629,8 @@ export default function Editor() {
 
         <div className="canvas" ref={wrapperRef} style={{ flex: 1 }}>
           <ReactFlow
+            minZoom={0.1}
+            maxZoom={2}
             selectionOnDrag={lassoMode}
             selectionMode={SelectionMode.Partial}
             panOnDrag={!lassoMode && !isDraggingFromPalette}
@@ -642,7 +659,7 @@ export default function Editor() {
                 }
                 onClick={() => setLassoMode((v) => !v)}
               >
-                {lassoMode ? '🔲' : '🖐️'}
+                {lassoMode ? <FaRegSquare /> : <FaHand />}
               </ControlButton>
             </Controls>
           </ReactFlow>
@@ -655,75 +672,6 @@ export default function Editor() {
             selectedId && setModal({ type: t, nodeId: selectedId })
           }
         />
-
-        {modal?.type === 'data' && (
-          <Modal title="Data menu" onClose={() => setModal(null)}>
-            <DataPopup
-              initial={
-                (nodes.find((n) => n.id === modal.nodeId)?.data as any)?.data ??
-                []
-              }
-              onCancel={() => setModal(null)}
-              onSave={(items) => {
-                updateNodeById(modal.nodeId, { data: items });
-                setModal(null);
-              }}
-            />
-          </Modal>
-        )}
-
-        {modal?.type === 'tooltips' && (
-          <Modal title="Tooltip menu" onClose={() => setModal(null)}>
-            {(() => {
-              const n = nodes.find((x) => x.id === modal.nodeId);
-              const availableData = ((n?.data as any)?.data ?? []) as Array<
-                string | DataItem
-              >;
-
-              const availableTooltips = nodes
-                .filter((n) => n.data?.kind === 'Tooltip')
-                .map((n) => ({
-                  id: n.id,
-                  title: n.data.title,
-                  badge: n.data.badge,
-                }));
-
-              return (
-                <TooltipPopup
-                  availableData={availableData}
-                  availableTooltips={availableTooltips}
-                  onCancel={() => setModal(null)}
-                  // onSave stays unimplemented for now
-                />
-              );
-            })()}
-          </Modal>
-        )}
-        {/* 
-            Here i am adding the component menu manually fot eh dahsboard, but in the visualization (in the future) i will have different kinds of nodes that are available, 
-            so maybe i will need to allocate this function to a different class for every node 
-        */}
-        {modal?.type === 'add-component' && (
-          <Modal title="Component Menu" onClose={() => setModal(null)}>
-            <AddComponentPopup
-              // types of components that i can place inside Dashboard
-              kinds={[
-                'Visualization',
-                'Legend',
-                'Tooltip',
-                'Button',
-                'Filter',
-                'Parameter',
-                'Placeholder',
-              ]}
-              onCancel={() => setModal(null)}
-              onSave={(payload) => {
-                createChildInParent(modal.nodeId, payload);
-                setModal(null);
-              }}
-            />
-          </Modal>
-        )}
 
         <DragOverlay dropAnimation={{ duration: 150 }}>
           {dragPreview ? <NodeGhost payload={dragPreview} /> : null}
