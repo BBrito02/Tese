@@ -1,4 +1,3 @@
-// src/components/popups/AddComponentPopup.tsx
 import React, { useState } from 'react';
 import type { NodeKind } from '../../domain/types';
 

@@ -8,33 +8,12 @@ import DataPopup from '../popups/DataPopup';
 export default function VisualizationMenu(p: KindProps) {
   const d: any = p.node.data;
   const disabled = p.disabled;
-  const { openModal, closeModal } = useModal();
+  const { openDataModal } = useModal();
 
   const objectives: string[] = d.objectives ?? [];
   const interactions: string[] = d.interactions ?? [];
   const tooltips: string[] = d.tooltips ?? [];
   const dataList: (string | DataItem)[] = d.data ?? [];
-
-  // normalize (string | DataItem)[] -> DataItem[]
-  const initialData: DataItem[] = dataList.map((v) =>
-    typeof v === 'string' ? { name: v, dtype: 'Other' } : v
-  );
-
-  const openDataModal = () => {
-    openModal({
-      title: 'Data menu',
-      node: (
-        <DataPopup
-          initial={initialData}
-          onCancel={closeModal}
-          onSave={(items) => {
-            p.onChange({ data: items });
-            closeModal();
-          }}
-        />
-      ),
-    });
-  };
 
   const openTooltipsModal = () => {
     window.dispatchEvent(
@@ -58,7 +37,9 @@ export default function VisualizationMenu(p: KindProps) {
       <ListSection
         title="Data list"
         items={dataList}
-        onAdd={openDataModal}
+        onAdd={() =>
+          openDataModal(dataList, (items) => p.onChange({ data: items }))
+        }
         addTooltip="Associate data"
         disabled={disabled}
       />

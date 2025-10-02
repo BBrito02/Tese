@@ -2,12 +2,16 @@ import type { KindProps } from './common';
 import { NameField, TypeField, ListSection } from './sections';
 import type { DataItem } from '../../domain/types';
 
+import { useModal } from '../ui/ModalHost';
+
 export default function FilterMenu(p: KindProps) {
   const d: any = p.node.data;
   const disabled = p.disabled;
 
   const dataList: (string | DataItem)[] = d.data ?? [];
   const interactions: string[] = d.interactions ?? [];
+
+  const { openDataModal } = useModal();
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -28,7 +32,9 @@ export default function FilterMenu(p: KindProps) {
       <ListSection
         title="Data list"
         items={dataList}
-        onAdd={() => p.onOpen?.('data')}
+        onAdd={() =>
+          openDataModal(dataList, (items) => p.onChange({ data: items }))
+        }
         addTooltip="Associate data"
         disabled={disabled}
       />

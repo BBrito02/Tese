@@ -2,6 +2,7 @@ import type { KindProps } from './common';
 import { WhiteField } from './common';
 import type { DataItem } from '../../domain/types';
 import { NameField, TypeField, ListSection } from './sections';
+import { useModal } from '../ui/ModalHost';
 
 export default function TooltipMenu(p: KindProps) {
   const d: any = p.node.data;
@@ -9,6 +10,8 @@ export default function TooltipMenu(p: KindProps) {
 
   // Data list can be strings or DataItem objects
   const dataList: (string | DataItem)[] = d.data ?? [];
+
+  const { openDataModal } = useModal();
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -29,7 +32,9 @@ export default function TooltipMenu(p: KindProps) {
       <ListSection
         title="Data list"
         items={dataList}
-        onAdd={() => p.onOpen?.('data')}
+        onAdd={() =>
+          openDataModal(dataList, (items) => p.onChange({ data: items }))
+        }
         addTooltip="Associate data"
         disabled={disabled}
       />

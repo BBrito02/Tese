@@ -36,7 +36,7 @@ const SECTIONS: Section[] = [
         Icon: LuChartColumnDecreasing,
       },
       { kind: 'Tooltip', label: 'Tooltip', Icon: LuInfo },
-      { kind: 'Legend', label: 'Legenda', Icon: LuList },
+      { kind: 'Legend', label: 'Legend', Icon: LuList },
     ],
   },
   {
