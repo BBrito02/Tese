@@ -547,6 +547,7 @@ export default function Editor() {
             availableData={availableData}
             availableTooltips={availableTooltips}
             onCancel={closeModal}
+            // To be done later on, when i finish the essentials
             // onSave={(payload) => { /* wire up later if needed */ closeModal(); }}
           />
         ),
