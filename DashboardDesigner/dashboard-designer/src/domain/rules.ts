@@ -4,20 +4,18 @@ const ALLOWED_TO: Readonly<Record<NodeKind, readonly NodeKind[]>> = {
   Dashboard: [
     'Visualization',
     'Legend',
-    'Tooltip',
     'Button',
     'Filter',
     'Parameter',
-    'DataAction',
     'Placeholder',
   ],
-  Visualization: ['Legend', 'Tooltip'],
-  Legend: [],
-  Tooltip: ['Visualization'],
-  Button: ['DataAction'],
+  Visualization: ['Legend', 'Tooltip', 'Button', 'Filter', 'Parameter'],//Missing visual variables and graph type
+  Legend: [],//missing visual variables
+  Tooltip: ['Visualization'],//missing visual variables and graph type
+  Button: [],
   Filter: ['DataAction'],
-  Parameter: ['Filter', 'Visualization'],
-  DataAction: ['Visualization'],
+  Parameter: ['Filter'],
+  DataAction: [],
   Placeholder: [],
 } as const;
 

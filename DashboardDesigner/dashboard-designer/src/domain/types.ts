@@ -1,3 +1,23 @@
+export type VisualVar = 'Size' | 'Shape' | 'Color';
+
+export type GraphType =
+  | 'Dispersion'
+  | 'Line'
+  | 'Multiuple Lines'
+  | 'Area'
+  | 'Bars'
+  | 'Pilled Bars'
+  | 'Pilled 100%'
+  | 'Gantt'
+  | 'Dots'
+  | 'Map'
+  | 'Color Map'
+  | 'Hexabin'
+  | 'Text'
+  | 'Table'
+  | 'Map Color'
+  | 'Clock';
+
 export type DataType = 'Binary' | 'Continuous' | 'Discrete' | 'Other';
 
 export interface DataItem {
@@ -27,6 +47,8 @@ interface NodeDataBase {
   description?: string;
   kind: NodeKind;
   badge?: string;
+  visualVars?: VisualVar[];
+  graphType?: GraphType | null;
 }
 
 const KIND_PREFIX = {
