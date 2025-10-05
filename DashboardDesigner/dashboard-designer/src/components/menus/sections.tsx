@@ -318,7 +318,7 @@ export function AddComponentSection({
         <label style={{ fontSize: 12, opacity: 0.8 }}>{title}</label>
         <button
           type="button"
-          title="Create a new component inside this Dashboard"
+          title="Create a new component"
           onClick={onAdd}
           disabled={disabled}
           style={{ ...roundIconBtn, opacity: disabled ? 0.6 : 1 }}

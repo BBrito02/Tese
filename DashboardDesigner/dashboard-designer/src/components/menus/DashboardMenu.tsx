@@ -1,4 +1,3 @@
-// src/components/menus/DashboardMenu.tsx
 import type { KindProps } from './common';
 import {
   NameField,

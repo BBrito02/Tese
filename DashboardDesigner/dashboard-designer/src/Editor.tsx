@@ -559,6 +559,31 @@ export default function Editor() {
     return () => window.removeEventListener('designer:open-tooltips', handler);
   }, [nodes, openModal, closeModal]);
 
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { nodeId, patch } =
+        (e as CustomEvent<{ nodeId: string; patch: Partial<NodeData> }>)
+          .detail || {};
+      if (!nodeId || !patch) return;
+
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === nodeId ? { ...n, data: { ...n.data, ...patch } } : n
+        )
+      );
+    };
+
+    window.addEventListener(
+      'designer:update-visualization-props',
+      handler as EventListener
+    );
+    return () =>
+      window.removeEventListener(
+        'designer:update-visualization-props',
+        handler as EventListener
+      );
+  }, [setNodes]);
+
   return (
     <div
       id="editor-root"

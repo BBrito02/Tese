@@ -1,7 +1,13 @@
 import type { KindProps } from './common';
-import { NameField, TypeField, ListSection } from './sections';
-import type { DataItem } from '../../domain/types';
+import {
+  NameField,
+  TypeField,
+  ListSection,
+  AddComponentSection,
+} from './sections';
+import type { DataItem, NodeKind } from '../../domain/types';
 import { useModal } from '../ui/ModalHost';
+import { allowedChildKinds } from '../../domain/rules';
 
 export default function LegendMenu(p: KindProps) {
   const d: any = p.node.data;
@@ -10,7 +16,20 @@ export default function LegendMenu(p: KindProps) {
   const dataList: (string | DataItem)[] = d.data ?? [];
   const interactions: string[] = d.interactions ?? [];
 
-  const { openDataModal } = useModal();
+  const { openDataModal, openAddComponentModal } = useModal();
+
+  const handleAddComponent = () => {
+    const parentKind = (p.node.data?.kind ?? 'Dashboard') as NodeKind;
+    const kinds = allowedChildKinds(parentKind);
+    openAddComponentModal(kinds, (payload) => {
+      // Let Editor create the child (keeps graph logic centralized)
+      window.dispatchEvent(
+        new CustomEvent('designer:add-component', {
+          detail: { parentId: p.node.id, payload },
+        })
+      );
+    });
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -26,6 +45,12 @@ export default function LegendMenu(p: KindProps) {
 
       {/* Component type */}
       <TypeField value="Legend" />
+
+      <AddComponentSection
+        title="Add component"
+        disabled={disabled}
+        onAdd={handleAddComponent}
+      />
 
       {/* Data list */}
       <ListSection

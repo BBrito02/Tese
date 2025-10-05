@@ -1,9 +1,19 @@
-// src/components/ui/ModalHost.tsx
 import React, { createContext, useContext, useMemo, useState } from 'react';
 import Modal from './Modal';
 import AddComponentPopup from '../popups/ComponentPopup';
 import DataPopup from '../popups/DataPopup';
-import type { DataItem, NodeKind } from '../../domain/types';
+import type {
+  DataItem,
+  GraphType,
+  NodeKind,
+  VisualVariable,
+} from '../../domain/types';
+
+type AddableKind = NodeKind | 'GraphType' | 'VisualVariable';
+type AddComponentResult =
+  | { kind: NodeKind; title: string; description?: string }
+  | { kind: 'GraphType'; graphType: GraphType }
+  | { kind: 'VisualVariable'; variables: VisualVariable[] };
 
 type ModalPayload = { title: string; node: React.ReactNode };
 
@@ -18,14 +28,9 @@ type ModalCtx = {
     title?: string
   ) => void;
 
-  // NEW: helper for AddComponent
   openAddComponentModal: (
-    kinds: readonly NodeKind[],
-    onSave: (payload: {
-      kind: NodeKind;
-      title: string;
-      description?: string;
-    }) => void,
+    kinds: readonly AddableKind[],
+    onSave: (payload: AddComponentResult) => void,
     title?: string
   ) => void;
 };

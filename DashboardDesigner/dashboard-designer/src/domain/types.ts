@@ -1,4 +1,4 @@
-export type VisualVar = 'Size' | 'Shape' | 'Color';
+export type VisualVariable = 'Size' | 'Shape' | 'Color';
 
 export type GraphType =
   | 'Dispersion'
@@ -47,7 +47,7 @@ interface NodeDataBase {
   description?: string;
   kind: NodeKind;
   badge?: string;
-  visualVars?: VisualVar[];
+  visualVars?: VisualVariable[];
   graphType?: GraphType | null;
 }
 
@@ -104,17 +104,22 @@ interface VisualizationNodeData extends NodeDataBase {
   data?: DataItem[]; //when adding display the data on the bottom of the component
   tooltips?: string[]; //will be added thru the tooltip menu(to be done later)
   interactions?: string[]; //will be added thru the interactions menu(to be done later)
+  graphType?: GraphType;
+  visualVars?: VisualVariable[];
 }
 
 interface TooltipNodeData extends NodeDataBase {
   kind: 'Tooltip';
   data?: DataItem[]; //when adding display the data on the bottom of the component
+  graphType?: GraphType;
+  visualVars?: VisualVariable[];
 }
 
 interface LegendNodeData extends NodeDataBase {
   kind: 'Legend';
   data?: DataItem[]; //when adding display the data on the bottom of the component
   interactions?: string[]; //will be added thru the interactions menu(to be done later)
+  visualVars?: VisualVariable[];
 }
 
 interface ButtonNodeData extends NodeDataBase {
