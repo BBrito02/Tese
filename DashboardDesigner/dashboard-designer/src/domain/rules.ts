@@ -9,7 +9,7 @@ const ALLOWED_TO: Readonly<Record<NodeKind, readonly NodeKind[]>> = {
     'Parameter',
     'Placeholder',
   ],
-  Visualization: ['Legend', 'Tooltip', 'Button', 'Filter', 'Parameter'],
+  Visualization: ['Legend', 'Button', 'Filter', 'Parameter'],
   Legend: [],
   Tooltip: ['Visualization'],
   Button: [],
