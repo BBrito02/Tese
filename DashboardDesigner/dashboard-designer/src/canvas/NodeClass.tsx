@@ -6,9 +6,9 @@ import { NodeResizer } from '@reactflow/node-resizer';
 import '@reactflow/node-resizer/dist/style.css';
 import type { DataItem } from '../domain/types';
 import { KIND_STYLES } from './kinds/styles';
+import { VISUAL_VAR_ICONS, GRAPH_TYPE_ICONS } from '../domain/icons';
+import type { VisualVariable, GraphType } from '../domain/types';
 
-// minimal sizes fixed to avoid overlapping attributes inside the components
-// Here i need to make every component smaller because of the vieweing window, its too small if the visualizations are too big and complex
 const MIN_SIZE = {
   Dashboard: { w: 260, h: 200 },
   Visualization: { w: 200, h: 110 },
@@ -62,57 +62,6 @@ function SingleDataBox({
       }}
     >
       {text}
-    </div>
-  );
-}
-
-// function to print all the data attrributes in separate boxes
-function DataPills({
-  items,
-  onClick,
-}: {
-  items: (string | DataItem)[];
-  onClick?: (index: number) => void;
-}) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 8,
-        width: '100%',
-      }}
-    >
-      {items.map((it, i) => {
-        const label = typeof it === 'string' ? it : it.name;
-        const title = typeof it === 'string' ? it : `${it.name} · ${it.dtype}`;
-        return (
-          <button
-            key={`${label}-${i}`}
-            title={title}
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={() => onClick?.(i)}
-            className="nodrag nopan"
-            style={{
-              padding: '6px 10px',
-              borderRadius: 10,
-              border: '1px solid #e5e7eb',
-              background: '#f8fafc',
-              fontWeight: 700,
-              fontSize: 12,
-              cursor: onClick ? 'pointer' : 'default',
-              maxWidth: '100%',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {label}
-          </button>
-        );
-      })}
     </div>
   );
 }
@@ -202,6 +151,52 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
           )}
           <div>
             <div style={{ fontWeight: 700 }}>{data.title}</div>
+          </div>
+
+          <div
+            style={{
+              marginLeft: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            {/* Styling for the grph type */}
+            {(data as any).graphType && (
+              <img
+                src={GRAPH_TYPE_ICONS[(data as any).graphType as GraphType]}
+                alt={(data as any).graphType}
+                title={(data as any).graphType}
+                style={{
+                  width: 20,
+                  height: 20,
+                  objectFit: 'contain',
+                  borderRadius: 4,
+                  background: 'rgba(255,255,255,0.6)',
+                  border: '1px solid #e5e7eb',
+                }}
+                draggable={false}
+              />
+            )}
+            {/* Styling for the visual attributes */}
+            {Array.isArray((data as any).visualVars) &&
+              (data as any).visualVars.map((vv: VisualVariable) => (
+                <img
+                  key={vv}
+                  src={VISUAL_VAR_ICONS[vv]}
+                  alt={vv}
+                  title={vv}
+                  style={{
+                    width: 18,
+                    height: 18,
+                    objectFit: 'contain',
+                    borderRadius: 4,
+                    background: 'rgba(255, 255, 255, 1)',
+                    border: '1px solid #e5e7eb',
+                  }}
+                  draggable={false}
+                />
+              ))}
           </div>
         </div>
 

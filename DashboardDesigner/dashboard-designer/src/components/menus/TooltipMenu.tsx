@@ -23,8 +23,7 @@ export default function TooltipMenu(p: KindProps) {
   // Data list can be strings or DataItem objects
   const dataList: (string | DataItem)[] = d.data ?? [];
 
-  const { openDataModal, openAddComponentModal, openModal, closeModal } =
-    useModal();
+  const { openDataModal, openModal, closeModal } = useModal();
 
   const handleAddComponent = () => {
     const parentKind = (p.node.data?.kind ?? 'Visualization') as NodeKind;
@@ -35,9 +34,7 @@ export default function TooltipMenu(p: KindProps) {
       title: 'Component Menu',
       node: (
         <AddComponentPopup
-          kinds={
-            kinds as unknown as (NodeKind | 'GraphType' | 'VisualVariable')[]
-          }
+          kinds={kinds as unknown as ('GraphType' | 'VisualVariable')[]}
           onCancel={closeModal}
           onSave={(payload) => {
             // Route by payload.kind
@@ -62,7 +59,6 @@ export default function TooltipMenu(p: KindProps) {
                 })
               );
             } else {
-              // regular child component -> let Editor create it
               window.dispatchEvent(
                 new CustomEvent('designer:add-component', {
                   detail: { parentId: p.node.id, payload },

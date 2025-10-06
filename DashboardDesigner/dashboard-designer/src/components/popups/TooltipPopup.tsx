@@ -53,8 +53,6 @@ const chip: React.CSSProperties = {
   gap: 6,
 };
 
-const labelOf = (v: string | DataItem) => (typeof v === 'string' ? v : v.name);
-
 // format option as "<badge> – <name>" or just "<name>" if no badge
 const optionLabel = (t: ExistingTooltip) => {
   const name = t.title || '(untitled tooltip)';

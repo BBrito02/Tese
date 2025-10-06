@@ -3,19 +3,19 @@ export type VisualVariable = 'Size' | 'Shape' | 'Color';
 export type GraphType =
   | 'Dispersion'
   | 'Line'
-  | 'Multiuple Lines'
+  | 'MultipleLines'
   | 'Area'
   | 'Bars'
-  | 'Pilled Bars'
-  | 'Pilled 100%'
+  | 'PilledBars'
+  | 'Pilled100'
   | 'Gantt'
   | 'Dots'
   | 'Map'
-  | 'Color Map'
+  | 'ColorMap'
   | 'Hexabin'
   | 'Text'
   | 'Table'
-  | 'Map Color'
+  | 'HeatMap'
   | 'Clock';
 
 export type DataType = 'Binary' | 'Continuous' | 'Discrete' | 'Other';

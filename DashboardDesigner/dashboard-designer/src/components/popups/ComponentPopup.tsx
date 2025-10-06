@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { NodeKind, GraphType, VisualVariable } from '../../domain/types';
+import { VISUAL_VAR_ICONS, GRAPH_TYPE_ICONS } from '../../domain/icons';
 
 type Props = {
   kinds: (NodeKind | 'GraphType' | 'VisualVariable')[];
@@ -14,42 +15,66 @@ type Props = {
 
 export default function AddComponentPopup({ kinds, onCancel, onSave }: Props) {
   const [kind, setKind] = useState<Props['kinds'][number]>(kinds[0]);
+
+  // SPECIAL states
+  const [variables, setVariables] = useState<VisualVariable[]>([]);
+  const [graphType, setGraphType] = useState<GraphType>('Line');
+
+  // DEFAULT node states
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
 
-  // specials state
-  const [graphType, setGraphType] = useState<GraphType>('Line');
-  const [vSize, setVSize] = useState(false);
-  const [vShape, setVShape] = useState(false);
-  const [vColor, setVColor] = useState(true);
-
   const isSpecial = kind === 'GraphType' || kind === 'VisualVariable';
+
+  // Reset unrelated fields when switching "Type"
+  useEffect(() => {
+    if (kind === 'GraphType') {
+      setVariables([]); // not used
+      // keep last chosen graphType or set default
+    } else if (kind === 'VisualVariable') {
+      setVariables([]); // start fresh
+    } else {
+      setTitle('');
+      setDescription('');
+    }
+  }, [kind]);
+
+  function toggleVar(v: VisualVariable) {
+    setVariables((prev) =>
+      prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]
+    );
+  }
 
   const canSave = useMemo(() => {
     if (kind === 'GraphType') return Boolean(graphType);
-    if (kind === 'VisualVariable') return vSize || vShape || vColor;
+    if (kind === 'VisualVariable') return variables.length > 0;
     return title.trim().length > 0;
-  }, [kind, title, graphType, vSize, vShape, vColor]);
+  }, [kind, title, graphType, variables]);
 
   const save = () => {
     if (!canSave) return;
+
     if (kind === 'GraphType') {
       onSave({ kind, graphType });
-    } else if (kind === 'VisualVariable') {
-      const vars: VisualVariable[] = [
-        ...(vSize ? (['Size'] as const) : []),
-        ...(vShape ? (['Shape'] as const) : []),
-        ...(vColor ? (['Color'] as const) : []),
-      ];
-      onSave({ kind, variables: vars });
-    } else {
-      onSave({
-        kind,
-        title: title.trim(),
-        description: description.trim() || undefined,
-      });
+      return;
     }
+
+    if (kind === 'VisualVariable') {
+      onSave({ kind, variables });
+      return;
+    }
+
+    onSave({
+      kind: kind as NodeKind,
+      title: title.trim(),
+      description: description.trim() || undefined,
+    });
   };
+
+  // Safe keys typed as GraphType[]
+  const GRAPH_TYPES = Object.keys(
+    GRAPH_TYPE_ICONS
+  ) as (keyof typeof GRAPH_TYPE_ICONS)[] as GraphType[];
 
   return (
     <div style={{ display: 'grid', gap: 12 }}>
@@ -85,94 +110,110 @@ export default function AddComponentPopup({ kinds, onCancel, onSave }: Props) {
 
       {/* Graph Type form */}
       {kind === 'GraphType' && (
-        <div>
-          <label
-            style={{
-              display: 'block',
-              fontSize: 12,
-              opacity: 0.8,
-              marginBottom: 6,
-            }}
-          >
+        <div style={{ display: 'grid', gap: 10 }}>
+          <div style={{ fontWeight: 700, fontSize: 12, opacity: 0.8 }}>
             Graph type
-          </label>
-          <select
-            value={graphType}
-            onChange={(e) => setGraphType(e.target.value as GraphType)}
+          </div>
+
+          <div
             style={{
-              width: '100%',
-              padding: '8px 12px',
-              borderRadius: 10,
-              border: '1px solid #e5e7eb',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+              gap: 8,
             }}
           >
-            {[
-              'Dispersion',
-              'Line',
-              'MultipleLines',
-              'Area',
-              'Bars',
-              'StackedBars',
-              'Stacked100',
-              'Gantt',
-              'Dots',
-              'Map',
-              'Choropleth',
-              'Hexbin',
-              'Text',
-              'Table',
-              'Clock',
-            ].map((gt) => (
-              <option key={gt} value={gt}>
-                {gt}
-              </option>
+            {GRAPH_TYPES.map((gt) => (
+              <label
+                key={gt}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  border: '1px solid #e5e7eb',
+                  borderRadius: 10,
+                  padding: '6px 8px',
+                  cursor: 'pointer',
+                  background: graphType === gt ? '#eef2ff' : '#fff',
+                }}
+                title={gt}
+              >
+                <input
+                  type="radio"
+                  name="graphType"
+                  checked={graphType === gt}
+                  onChange={() => setGraphType(gt)}
+                />
+                <img
+                  src={GRAPH_TYPE_ICONS[gt]}
+                  alt={gt}
+                  style={{ width: 22, height: 22, objectFit: 'contain' }}
+                  draggable={false}
+                />
+                <span
+                  style={{ fontWeight: 600, fontSize: 12, lineHeight: 1.1 }}
+                >
+                  {gt}
+                </span>
+              </label>
             ))}
-          </select>
+          </div>
         </div>
       )}
 
       {/* Visual Variable form */}
       {kind === 'VisualVariable' && (
-        <div>
-          <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 6 }}>
+        <div style={{ display: 'grid', gap: 10 }}>
+          <div style={{ fontWeight: 700, fontSize: 12, opacity: 0.8 }}>
             Visual variables
           </div>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <label
-              style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}
-            >
-              <input
-                type="checkbox"
-                checked={vSize}
-                onChange={(e) => setVSize(e.target.checked)}
-              />{' '}
-              Size
-            </label>
-            <label
-              style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}
-            >
-              <input
-                type="checkbox"
-                checked={vShape}
-                onChange={(e) => setVShape(e.target.checked)}
-              />{' '}
-              Shape
-            </label>
-            <label
-              style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}
-            >
-              <input
-                type="checkbox"
-                checked={vColor}
-                onChange={(e) => setVColor(e.target.checked)}
-              />{' '}
-              Color
-            </label>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+              gap: 8,
+            }}
+          >
+            {(['Size', 'Shape', 'Color'] as VisualVariable[]).map((vv) => {
+              const selected = variables.includes(vv);
+              return (
+                <button
+                  key={vv}
+                  type="button"
+                  onClick={() => toggleVar(vv)}
+                  title={vv}
+                  aria-pressed={selected}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    border: '1px solid #e5e7eb',
+                    borderRadius: 10,
+                    padding: '6px 8px',
+                    cursor: 'pointer',
+                    background: selected ? '#eef2ff' : '#fff',
+                  }}
+                >
+                  <input type="checkbox" checked={selected} readOnly />
+                  <img
+                    src={VISUAL_VAR_ICONS[vv]}
+                    alt={vv}
+                    style={{ width: 22, height: 22, objectFit: 'contain' }}
+                    draggable={false}
+                  />
+                  <span
+                    style={{ fontWeight: 600, fontSize: 12, lineHeight: 1.1 }}
+                  >
+                    {vv}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* Default node form (hidden for specials) */}
+      {/* Default node form */}
       {!isSpecial && (
         <>
           <div>

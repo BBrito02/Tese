@@ -9,9 +9,9 @@ const ALLOWED_TO: Readonly<Record<NodeKind, readonly NodeKind[]>> = {
     'Parameter',
     'Placeholder',
   ],
-  Visualization: ['Legend', 'Tooltip', 'Button', 'Filter', 'Parameter'],//Missing visual variables and graph type
-  Legend: [],//missing visual variables
-  Tooltip: ['Visualization'],//missing visual variables and graph type
+  Visualization: ['Legend', 'Tooltip', 'Button', 'Filter', 'Parameter'],
+  Legend: [],
+  Tooltip: ['Visualization'],
   Button: [],
   Filter: ['DataAction'],
   Parameter: ['Filter'],
