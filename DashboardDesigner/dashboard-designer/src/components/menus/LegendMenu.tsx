@@ -5,9 +5,10 @@ import {
   ListSection,
   AddComponentSection,
 } from './sections';
-import type { DataItem, NodeKind } from '../../domain/types';
+import type { DataItem, NodeKind, VisualVariable } from '../../domain/types';
 import { useModal } from '../ui/ModalHost';
 import { allowedChildKinds } from '../../domain/rules';
+import AddComponentPopup from '../popups/ComponentPopup';
 
 export default function LegendMenu(p: KindProps) {
   const d: any = p.node.data;
@@ -16,18 +17,39 @@ export default function LegendMenu(p: KindProps) {
   const dataList: (string | DataItem)[] = d.data ?? [];
   const interactions: string[] = d.interactions ?? [];
 
-  const { openDataModal, openAddComponentModal } = useModal();
+  const { openDataModal, openModal, closeModal } = useModal();
 
   const handleAddComponent = () => {
-    const parentKind = (p.node.data?.kind ?? 'Dashboard') as NodeKind;
-    const kinds = allowedChildKinds(parentKind);
-    openAddComponentModal(kinds, (payload) => {
-      // Let Editor create the child (keeps graph logic centralized)
-      window.dispatchEvent(
-        new CustomEvent('designer:add-component', {
-          detail: { parentId: p.node.id, payload },
-        })
-      );
+    const parentKind = (p.node.data?.kind ?? 'Visualization') as NodeKind;
+    const baseKinds = allowedChildKinds(parentKind); // NodeKind[]
+    const kinds = [...baseKinds, 'VisualVariable'] as const;
+
+    openModal({
+      title: 'Component Menu',
+      node: (
+        <AddComponentPopup
+          kinds={
+            kinds as unknown as (NodeKind | 'GraphType' | 'VisualVariable')[]
+          }
+          onCancel={closeModal}
+          onSave={(payload) => {
+            // Route by payload.kind
+            if (payload.kind === 'VisualVariable') {
+              window.dispatchEvent(
+                new CustomEvent('designer:update-visualization-props', {
+                  detail: {
+                    nodeId: p.node.id,
+                    patch: {
+                      visualVars: payload.variables as VisualVariable[],
+                    },
+                  },
+                })
+              );
+            }
+            closeModal();
+          }}
+        />
+      ),
     });
   };
 

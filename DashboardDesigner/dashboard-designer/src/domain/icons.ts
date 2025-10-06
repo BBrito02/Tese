@@ -1,9 +1,9 @@
 import type { VisualVariable, GraphType } from '../domain/types';
 
 export const VISUAL_VAR_ICONS: Record<VisualVariable, string> = {
-  Size: '/icons/visvar_color.png',
+  Color: '/icons/visvar_color.png',
   Shape: '/icons/visvar_shape.png',
-  Color: '/icons/visvar_size.png',
+  Size: '/icons/visvar_size.png',
 };
 
 export const GRAPH_TYPE_ICONS: Record<GraphType, string> = {
