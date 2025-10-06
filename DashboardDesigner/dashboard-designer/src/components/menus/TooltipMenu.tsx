@@ -34,7 +34,9 @@ export default function TooltipMenu(p: KindProps) {
       title: 'Component Menu',
       node: (
         <AddComponentPopup
-          kinds={kinds as unknown as ('GraphType' | 'VisualVariable')[]}
+          kinds={
+            kinds as unknown as (NodeKind | 'GraphType' | 'VisualVariable')[]
+          }
           onCancel={closeModal}
           onSave={(payload) => {
             // Route by payload.kind
