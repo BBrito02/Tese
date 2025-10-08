@@ -1,17 +1,12 @@
+// VisualizationMenu.tsx
 import type { KindProps } from './common';
-import type {
-  DataItem,
-  GraphType,
-  NodeKind,
-  VisualVariable,
-} from '../../domain/types';
+import type { DataItem, NodeKind, GraphType } from '../../domain/types';
 import {
   NameField,
   TypeField,
   ListSection,
   AddComponentSection,
 } from './sections';
-
 import { useModal } from '../ui/ModalHost';
 import { allowedChildKinds } from '../../domain/rules';
 import AddComponentPopup from '../popups/ComponentPopup';
@@ -19,64 +14,53 @@ import AddComponentPopup from '../popups/ComponentPopup';
 export default function VisualizationMenu(p: KindProps) {
   const d: any = p.node.data;
   const disabled = p.disabled;
-  const { openDataModal, openModal, closeModal } = useModal();
+  const { openModal, closeModal, openDataModal } = useModal();
 
   const objectives: string[] = d.objectives ?? [];
   const interactions: string[] = d.interactions ?? [];
   const tooltips: string[] = d.tooltips ?? [];
   const dataList: (string | DataItem)[] = d.data ?? [];
 
-  const openTooltipsModal = () => {
-    window.dispatchEvent(
-      new CustomEvent('designer:open-tooltips', {
-        detail: { nodeId: p.node.id },
-      })
-    );
-  };
-
   const handleAddComponent = () => {
     const parentKind = (p.node.data?.kind ?? 'Visualization') as NodeKind;
-    const baseKinds = allowedChildKinds(parentKind); // NodeKind[]
+    const baseKinds = allowedChildKinds(parentKind).filter(
+      (k) => k !== 'Graph'
+    );
     const kinds = [...baseKinds, 'GraphType', 'VisualVariable'] as const;
 
     openModal({
       title: 'Component Menu',
       node: (
         <AddComponentPopup
-          kinds={
-            kinds as unknown as (NodeKind | 'GraphType' | 'VisualVariable')[]
-          }
+          kinds={kinds as any}
           onCancel={closeModal}
           onSave={(payload) => {
-            // Route by payload.kind
             if (payload.kind === 'GraphType') {
+              // ⬇️ tell the editor to create/patch the Graph CHILD
               window.dispatchEvent(
-                new CustomEvent('designer:update-visualization-props', {
+                new CustomEvent('designer:set-graph-type', {
                   detail: {
                     nodeId: p.node.id,
-                    patch: { graphType: payload.graphType as GraphType },
+                    graphType: payload.graphType as GraphType,
                   },
                 })
               );
-            } else if (payload.kind === 'VisualVariable') {
-              window.dispatchEvent(
-                new CustomEvent('designer:update-visualization-props', {
-                  detail: {
-                    nodeId: p.node.id,
-                    patch: {
-                      visualVars: payload.variables as VisualVariable[],
-                    },
-                  },
-                })
-              );
-            } else {
-              // regular child component -> let Editor create it
-              window.dispatchEvent(
-                new CustomEvent('designer:add-component', {
-                  detail: { parentId: p.node.id, payload },
-                })
-              );
+              closeModal();
+              return;
             }
+
+            if (payload.kind === 'VisualVariable') {
+              p.onChange({ visualVars: payload.variables });
+              closeModal();
+              return;
+            }
+
+            // regular child
+            window.dispatchEvent(
+              new CustomEvent('designer:add-component', {
+                detail: { parentId: p.node.id, payload },
+              })
+            );
             closeModal();
           }}
         />
@@ -84,10 +68,10 @@ export default function VisualizationMenu(p: KindProps) {
     });
   };
 
+  // ... the rest of the menu (data list, objectives, etc.) unchanged ...
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ fontWeight: 700, textAlign: 'center' }}>MENU</div>
-
       <NameField
         value={d.title ?? ''}
         onChange={(val) => p.onChange({ title: val })}
@@ -118,7 +102,6 @@ export default function VisualizationMenu(p: KindProps) {
         addTooltip="Add objective"
         disabled={disabled}
       />
-
       <ListSection
         title="Interaction list"
         items={interactions}
@@ -126,11 +109,16 @@ export default function VisualizationMenu(p: KindProps) {
         addTooltip="Add interaction"
         disabled={disabled}
       />
-
       <ListSection
         title="Tooltips"
         items={tooltips}
-        onAdd={openTooltipsModal}
+        onAdd={() => {
+          window.dispatchEvent(
+            new CustomEvent('designer:open-tooltips', {
+              detail: { nodeId: p.node.id },
+            })
+          );
+        }}
         addTooltip="Associate tooltip"
         disabled={disabled}
       />

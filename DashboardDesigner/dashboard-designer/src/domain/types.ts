@@ -29,7 +29,8 @@ export type VisualizationCompKind =
   | 'Dashboard'
   | 'Visualization'
   | 'Tooltip'
-  | 'Legend';
+  | 'Legend'
+  | 'Graph';
 
 export type InteractionCompKind =
   | 'Button'
@@ -40,7 +41,8 @@ export type InteractionCompKind =
 export type NodeKind =
   | VisualizationCompKind
   | InteractionCompKind
-  | 'Placeholder';
+  | 'Placeholder'
+  | 'Graph';
 
 interface NodeDataBase {
   title: string;
@@ -151,6 +153,11 @@ interface PlaceholderNodeData extends NodeDataBase {
   image?: string;
 }
 
+export interface GraphNodeData extends NodeDataBase {
+  kind: 'Graph';
+  graphType: GraphType;
+}
+
 export type NodeData =
   | DashboardNodeData
   | VisualizationNodeData
@@ -160,4 +167,5 @@ export type NodeData =
   | FilterNodeData
   | ParameterNodeData
   | DataActionNodeData
-  | PlaceholderNodeData;
+  | PlaceholderNodeData
+  | GraphNodeData;

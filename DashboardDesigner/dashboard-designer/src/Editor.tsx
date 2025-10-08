@@ -12,7 +12,7 @@ import type { ReactFlowInstance, Connection, Node as RFNode } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { nanoid } from 'nanoid';
 import NodeClass from './canvas/NodeClass';
-import type { NodeData, NodeKind } from './domain/types';
+import type { GraphType, NodeData, NodeKind } from './domain/types';
 import { canConnect } from './domain/rules';
 import SideMenu from './components/SideMenu';
 import type { DragData } from './components/SideMenu';
@@ -75,6 +75,17 @@ export default function Editor() {
   const [lassoMode, setLassoMode] = useState(false);
 
   const { openModal, closeModal } = useModal();
+
+  const updateNodeById = useCallback(
+    (id: string, patch: Partial<NodeData>) => {
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === id ? { ...n, data: { ...n.data, ...patch } } : n
+        )
+      );
+    },
+    [setNodes]
+  );
 
   type ModalSpec =
     | { type: 'data'; nodeId: string }
@@ -236,10 +247,19 @@ export default function Editor() {
       y: viewportPt.y - bounds.top,
     });
 
-    const data: NodeData = {
-      kind: payload.kind,
-      title: payload.title ?? payload.kind,
-    };
+    let data: NodeData;
+    if (payload.kind === 'Graph') {
+      data = {
+        kind: 'Graph',
+        title: payload.title ?? 'Graph',
+        graphType: 'Line', // sensible default; pick any GraphType you prefer
+      };
+    } else {
+      data = {
+        kind: payload.kind,
+        title: payload.title ?? payload.kind,
+      } as NodeData;
+    }
 
     const defaultSizeFor = (kind: NodeKind) => {
       if (kind === 'Dashboard') return { width: 700, height: 380 };
@@ -431,16 +451,23 @@ export default function Editor() {
     return changed ? out : input; // don't trigger extra renders if nothing changed
   }
 
+  type ChildPayload =
+    | { kind: Exclude<NodeKind, 'Graph'>; title: string; description?: string }
+    | {
+        kind: 'Graph';
+        title: string;
+        description?: string;
+        graphType: GraphType;
+      };
+
+  // Editor.tsx
   const createChildInParent = useCallback(
-    (
-      parentId: string,
-      payload: { kind: NodeKind; title: string; description?: string }
-    ) => {
+    (parentId: string, payload: ChildPayload) => {
       setNodes((nds) => {
         const parent = nds.find((n) => n.id === parentId);
         if (!parent) return nds;
 
-        const { w: pW, h: pH } = getNodeSize(parent);
+        const { w: pW } = getNodeSize(parent);
         const innerLeft = CONTENT_PAD;
         const innerTop = HEADER_H + CONTENT_PAD;
         const innerRight = pW - CONTENT_PAD;
@@ -457,11 +484,11 @@ export default function Editor() {
             return { width: 220, height: 120 };
           if (kind === 'Button') return { width: 160, height: 90 };
           if (kind === 'Placeholder') return { width: 180, height: 100 };
+          if (kind === 'Graph') return { width: 200, height: 140 }; // sensible default
           return { width: 180, height: 100 };
         };
         const size = defaultSizeFor(payload.kind);
 
-        // how many columns fit?
         const cols = Math.max(
           1,
           Math.floor((innerWidth + GRID_GAP) / (size.width + GRID_GAP))
@@ -474,17 +501,29 @@ export default function Editor() {
         const x = innerLeft + col * (size.width + GRID_GAP);
         const y = innerTop + row * (size.height + GRID_GAP);
 
-        const data: NodeData = {
-          kind: payload.kind,
-          title: payload.title || payload.kind,
-          description: payload.description,
-          badge: nextBadgeFor(payload.kind, nds),
-        };
+        let data: NodeData;
+        if (payload.kind === 'Graph') {
+          // graphType is required by the union
+          data = {
+            kind: 'Graph',
+            title: payload.title || 'Graph',
+            description: payload.description,
+            badge: nextBadgeFor('Graph', nds),
+            graphType: payload.graphType,
+          };
+        } else {
+          data = {
+            kind: payload.kind,
+            title: payload.title || payload.kind,
+            description: payload.description,
+            badge: nextBadgeFor(payload.kind, nds),
+          } as NodeData;
+        }
 
         return nds.concat({
           id: nanoid(),
           type: 'class',
-          position: { x, y }, // relative to parent top-left
+          position: { x, y },
           parentNode: parentId,
           extent: 'parent',
           data,
@@ -492,7 +531,6 @@ export default function Editor() {
         });
       });
 
-      // after adding, stabilize to enforce all constraints
       setNodes((nds) => applyConstraints(nds));
     },
     [setNodes]
@@ -500,19 +538,13 @@ export default function Editor() {
 
   useEffect(() => {
     function onAddComponent(
-      e: CustomEvent<{
-        parentId: string;
-        payload: { kind: NodeKind; title: string; description?: string };
-      }>
+      e: CustomEvent<{ parentId: string; payload: ChildPayload }>
     ) {
       const { parentId, payload } = e.detail || ({} as any);
       if (!parentId || !payload) return;
-      createChildInParent(parentId, payload); // your existing helper
+      createChildInParent(parentId, payload);
     }
-
-    // TS helper to type the handler properly
-    const handler = onAddComponent as EventListener;
-
+    const handler = onAddComponent as unknown as EventListener;
     window.addEventListener('designer:add-component', handler);
     return () => window.removeEventListener('designer:add-component', handler);
   }, [createChildInParent]);
@@ -559,6 +591,7 @@ export default function Editor() {
     return () => window.removeEventListener('designer:open-tooltips', handler);
   }, [nodes, openModal, closeModal]);
 
+  // Editor.tsx
   useEffect(() => {
     const handler = (e: Event) => {
       const { nodeId, patch } =
@@ -582,6 +615,70 @@ export default function Editor() {
         'designer:update-visualization-props',
         handler as EventListener
       );
+  }, [setNodes]);
+
+  useEffect(() => {
+    function onPatchNodeData(
+      e: CustomEvent<{ nodeId: string; patch: Partial<NodeData> }>
+    ) {
+      const { nodeId, patch } = e.detail || ({} as any);
+      if (!nodeId || !patch) return;
+      updateNodeById(nodeId, patch);
+    }
+    const handler = onPatchNodeData as EventListener;
+    window.addEventListener('designer:patch-node-data', handler);
+    return () =>
+      window.removeEventListener('designer:patch-node-data', handler);
+  }, [updateNodeById]);
+
+  useEffect(() => {
+    function onSetGraphType(e: Event) {
+      const { nodeId, graphType } =
+        (e as CustomEvent<{ nodeId: string; graphType: GraphType }>).detail ||
+        {};
+      if (!nodeId || !graphType) return;
+
+      setNodes((nds) => {
+        const parent = nds.find((n) => n.id === nodeId);
+        if (!parent) return nds;
+
+        // (optional) store graphType on the parent too, but it won’t be rendered
+        const withParent = nds.map((n) =>
+          n.id === nodeId ? { ...n, data: { ...n.data, graphType } } : n
+        );
+
+        const existing = withParent.find(
+          (n) => n.parentNode === nodeId && (n.data as any)?.kind === 'Graph'
+        );
+
+        if (existing) {
+          return withParent.map((n) =>
+            n.id === existing.id ? { ...n, data: { ...n.data, graphType } } : n
+          );
+        }
+
+        const size = { width: 200, height: 140 };
+        const pos = { x: 16, y: 16 }; // start near top-left inside the parent
+        return withParent.concat({
+          id: nanoid(),
+          type: 'class',
+          position: pos, // relative to parent
+          parentNode: nodeId,
+          extent: 'parent', // constrain inside parent content
+          style: size,
+          data: {
+            kind: 'Graph',
+            title: 'Graph',
+            graphType,
+            badge: nextBadgeFor('Graph', withParent),
+          } as NodeData,
+        });
+      });
+    }
+
+    const handler = onSetGraphType as unknown as EventListener;
+    window.addEventListener('designer:set-graph-type', handler);
+    return () => window.removeEventListener('designer:set-graph-type', handler);
   }, [setNodes]);
 
   return (

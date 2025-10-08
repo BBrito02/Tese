@@ -9,14 +9,15 @@ const ALLOWED_TO: Readonly<Record<NodeKind, readonly NodeKind[]>> = {
     'Parameter',
     'Placeholder',
   ],
-  Visualization: ['Legend', 'Button', 'Filter', 'Parameter'],
+  Visualization: ['Legend', 'Button', 'Filter', 'Parameter', 'Graph'],
   Legend: [],
-  Tooltip: ['Visualization'],
+  Tooltip: ['Visualization', 'Graph'],
   Button: [],
   Filter: ['DataAction'],
   Parameter: ['Filter'],
   DataAction: [],
   Placeholder: [],
+  Graph: [],
 } as const;
 
 export function canConnect(

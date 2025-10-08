@@ -16,7 +16,7 @@ type Props = {
 export default function AddComponentPopup({ kinds, onCancel, onSave }: Props) {
   const [kind, setKind] = useState<Props['kinds'][number]>(kinds[0]);
 
-  // SPECIAL states
+  // sets the new attributes
   const [variables, setVariables] = useState<VisualVariable[]>([]);
   const [graphType, setGraphType] = useState<GraphType>('Line');
 
@@ -40,8 +40,8 @@ export default function AddComponentPopup({ kinds, onCancel, onSave }: Props) {
   }, [kind]);
 
   function toggleVar(v: VisualVariable) {
-    setVariables((prev) =>
-      prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]
+    setVariables((xs) =>
+      xs.includes(v) ? xs.filter((y) => y !== v) : [...xs, v]
     );
   }
 
@@ -78,7 +78,7 @@ export default function AddComponentPopup({ kinds, onCancel, onSave }: Props) {
 
   return (
     <div style={{ display: 'grid', gap: 12 }}>
-      {/* Kind selector */}
+      {/* Type */}
       <div>
         <label
           style={{
@@ -108,13 +108,12 @@ export default function AddComponentPopup({ kinds, onCancel, onSave }: Props) {
         </select>
       </div>
 
-      {/* Graph Type form */}
+      {/* GraphType form */}
       {kind === 'GraphType' && (
         <div style={{ display: 'grid', gap: 10 }}>
           <div style={{ fontWeight: 700, fontSize: 12, opacity: 0.8 }}>
             Graph type
           </div>
-
           <div
             style={{
               display: 'grid',
@@ -125,6 +124,7 @@ export default function AddComponentPopup({ kinds, onCancel, onSave }: Props) {
             {GRAPH_TYPES.map((gt) => (
               <label
                 key={gt}
+                title={gt}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -135,7 +135,6 @@ export default function AddComponentPopup({ kinds, onCancel, onSave }: Props) {
                   cursor: 'pointer',
                   background: graphType === gt ? '#eef2ff' : '#fff',
                 }}
-                title={gt}
               >
                 <input
                   type="radio"
@@ -147,7 +146,6 @@ export default function AddComponentPopup({ kinds, onCancel, onSave }: Props) {
                   src={GRAPH_TYPE_ICONS[gt]}
                   alt={gt}
                   style={{ width: 22, height: 22, objectFit: 'contain' }}
-                  draggable={false}
                 />
                 <span
                   style={{ fontWeight: 600, fontSize: 12, lineHeight: 1.1 }}
@@ -160,13 +158,12 @@ export default function AddComponentPopup({ kinds, onCancel, onSave }: Props) {
         </div>
       )}
 
-      {/* Visual Variable form */}
+      {/* VisualVariable form */}
       {kind === 'VisualVariable' && (
         <div style={{ display: 'grid', gap: 10 }}>
           <div style={{ fontWeight: 700, fontSize: 12, opacity: 0.8 }}>
             Visual variables
           </div>
-
           <div
             style={{
               display: 'grid',
@@ -181,8 +178,8 @@ export default function AddComponentPopup({ kinds, onCancel, onSave }: Props) {
                   key={vv}
                   type="button"
                   onClick={() => toggleVar(vv)}
-                  title={vv}
                   aria-pressed={selected}
+                  title={vv}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -190,16 +187,15 @@ export default function AddComponentPopup({ kinds, onCancel, onSave }: Props) {
                     border: '1px solid #e5e7eb',
                     borderRadius: 10,
                     padding: '6px 8px',
-                    cursor: 'pointer',
                     background: selected ? '#eef2ff' : '#fff',
+                    cursor: 'pointer',
                   }}
                 >
-                  <input type="checkbox" checked={selected} readOnly />
+                  <input type="checkbox" readOnly checked={selected} />
                   <img
                     src={VISUAL_VAR_ICONS[vv]}
                     alt={vv}
                     style={{ width: 22, height: 22, objectFit: 'contain' }}
-                    draggable={false}
                   />
                   <span
                     style={{ fontWeight: 600, fontSize: 12, lineHeight: 1.1 }}
@@ -213,7 +209,7 @@ export default function AddComponentPopup({ kinds, onCancel, onSave }: Props) {
         </div>
       )}
 
-      {/* Default node form */}
+      {/* Default (non-special) fields */}
       {!isSpecial && (
         <>
           <div>

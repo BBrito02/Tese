@@ -19,6 +19,7 @@ const MIN_SIZE = {
   Parameter: { w: 170, h: 75 },
   DataAction: { w: 140, h: 75 },
   Placeholder: { w: 130, h: 40 },
+  Graph: { w: 60, h: 40 },
 };
 
 const COMPACT_FOOTER_KINDS = new Set<NodeData['kind']>([
@@ -84,6 +85,8 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
 
   const hasFooter = Array.isArray(footerItems) && footerItems.length > 0;
 
+  const isGraph = data.kind === 'Graph';
+
   return (
     <div
       ref={setNodeRef}
@@ -106,13 +109,13 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
         lineStyle={{ strokeWidth: 1.5 }}
       />
 
-      {/* Card: header | body | footer */}
+      {/* INNER card: header | body | footer */}
       <div
         style={{
           position: 'absolute',
           inset: 0,
           display: 'grid',
-          gridTemplateRows: 'auto minmax(0, 1fr) auto',
+          gridTemplateRows: isGraph ? '1fr' : 'auto minmax(0, 1fr) auto',
           minHeight: 0,
           borderRadius: 12,
           background: '#fff',
@@ -125,133 +128,121 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
           ...(KIND_STYLES[data.kind]?.card || {}),
         }}
       >
-        {/* Header */}
-        <div
-          style={{ padding: 10, display: 'flex', alignItems: 'center', gap: 8 }}
-        >
-          {data.badge && (
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 22,
-                height: 22,
-                padding: '0 4px',
-                borderRadius: 3,
-                background: '#fde047',
-                fontWeight: 800,
-                fontSize: 11,
-                lineHeight: '18px',
-              }}
-              title={data.badge}
-            >
-              {data.badge}
-            </span>
-          )}
-          <div>
-            <div style={{ fontWeight: 700 }}>{data.title}</div>
-          </div>
-
+        {/* Header (hidden for Graph) */}
+        {!isGraph && (
           <div
             style={{
-              marginLeft: 'auto',
+              padding: 10,
               display: 'flex',
               alignItems: 'center',
-              gap: 6,
+              gap: 8,
             }}
           >
-            {/* Styling for the grph type */}
-            {(data as any).graphType && (
-              <img
-                src={GRAPH_TYPE_ICONS[(data as any).graphType as GraphType]}
-                alt={(data as any).graphType}
-                title={(data as any).graphType}
+            {data.badge && (
+              <span
                 style={{
-                  width: 20,
-                  height: 20,
-                  objectFit: 'contain',
-                  borderRadius: 4,
-                  background: 'rgba(255,255,255,0.6)',
-                  border: '1px solid #e5e7eb',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 22,
+                  height: 22,
+                  padding: '0 4px',
+                  borderRadius: 3,
+                  background: '#fde047',
+                  fontWeight: 800,
+                  fontSize: 11,
+                  lineHeight: '18px',
                 }}
-                draggable={false}
-              />
+                title={data.badge}
+              >
+                {data.badge}
+              </span>
             )}
-            {/* Styling for the visual attributes */}
-            {Array.isArray((data as any).visualVars) &&
-              (data as any).visualVars.map((vv: VisualVariable) => (
-                <img
-                  key={vv}
-                  src={VISUAL_VAR_ICONS[vv]}
-                  alt={vv}
-                  title={vv}
-                  style={{
-                    width: 25,
-                    height: 25,
-                    objectFit: 'contain',
-                    borderRadius: 4,
-                    background: 'rgba(255, 255, 255, 1)',
-                    border: '1px solid #e5e7eb',
-                  }}
-                  draggable={false}
-                />
-              ))}
+            <div>
+              <div style={{ fontWeight: 700 }}>{data.title}</div>
+            </div>
+
+            {/* right-side icons (keep for non-Graph) */}
+            <div
+              style={{
+                marginLeft: 'auto',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              {Array.isArray((data as any).visualVars) &&
+                (data as any).visualVars.map((vv: VisualVariable) => (
+                  <img
+                    key={vv}
+                    src={VISUAL_VAR_ICONS[vv]}
+                    alt={vv}
+                    title={vv}
+                    style={{
+                      width: 25,
+                      height: 25,
+                      objectFit: 'contain',
+                      borderRadius: 4,
+                      background: 'rgba(255, 255, 255, 1)',
+                      border: '1px solid #e5e7eb',
+                    }}
+                    draggable={false}
+                  />
+                ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Body */}
         <div
           style={{
             minHeight: 0,
             display: 'flex',
-            alignItems: data.kind === 'Parameter' ? 'center' : 'stretch',
+            alignItems: 'stretch',
             justifyContent: 'center',
-            padding: 10,
+            padding: isGraph ? 0 : 10,
+            position: 'relative',
           }}
         >
-          {data.kind === 'Parameter' ? (
-            <select
-              className="nodrag nopan"
-              onPointerDown={(e) => e.stopPropagation()}
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                width: '100%',
-                maxWidth: 260,
-                boxSizing: 'border-box',
-                padding: '6px 8px',
-                borderRadius: 8,
-                border: '1px solid #e5e7eb',
-                background: '#fff',
-              }}
-              defaultValue=""
-            >
-              <option value="" disabled>
-                Select an item
-              </option>
-              {(data as any).options?.map((o: string, i: number) => (
-                <option key={`${o}-${i}`} value={o}>
-                  {o}
-                </option>
-              ))}
-            </select>
+          {isGraph ? (
+            <div style={{ position: 'absolute', inset: 0 }}>
+              {(data as any).graphType ? (
+                <img
+                  src={GRAPH_TYPE_ICONS[(data as any).graphType as GraphType]}
+                  alt={(data as any).graphType}
+                  draggable={false}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain',
+                    display: 'block',
+                    pointerEvents: 'none',
+                    userSelect: 'none',
+                  }}
+                />
+              ) : null}
+            </div>
           ) : null}
         </div>
 
-        {/* Footer */}
-        {hasFooter ? (
-          <div
-            style={{ margin: '3px', display: 'flex', justifyContent: 'center' }}
-          >
-            <SingleDataBox
-              items={footerItems}
-              compact={COMPACT_FOOTER_KINDS.has(data.kind)}
-            />
-          </div>
-        ) : (
-          <div style={{ height: 0 }} />
-        )}
+        {/* Footer (hidden for Graph) */}
+        {!isGraph &&
+          (hasFooter ? (
+            <div
+              style={{
+                margin: '3px',
+                display: 'flex',
+                justifyContent: 'center',
+              }}
+            >
+              <SingleDataBox
+                items={footerItems}
+                compact={COMPACT_FOOTER_KINDS.has(data.kind)}
+              />
+            </div>
+          ) : (
+            <div style={{ height: 0 }} />
+          ))}
       </div>
 
       {/* Handles */}
