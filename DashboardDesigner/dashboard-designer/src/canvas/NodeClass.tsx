@@ -187,8 +187,8 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
                   alt={vv}
                   title={vv}
                   style={{
-                    width: 18,
-                    height: 18,
+                    width: 25,
+                    height: 25,
                     objectFit: 'contain',
                     borderRadius: 4,
                     background: 'rgba(255, 255, 255, 1)',
