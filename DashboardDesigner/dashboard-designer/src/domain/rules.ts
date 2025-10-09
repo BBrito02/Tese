@@ -13,7 +13,7 @@ const ALLOWED_TO: Readonly<Record<NodeKind, readonly NodeKind[]>> = {
   Legend: [],
   Tooltip: ['Visualization', 'Graph'],
   Button: [],
-  Filter: ['DataAction'],
+  Filter: [],
   Parameter: ['Filter'],
   DataAction: [],
   Placeholder: [],

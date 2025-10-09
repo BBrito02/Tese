@@ -76,6 +76,10 @@ export default function Editor() {
 
   const { openModal, closeModal } = useModal();
 
+  useEffect(() => {
+    if (lassoMode) setSelectedId(null);
+  }, [lassoMode]);
+
   const updateNodeById = useCallback(
     (id: string, patch: Partial<NodeData>) => {
       setNodes((nds) =>
@@ -114,13 +118,21 @@ export default function Editor() {
     ? -(PANEL_WIDTH + PANEL_MARGIN + PANEL_GAP)
     : 0;
 
-  // React Flow will call this whenever selection changes
   const handleSelectionChange = useCallback(
     ({ nodes: sel }: { nodes: RFNode<NodeData>[]; edges: any[] }) => {
-      const id = sel[0]?.id ?? null;
-      setSelectedId(id);
+      // hide menu if lasso ON, or not exactly one node selected
+      if (lassoMode || sel.length !== 1) {
+        setSelectedId(null);
+        return;
+      }
+
+      const n = sel[0];
+      const kind = n?.data?.kind as NodeKind | undefined;
+
+      // also hide menu for Graph nodes (so you can resize/drag without menu)
+      setSelectedId(kind === 'Graph' ? null : n.id);
     },
-    []
+    [lassoMode]
   );
 
   const onConnect = useCallback(
@@ -360,12 +372,19 @@ export default function Editor() {
     loadSave(data);
   };
 
-  const CONTENT_PAD = 16; // inner padding on all sides
-  const HEADER_H = 30; // approximate header (badge+title) height inside the card
+  const PAD_X = 5; // left & right padding (smaller)
+  const PAD_TOP = 17; // top padding (below header)
+  const PAD_BOTTOM = 28; // bottom padding (larger)
+  const HEADER_H = 23; // keep your header height
   const GRID_GAP = 16; // spacing when auto-laying out children
 
   function isContainerKind(k: NodeKind | undefined) {
-    return k === 'Dashboard' || k === 'Visualization';
+    return (
+      k === 'Dashboard' ||
+      k === 'Visualization' ||
+      k === 'Tooltip' ||
+      k === 'Parameter'
+    );
   }
 
   type Size = { w: number; h: number };
@@ -394,21 +413,21 @@ export default function Editor() {
       if (!isContainerKind(parent.data?.kind as NodeKind)) continue;
 
       const { w: pW, h: pH } = getNodeSize(parent);
-      const innerLeft = CONTENT_PAD;
-      const innerTop = HEADER_H + CONTENT_PAD;
-      const innerRight = pW - CONTENT_PAD;
-      const innerBottom = pH - CONTENT_PAD;
 
-      let requiredRight = innerLeft; // track how far children extend
+      // inner content rect (relative to parent top-left)
+      const innerLeft = PAD_X;
+      const innerTop = HEADER_H + PAD_TOP;
+      const innerRight = pW - PAD_X;
+      const innerBottom = pH - PAD_BOTTOM;
+
+      let requiredRight = innerLeft;
       let requiredBottom = innerTop;
 
-      // Clamp each child inside content rect
       for (const child of out) {
         if (child.parentNode !== parent.id) continue;
 
         const { w: cW, h: cH } = getNodeSize(child);
 
-        // desired bounds for child inside content
         const minX = innerLeft;
         const minY = innerTop;
         const maxX = Math.max(innerLeft, innerRight - cW);
@@ -421,34 +440,27 @@ export default function Editor() {
           touch(child.id, { position: { x: clampedX, y: clampedY } });
         }
 
-        // how much space do we need to contain this child?
         requiredRight = Math.max(requiredRight, clampedX + cW);
         requiredBottom = Math.max(requiredBottom, clampedY + cH);
       }
 
-      // Compute required parent size from children extents + padding
-      const needW = Math.max(pW, requiredRight + CONTENT_PAD);
-      const needH = Math.max(pH, requiredBottom + CONTENT_PAD);
+      // grow parent if children need more space; use asymmetric pads
+      const needW = Math.max(pW, requiredRight + PAD_X);
+      const needH = Math.max(pH, requiredBottom + PAD_BOTTOM);
 
-      // Also respect some base minimums so dashboards can't be tiny
       const baseMinW = parent.data?.kind === 'Dashboard' ? 320 : 240;
       const baseMinH = parent.data?.kind === 'Dashboard' ? 180 : 140;
 
       const targetW = Math.max(needW, baseMinW);
       const targetH = Math.max(needH, baseMinH);
 
-      // If the parent is smaller than required, expand it
       if (targetW !== pW || targetH !== pH) {
-        const style = {
-          ...(parent.style || {}),
-          width: targetW,
-          height: targetH,
-        };
-        touch(parent.id, { style });
+        touch(parent.id, {
+          style: { ...(parent.style || {}), width: targetW, height: targetH },
+        });
       }
     }
-
-    return changed ? out : input; // don't trigger extra renders if nothing changed
+    return changed ? out : input;
   }
 
   type ChildPayload =
@@ -468,9 +480,9 @@ export default function Editor() {
         if (!parent) return nds;
 
         const { w: pW } = getNodeSize(parent);
-        const innerLeft = CONTENT_PAD;
-        const innerTop = HEADER_H + CONTENT_PAD;
-        const innerRight = pW - CONTENT_PAD;
+        const innerLeft = PAD_X;
+        const innerTop = HEADER_H + PAD_TOP;
+        const innerRight = pW - PAD_X;
         const innerWidth = Math.max(0, innerRight - innerLeft);
 
         const defaultSizeFor = (kind: NodeKind) => {

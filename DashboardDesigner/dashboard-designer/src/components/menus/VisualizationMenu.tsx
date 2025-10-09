@@ -36,7 +36,6 @@ export default function VisualizationMenu(p: KindProps) {
           onCancel={closeModal}
           onSave={(payload) => {
             if (payload.kind === 'GraphType') {
-              // ⬇️ tell the editor to create/patch the Graph CHILD
               window.dispatchEvent(
                 new CustomEvent('designer:set-graph-type', {
                   detail: {
@@ -55,7 +54,6 @@ export default function VisualizationMenu(p: KindProps) {
               return;
             }
 
-            // regular child
             window.dispatchEvent(
               new CustomEvent('designer:add-component', {
                 detail: { parentId: p.node.id, payload },

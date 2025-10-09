@@ -48,9 +48,9 @@ function SingleDataBox({
         display: 'inline-block',
         width: 'auto',
         maxWidth: '90%',
-        minWidth: compact ? 100 : 120, // smaller when compact
+        minWidth: compact ? 40 : 60,
         boxSizing: 'border-box',
-        padding: compact ? '6px 8px' : '10px 12px',
+        padding: compact ? '1px 3px' : '3px 5px',
         border: '1px solid #e5e7eb',
         borderRadius: 5,
         background: '#f8fafc',
@@ -179,7 +179,7 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
                     alt={vv}
                     title={vv}
                     style={{
-                      width: 25,
+                      width: 30,
                       height: 25,
                       objectFit: 'contain',
                       borderRadius: 4,
@@ -225,12 +225,12 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
           ) : null}
         </div>
 
-        {/* Footer (hidden for Graph) */}
+        {/* Footer */}
         {!isGraph &&
           (hasFooter ? (
             <div
               style={{
-                margin: '3px',
+                margin: '1px',
                 display: 'flex',
                 justifyContent: 'center',
               }}

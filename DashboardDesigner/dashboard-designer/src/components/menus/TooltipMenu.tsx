@@ -27,46 +27,42 @@ export default function TooltipMenu(p: KindProps) {
 
   const handleAddComponent = () => {
     const parentKind = (p.node.data?.kind ?? 'Visualization') as NodeKind;
-    const baseKinds = allowedChildKinds(parentKind); // NodeKind[]
+    const baseKinds = allowedChildKinds(parentKind).filter(
+      (k) => k !== 'Graph'
+    );
     const kinds = [...baseKinds, 'GraphType', 'VisualVariable'] as const;
 
     openModal({
       title: 'Component Menu',
       node: (
         <AddComponentPopup
-          kinds={
-            kinds as unknown as (NodeKind | 'GraphType' | 'VisualVariable')[]
-          }
+          kinds={kinds as any}
           onCancel={closeModal}
           onSave={(payload) => {
-            // Route by payload.kind
             if (payload.kind === 'GraphType') {
               window.dispatchEvent(
-                new CustomEvent('designer:update-visualization-props', {
+                new CustomEvent('designer:set-graph-type', {
                   detail: {
                     nodeId: p.node.id,
-                    patch: { graphType: payload.graphType as GraphType },
+                    graphType: payload.graphType as GraphType,
                   },
                 })
               );
-            } else if (payload.kind === 'VisualVariable') {
-              window.dispatchEvent(
-                new CustomEvent('designer:update-visualization-props', {
-                  detail: {
-                    nodeId: p.node.id,
-                    patch: {
-                      visualVars: payload.variables as VisualVariable[],
-                    },
-                  },
-                })
-              );
-            } else {
-              window.dispatchEvent(
-                new CustomEvent('designer:add-component', {
-                  detail: { parentId: p.node.id, payload },
-                })
-              );
+              closeModal();
+              return;
             }
+
+            if (payload.kind === 'VisualVariable') {
+              p.onChange({ visualVars: payload.variables });
+              closeModal();
+              return;
+            }
+
+            window.dispatchEvent(
+              new CustomEvent('designer:add-component', {
+                detail: { parentId: p.node.id, payload },
+              })
+            );
             closeModal();
           }}
         />
