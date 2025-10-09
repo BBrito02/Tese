@@ -76,6 +76,23 @@ export default function Editor() {
 
   const { openModal, closeModal } = useModal();
 
+  const [menuWidth, setMenuWidth] = useState<number>(PANEL_WIDTH);
+
+  useEffect(() => {
+    const onWidth = (e: Event) => {
+      const { width } = (e as CustomEvent<{ width: number }>).detail || {
+        width: PANEL_WIDTH,
+      };
+      setMenuWidth(width);
+    };
+    window.addEventListener('designer:menu-width', onWidth as EventListener);
+    return () =>
+      window.removeEventListener(
+        'designer:menu-width',
+        onWidth as EventListener
+      );
+  }, []);
+
   useEffect(() => {
     if (lassoMode) setSelectedId(null);
   }, [lassoMode]);
@@ -115,7 +132,7 @@ export default function Editor() {
 
   const menuActive = Boolean(selectedId) || menuExiting;
   const buttonsOffset = menuActive
-    ? -(PANEL_WIDTH + PANEL_MARGIN + PANEL_GAP)
+    ? -(menuWidth + PANEL_MARGIN + PANEL_GAP)
     : 0;
 
   const handleSelectionChange = useCallback(
