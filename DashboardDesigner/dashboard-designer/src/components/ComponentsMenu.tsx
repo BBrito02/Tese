@@ -15,7 +15,7 @@ type Props = {
 };
 
 const PANEL_W = 280;
-const COLLAPSED_W = 28;
+const COLLAPSED_W = 0;
 const ANIM_MS = 200;
 const LS_KEY = 'componentsMenu:collapsed';
 
@@ -95,14 +95,15 @@ export default function ComponentsMenu({
       style={{
         width,
         height: 'calc(100vh - 14px)',
-        marginRight: 7,
         marginTop: 7,
         marginBottom: 7,
 
-        background: collapsed ? 'transparent' : '#fafafa',
-        borderLeft: collapsed ? 'none' : '1px solid #e5e7eb',
-        borderRadius: collapsed ? 0 : 20,
+        marginRight: collapsed ? 0 : 7,
         padding: collapsed ? 0 : 12,
+        borderLeft: collapsed ? 'none' : '1px solid #e5e7eb',
+        background: collapsed ? 'transparent' : '#fafafa',
+
+        borderRadius: collapsed ? 0 : 20,
 
         // IMPORTANT: always visible so the toggle can protrude
         overflow: 'visible',
@@ -136,7 +137,7 @@ export default function ComponentsMenu({
         style={{
           position: 'absolute',
           top: 6,
-          left: collapsed ? -10 : 8,
+          left: collapsed ? -38 : 8,
           width: 32,
           height: 32,
           borderRadius: 10,

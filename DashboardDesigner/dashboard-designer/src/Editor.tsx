@@ -132,9 +132,17 @@ export default function Editor() {
     };
   }, [selectedId]);
 
+  const COLLAPSED_W = 28;
+  const EXTRA_COLLAPSED_GAP = 18;
+
   const menuActive = Boolean(selectedId) || menuExiting;
   const buttonsOffset = menuActive
-    ? -(menuWidth + PANEL_MARGIN + PANEL_GAP)
+    ? -(
+        menuWidth +
+        PANEL_MARGIN +
+        PANEL_GAP +
+        (menuWidth <= COLLAPSED_W ? EXTRA_COLLAPSED_GAP : 0)
+      )
     : 0;
 
   const handleSelectionChange = useCallback(
@@ -410,11 +418,11 @@ export default function Editor() {
     });
   }, [buildSave, downloadJSON, openModal, closeModal]);
 
-  const PAD_X = 5; // left & right padding (smaller)
-  const PAD_TOP = 17; // top padding (below header)
-  const PAD_BOTTOM = 28; // bottom padding (larger)
-  const HEADER_H = 23; // keep your header height
-  const GRID_GAP = 16; // spacing when auto-laying out children
+  const PAD_X = 5;
+  const PAD_TOP = 17;
+  const PAD_BOTTOM = 28;
+  const HEADER_H = 23;
+  const GRID_GAP = 16;
 
   function isContainerKind(k: NodeKind | undefined) {
     return (
@@ -734,7 +742,12 @@ export default function Editor() {
   return (
     <div
       id="editor-root"
-      style={{ display: 'flex', height: '100vh', backgroundColor: '#aedbe6ff' }}
+      style={{
+        display: 'flex',
+        height: '100vh',
+        backgroundColor: '#aedbe6ff',
+        overflow: 'hidden',
+      }}
     >
       <DndContext
         sensors={sensors}
@@ -800,7 +813,11 @@ export default function Editor() {
           </label>
         </div>
 
-        <div className="canvas" ref={wrapperRef} style={{ flex: 1 }}>
+        <div
+          className="canvas"
+          ref={wrapperRef}
+          style={{ flex: 1, minWidth: 0 }}
+        >
           <ReactFlow
             minZoom={0.1}
             maxZoom={2}
