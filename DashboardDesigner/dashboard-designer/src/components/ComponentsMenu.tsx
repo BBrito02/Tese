@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import type { Node as RFNode } from 'reactflow';
 import type { NodeData, NodeKind } from '../domain/types';
 import { MENUS } from './menus';

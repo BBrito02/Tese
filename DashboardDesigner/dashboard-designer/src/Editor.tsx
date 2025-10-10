@@ -51,6 +51,8 @@ import {
 import { FaHand } from 'react-icons/fa6';
 import { useModal } from './components/ui/ModalHost';
 
+import SavePopup from './components/popups/SavePopup';
+
 const NODE_TYPES = { class: NodeClass };
 
 const PANEL_WIDTH = 280;
@@ -388,6 +390,25 @@ export default function Editor() {
     }
     loadSave(data);
   };
+
+  // inside Editor component
+  const openSaveModal = useCallback(() => {
+    const defaultBase = 'dashboard-designer';
+
+    openModal({
+      title: 'Save',
+      node: (
+        <SavePopup
+          initialName={defaultBase}
+          onCancel={closeModal}
+          onConfirm={(finalFilename) => {
+            downloadJSON(buildSave(), finalFilename);
+            closeModal();
+          }}
+        />
+      ),
+    });
+  }, [buildSave, downloadJSON, openModal, closeModal]);
 
   const PAD_X = 5; // left & right padding (smaller)
   const PAD_TOP = 17; // top padding (below header)
@@ -738,7 +759,7 @@ export default function Editor() {
           }}
         >
           <button
-            onClick={() => downloadJSON(buildSave(), 'dashboard-designer.json')}
+            onClick={openSaveModal}
             style={{
               padding: '6px 10px',
               borderRadius: 8,
