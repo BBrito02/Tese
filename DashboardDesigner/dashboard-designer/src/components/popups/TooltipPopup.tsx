@@ -3,15 +3,6 @@ import React, { useMemo, useState } from 'react';
 import type { DataItem, DataType } from '../../domain/types';
 
 // this graph types will change once i start implementing the graph types directly in the nodes
-type GraphType =
-  | 'bar'
-  | 'line'
-  | 'area'
-  | 'scatter'
-  | 'pie'
-  | 'table'
-  | 'heatmap'
-  | 'other';
 
 // type that helps identify existing tooltips
 export type ExistingTooltip = {
@@ -84,8 +75,6 @@ export default function TooltipPopup({
   const [customName, setCustomName] = useState('');
   const [customType, setCustomType] = useState<DataType>('Other');
   const [customItems, setCustomItems] = useState<DataItem[]>([]);
-
-  const [graphType, setGraphType] = useState<GraphType | ''>('');
 
   const existingNames = useMemo(
     () => availableData.map((v) => (typeof v === 'string' ? v : v.name)),
@@ -237,6 +226,7 @@ export default function TooltipPopup({
           </div>
 
           {/* Data for new tooltip */}
+          {/* Probably this is not needed, just an extra functinality when the user can just add the data later on the component itself instead of in the popup menu */}
           <div
             style={{
               display: 'grid',
@@ -399,39 +389,6 @@ export default function TooltipPopup({
                 </>
               )}
             </div>
-          </div>
-
-          {/* Graph (optional) */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '140px 1fr',
-              gap: 10,
-              alignItems: 'center',
-            }}
-          >
-            <div style={pill}>Graph</div>
-            <select
-              value={graphType}
-              onChange={(e) => setGraphType(e.target.value as GraphType | '')}
-              style={{
-                padding: '8px 12px',
-                border: '1px solid #e5e7eb',
-                borderRadius: 12,
-                background: '#fff',
-                fontWeight: 700,
-              }}
-            >
-              <option value="">(none)</option>
-              <option value="bar">Bar</option>
-              <option value="line">Line</option>
-              <option value="area">Area</option>
-              <option value="scatter">Scatter</option>
-              <option value="pie">Pie</option>
-              <option value="table">Table</option>
-              <option value="heatmap">Heatmap</option>
-              <option value="other">Other</option>
-            </select>
           </div>
         </>
       )}
