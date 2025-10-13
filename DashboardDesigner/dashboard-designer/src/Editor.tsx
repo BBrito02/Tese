@@ -424,6 +424,20 @@ export default function Editor() {
   const HEADER_H = 23;
   const GRID_GAP = 16;
 
+  function baseMinFor(kind: NodeKind | undefined) {
+    return {
+      w: kind === 'Dashboard' ? 320 : 240,
+      h: kind === 'Dashboard' ? 180 : 140,
+    };
+  }
+
+  type Size = { w: number; h: number };
+  function getNodeSize(n: Node): Size {
+    const w = (n as any).width ?? (n.style as any)?.width ?? 180;
+    const h = (n as any).height ?? (n.style as any)?.height ?? 100;
+    return { w: Number(w) || 0, h: Number(h) || 0 };
+  }
+
   function isContainerKind(k: NodeKind | undefined) {
     return (
       k === 'Dashboard' ||
@@ -433,80 +447,84 @@ export default function Editor() {
     );
   }
 
-  type Size = { w: number; h: number };
-  function getNodeSize(n: Node): Size {
-    const w = (n as any).width ?? (n.style as any)?.width ?? 180; // fallback
-    const h = (n as any).height ?? (n.style as any)?.height ?? 100; // fallback
-    return { w: Number(w) || 0, h: Number(h) || 0 };
-  }
+  /**
+   * Expand parents to fit children, then re-clamp children using the new size.
+   * Usually converges in 1–2 passes (cap at 5 for safety).
+   */
+  function applyConstraints(initial: Node[]): Node[] {
+    let nodes = initial.map((n) => ({ ...n }));
 
-  function applyConstraints(input: Node[]): Node[] {
-    // Build quick index
-    let changed = false;
-    const out = input.map((n) => ({ ...n })); // shallow clones
+    for (let pass = 0; pass < 5; pass++) {
+      let changed = false;
+      const next = nodes.map((n) => ({ ...n }));
 
-    // Helper to update a node in out array by id
-    const touch = (id: string, patch: Partial<Node>) => {
-      const i = out.findIndex((x) => x.id === id);
-      if (i >= 0) {
-        out[i] = { ...out[i], ...patch };
-        changed = true;
-      }
-    };
+      const patch = (id: string, p: Partial<Node>) => {
+        const i = next.findIndex((x) => x.id === id);
+        if (i >= 0) {
+          next[i] = { ...next[i], ...p };
+          changed = true;
+        }
+      };
 
-    // For each container, clamp its children and compute required min size
-    for (const parent of out) {
-      if (!isContainerKind(parent.data?.kind as NodeKind)) continue;
+      for (const parent of nodes) {
+        if (!isContainerKind(parent.data?.kind as NodeKind)) continue;
 
-      const { w: pW, h: pH } = getNodeSize(parent);
+        const { w: pW, h: pH } = getNodeSize(parent);
 
-      // inner content rect (relative to parent top-left)
-      const innerLeft = PAD_X;
-      const innerTop = HEADER_H + PAD_TOP;
-      const innerRight = pW - PAD_X;
-      const innerBottom = pH - PAD_BOTTOM;
+        const innerLeft = PAD_X;
+        const innerTop = HEADER_H + PAD_TOP;
+        const innerRight = pW - PAD_X;
+        const innerBottom = pH - PAD_BOTTOM;
 
-      let requiredRight = innerLeft;
-      let requiredBottom = innerTop;
+        let requiredRight = innerLeft;
+        let requiredBottom = innerTop;
 
-      for (const child of out) {
-        if (child.parentNode !== parent.id) continue;
+        for (const child of nodes) {
+          if (child.parentNode !== parent.id) continue;
 
-        const { w: cW, h: cH } = getNodeSize(child);
+          const { w: cW, h: cH } = getNodeSize(child);
 
-        const minX = innerLeft;
-        const minY = innerTop;
-        const maxX = Math.max(innerLeft, innerRight - cW);
-        const maxY = Math.max(innerTop, innerBottom - cH);
+          const minX = innerLeft;
+          const minY = innerTop;
+          let maxX = innerRight - cW;
+          let maxY = innerBottom - cH;
+          if (maxX < minX) maxX = minX;
+          if (maxY < minY) maxY = minY;
 
-        const clampedX = Math.min(Math.max(child.position.x, minX), maxX);
-        const clampedY = Math.min(Math.max(child.position.y, minY), maxY);
+          const cx = Math.min(Math.max(child.position.x, minX), maxX);
+          const cy = Math.min(Math.max(child.position.y, minY), maxY);
 
-        if (clampedX !== child.position.x || clampedY !== child.position.y) {
-          touch(child.id, { position: { x: clampedX, y: clampedY } });
+          if (cx !== child.position.x || cy !== child.position.y) {
+            patch(child.id, { position: { x: cx, y: cy } });
+          }
+
+          // content need based on clamped position
+          requiredRight = Math.max(requiredRight, cx + cW);
+          requiredBottom = Math.max(requiredBottom, cy + cH);
+
+          // also ensure parent grows if child is bigger than inner area
+          requiredRight = Math.max(requiredRight, innerLeft + cW);
+          requiredBottom = Math.max(requiredBottom, innerTop + cH);
         }
 
-        requiredRight = Math.max(requiredRight, clampedX + cW);
-        requiredBottom = Math.max(requiredBottom, clampedY + cH);
+        const base = baseMinFor(parent.data?.kind as NodeKind | undefined);
+        const needW = Math.max(pW, requiredRight + PAD_X);
+        const needH = Math.max(pH, requiredBottom + PAD_BOTTOM);
+        const targetW = Math.max(needW, base.w);
+        const targetH = Math.max(needH, base.h);
+
+        if (targetW !== pW || targetH !== pH) {
+          patch(parent.id, {
+            style: { ...(parent.style || {}), width: targetW, height: targetH },
+          });
+        }
       }
 
-      // grow parent if children need more space; use asymmetric pads
-      const needW = Math.max(pW, requiredRight + PAD_X);
-      const needH = Math.max(pH, requiredBottom + PAD_BOTTOM);
-
-      const baseMinW = parent.data?.kind === 'Dashboard' ? 320 : 240;
-      const baseMinH = parent.data?.kind === 'Dashboard' ? 180 : 140;
-
-      const targetW = Math.max(needW, baseMinW);
-      const targetH = Math.max(needH, baseMinH);
-
-      if (targetW !== pW || targetH !== pH) {
-        touch(parent.id, {
-          style: { ...(parent.style || {}), width: targetW, height: targetH },
-        });
-      }
+      nodes = next;
+      if (!changed) break;
     }
-    return changed ? out : input;
+
+    return nodes;
   }
 
   type ChildPayload =

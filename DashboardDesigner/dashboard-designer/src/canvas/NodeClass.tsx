@@ -11,8 +11,8 @@ import type { VisualVariable, GraphType } from '../domain/types';
 
 const MIN_SIZE = {
   Dashboard: { w: 260, h: 200 },
-  Visualization: { w: 200, h: 110 },
-  Tooltip: { w: 170, h: 110 },
+  Visualization: { w: 260, h: 200 },
+  Tooltip: { w: 250, h: 180 },
   Legend: { w: 170, h: 75 },
   Button: { w: 140, h: 75 },
   Filter: { w: 170, h: 75 },
@@ -50,7 +50,7 @@ function SingleDataBox({
         maxWidth: '90%',
         minWidth: compact ? 40 : 60,
         boxSizing: 'border-box',
-        padding: compact ? '1px 3px' : '3px 5px',
+        padding: compact ? '1px 3px' : '4px 5px',
         border: '1px solid #e5e7eb',
         borderRadius: 5,
         background: '#f8fafc',
