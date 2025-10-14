@@ -80,6 +80,9 @@ export default function Editor() {
 
   const [menuWidth, setMenuWidth] = useState<number>(PANEL_WIDTH);
 
+  const [saveNameBase, setSaveNameBase] = useState('dashboard-designer');
+  const baseFrom = (name: string) => name.replace(/\.[^.]+$/, '');
+
   useEffect(() => {
     const onWidth = (e: Event) => {
       const { width } = (e as CustomEvent<{ width: number }>).detail || {
@@ -390,6 +393,10 @@ export default function Editor() {
     const file = e.target.files?.[0];
     e.currentTarget.value = ''; // reset input for next open
     if (!file) return;
+
+    // remember the file's base name for subsequent saves
+    setSaveNameBase(baseFrom(file.name));
+
     const text = await file.text();
     const data = JSON.parse(text) as SaveFile;
     if (!('version' in data)) {
@@ -399,24 +406,23 @@ export default function Editor() {
     loadSave(data);
   };
 
-  // inside Editor component
   const openSaveModal = useCallback(() => {
-    const defaultBase = 'dashboard-designer';
-
     openModal({
       title: 'Save',
       node: (
         <SavePopup
-          initialName={defaultBase}
+          initialName={saveNameBase}
           onCancel={closeModal}
           onConfirm={(finalFilename) => {
             downloadJSON(buildSave(), finalFilename);
+            // remember the last used name (strip .json if present)
+            setSaveNameBase(baseFrom(finalFilename));
             closeModal();
           }}
         />
       ),
     });
-  }, [buildSave, downloadJSON, openModal, closeModal]);
+  }, [buildSave, downloadJSON, openModal, closeModal, saveNameBase]);
 
   const PAD_X = 5;
   const PAD_TOP = 17;
