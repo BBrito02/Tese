@@ -31,6 +31,56 @@ const COMPACT_FOOTER_KINDS = new Set<NodeData['kind']>([
 const dataLabel = (v: string | DataItem) =>
   typeof v === 'string' ? v : v.name;
 
+function DataPills({
+  items,
+  onClick,
+}: {
+  items: (string | DataItem)[];
+  onClick?: (index: number) => void;
+}) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 8,
+        width: '100%',
+      }}
+    >
+      {items.map((it, i) => {
+        const label = typeof it === 'string' ? it : it.name;
+        const title = typeof it === 'string' ? it : `${it.name} · ${it.dtype}`;
+        return (
+          <button
+            key={`${label}-${i}`}
+            title={title}
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={() => onClick?.(i)}
+            className="nodrag nopan"
+            style={{
+              padding: '6px 10px',
+              borderRadius: 5,
+              border: '1px solid #e5e7eb',
+              background: '#f8fafc',
+              fontWeight: 700,
+              fontSize: 12,
+              cursor: onClick ? 'pointer' : 'default',
+              maxWidth: '100%',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // function to print all the data attrributes in a single box
 function SingleDataBox({
   items,
@@ -235,10 +285,7 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
                 justifyContent: 'center',
               }}
             >
-              <SingleDataBox
-                items={footerItems}
-                compact={COMPACT_FOOTER_KINDS.has(data.kind)}
-              />
+              <DataPills items={footerItems!} />
             </div>
           ) : (
             <div style={{ height: 0 }} />
