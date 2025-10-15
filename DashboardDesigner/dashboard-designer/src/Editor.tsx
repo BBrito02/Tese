@@ -53,6 +53,9 @@ import { useModal } from './components/ui/ModalHost';
 
 import SavePopup from './components/popups/SavePopup';
 
+import { allowedChildKinds } from './domain/rules';
+import AddComponentPopup from './components/popups/ComponentPopup';
+
 const NODE_TYPES = { class: NodeClass };
 
 const PANEL_WIDTH = 280;
@@ -117,7 +120,7 @@ export default function Editor() {
     | { type: 'data'; nodeId: string }
     | { type: 'interactions'; nodeId: string }
     | { type: 'tooltips'; nodeId: string }
-    | { type: 'add-component'; nodeId: string };
+    | { type: 'add-component'; nodeId: string; presetKind?: NodeKind };
 
   const [modal, setModal] = useState<ModalSpec | null>(null);
 
@@ -245,6 +248,28 @@ export default function Editor() {
     return null;
   }
 
+  // Which parent we’re hovering over while dragging from the palette
+  const [dragTargetParentId, setDragTargetParentId] = useState<string | null>(
+    null
+  );
+  const [dragAllowed, setDragAllowed] = useState(false);
+
+  function pointInsideContentAbs(
+    p: { x: number; y: number },
+    n: Node,
+    all: Node[]
+  ) {
+    const { w, h } = getNodeSize(n);
+    const abs = getAbsolutePosition(n, all);
+
+    const left = abs.x + PAD_X;
+    const top = abs.y + HEADER_H + PAD_TOP;
+    const right = abs.x + w - PAD_X;
+    const bottom = abs.y + h - PAD_BOTTOM;
+
+    return p.x >= left && p.x <= right && p.y >= top && p.y <= bottom;
+  }
+
   const handleDragStart = (e: DragStartEvent) => {
     setIsDraggingFromPalette(true);
     setDragPreview((e.active.data.current as DragData) ?? null);
@@ -257,11 +282,57 @@ export default function Editor() {
 
   const handleDragMove = (e: DragMoveEvent) => {
     if (!dragStartPoint) return;
+
     // cursor = start + delta
-    setCursorPoint({
+    const nextCursor = {
       x: dragStartPoint.x + e.delta.x,
       y: dragStartPoint.y + e.delta.y,
+    };
+    setCursorPoint(nextCursor);
+
+    if (!rf || !wrapperRef.current) return;
+
+    // Map screen → flow coords
+    const bounds = wrapperRef.current.getBoundingClientRect();
+    const flowPt = rf.project({
+      x: nextCursor.x - bounds.left,
+      y: nextCursor.y - bounds.top,
     });
+
+    // Find the *deepest* container whose content rect contains the pointer
+    let best: { id: string; kind: NodeKind; depth: number } | null = null;
+
+    for (const n of nodes) {
+      const k = n.data?.kind as NodeKind | undefined;
+      if (!isContainerKind(k)) continue;
+      if (pointInsideContentAbs(flowPt, n, nodes)) {
+        const d = depthOf(n, nodes);
+        if (!best || d > best.depth) {
+          best = { id: n.id, kind: k!, depth: d };
+        }
+      }
+    }
+
+    const parentId = best?.id ?? null;
+    const parentKind = best?.kind;
+    setDragTargetParentId(parentId);
+
+    // Check the payload kind against rules
+    const payload = e.active?.data?.current as DragData | undefined;
+    const childKind = payload?.kind as NodeKind | undefined;
+    const isAllowed = !!(
+      parentKind &&
+      childKind &&
+      allowedChildKinds(parentKind).includes(childKind)
+    );
+    setDragAllowed(isAllowed);
+
+    // Visual feedback
+    if (parentId) {
+      document.body.style.cursor = isAllowed ? 'copy' : 'not-allowed';
+    } else {
+      document.body.style.cursor = 'grabbing';
+    }
   };
 
   const handleDragCancel = (_e: DragCancelEvent) => {
@@ -269,6 +340,9 @@ export default function Editor() {
     setDragPreview(null);
     setDragStartPoint(null);
     setCursorPoint(null);
+    setDragTargetParentId(null);
+    setDragAllowed(false);
+    document.body.style.cursor = '';
   };
 
   const handleDragEnd = (e: DragEndEvent) => {
@@ -276,8 +350,26 @@ export default function Editor() {
     const payload = e.active.data.current as DragData | undefined;
     setDragPreview(null);
 
+    // snapshot targeting state then reset UI cursor/states
+    const parentId = dragTargetParentId;
+    const allowed = dragAllowed;
+    setDragTargetParentId(null);
+    setDragAllowed(false);
+    document.body.style.cursor = '';
+
     if (!payload || !rf || !wrapperRef.current) return;
 
+    // If dropping inside a valid parent: open your default Add Component popup
+    if (allowed && parentId) {
+      setModal({
+        type: 'add-component',
+        nodeId: parentId,
+        presetKind: payload.kind as NodeKind,
+      });
+      return; // don't add to canvas directly
+    }
+
+    // Otherwise keep your existing behavior: drop onto canvas background
     const viewportPt = cursorPoint ?? getDragCenter(e);
     setDragStartPoint(null);
     setCursorPoint(null);
@@ -294,7 +386,7 @@ export default function Editor() {
       data = {
         kind: 'Graph',
         title: payload.title ?? 'Graph',
-        graphType: 'Line', // sensible default; pick any GraphType you prefer
+        graphType: 'Line',
       };
     } else {
       data = {
@@ -442,6 +534,32 @@ export default function Editor() {
     const w = (n as any).width ?? (n.style as any)?.width ?? 180;
     const h = (n as any).height ?? (n.style as any)?.height ?? 100;
     return { w: Number(w) || 0, h: Number(h) || 0 };
+  }
+
+  function getAbsolutePosition(n: Node, all: Node[]) {
+    let x = n.position.x;
+    let y = n.position.y;
+    let cur = n;
+    while (cur.parentNode) {
+      const p = all.find((nn) => nn.id === cur.parentNode);
+      if (!p) break;
+      x += p.position.x;
+      y += p.position.y;
+      cur = p;
+    }
+    return { x, y };
+  }
+
+  function depthOf(n: Node, all: Node[]) {
+    let d = 0;
+    let cur = n;
+    while (cur.parentNode) {
+      const p = all.find((nn) => nn.id === cur.parentNode);
+      if (!p) break;
+      d++;
+      cur = p;
+    }
+    return d;
   }
 
   function isContainerKind(k: NodeKind | undefined) {
@@ -762,6 +880,94 @@ export default function Editor() {
     window.addEventListener('designer:set-graph-type', handler);
     return () => window.removeEventListener('designer:set-graph-type', handler);
   }, [setNodes]);
+
+  function ModalCleanup({
+    onCleanup,
+    children,
+  }: {
+    onCleanup: () => void;
+    children: React.ReactNode;
+  }) {
+    useEffect(() => {
+      return () => {
+        onCleanup(); // called when the modal unmounts (backdrop click, ESC, etc.)
+      };
+    }, [onCleanup]);
+    return <>{children}</>;
+  }
+
+  // helper: only handle the "normal node" payload (not GraphType / VisualVariable)
+  function isNodePayload(
+    p: any
+  ): p is { kind: NodeKind; title: string; description?: string } {
+    return (
+      p &&
+      typeof p.kind === 'string' &&
+      !('graphType' in p) &&
+      !('variables' in p)
+    );
+  }
+
+  useEffect(() => {
+    if (modal?.type !== 'add-component') return;
+
+    const { nodeId, presetKind } = modal;
+    if (!nodeId || !presetKind) {
+      setModal(null);
+      return;
+    }
+
+    const parent = nodes.find((n) => n.id === nodeId);
+    const parentKind = parent?.data?.kind as NodeKind | undefined;
+    if (!parentKind) {
+      setModal(null);
+      return;
+    }
+
+    const allowed = allowedChildKinds(parentKind);
+    if (!allowed.includes(presetKind)) {
+      setModal(null);
+      return;
+    }
+
+    const closeAndClear = () => {
+      closeModal();
+      setModal(null);
+    };
+
+    setSelectedId(nodeId);
+
+    openModal({
+      title: 'Component Menu',
+      node: (
+        <ModalCleanup onCleanup={() => setModal(null)}>
+          <AddComponentPopup
+            kinds={[presetKind] as any} // lock type to dragged kind
+            onCancel={closeAndClear} // close button
+            onSave={(payload: any) => {
+              // only handle normal node payloads here
+              if (
+                !payload ||
+                typeof payload.kind !== 'string' ||
+                'graphType' in payload ||
+                'variables' in payload
+              ) {
+                closeAndClear();
+                return;
+              }
+
+              window.dispatchEvent(
+                new CustomEvent('designer:add-component', {
+                  detail: { parentId: nodeId, payload },
+                })
+              );
+              closeAndClear();
+            }}
+          />
+        </ModalCleanup>
+      ),
+    });
+  }, [modal]); // ← only re-run when `modal` changes
 
   return (
     <div
