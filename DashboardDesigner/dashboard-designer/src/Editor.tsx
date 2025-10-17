@@ -158,17 +158,13 @@ export default function Editor() {
 
   const handleSelectionChange = useCallback(
     ({ nodes: sel }: { nodes: RFNode<NodeData>[]; edges: any[] }) => {
-      // hide menu if lasso ON, or not exactly one node selected
       if (lassoMode || sel.length !== 1) {
         setSelectedId(null);
         return;
       }
-
+      // Always keep the clicked node selected (no special-casing Graph).
       const n = sel[0];
-      const kind = n?.data?.kind as NodeKind | undefined;
-
-      // also hide menu for Graph nodes (so you can resize/drag without menu)
-      setSelectedId(kind === 'Graph' ? null : n.id);
+      setSelectedId(n.id);
     },
     [lassoMode]
   );
@@ -203,37 +199,8 @@ export default function Editor() {
 
   const deleteSelectedNode = useCallback(() => {
     if (!selectedId) return;
-
-    setNodes((nds) => {
-      const toDelete = new Set<string>([selectedId]);
-
-      // if selected is a Visualization, also delete its tooltips
-      const sel = nds.find((n) => n.id === selectedId);
-      if (sel?.data?.kind === 'Visualization') {
-        nds.forEach((n) => {
-          if (
-            n.data?.kind === 'Tooltip' &&
-            (n.data as any)?.attachedTo === selectedId
-          ) {
-            toDelete.add(n.id);
-          }
-        });
-      }
-
-      return nds.filter((n) => !toDelete.has(n.id));
-    });
-
-    setEdges((eds) =>
-      eds.filter((e) => e.source !== selectedId && e.target !== selectedId)
-    );
-
-    // also drop edges for any tooltip that was removed in setNodes above
-    setEdges((eds) =>
-      eds.filter((e) => !(e.source === selectedId || e.target === selectedId))
-    );
-
-    setSelectedId(null);
-  }, [selectedId, setNodes, setEdges]);
+    pruneAfterRemoval([selectedId]);
+  }, [selectedId]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } })
@@ -1099,6 +1066,86 @@ export default function Editor() {
     });
   }, [modal]);
 
+  function collectDescendants(all: Node[], roots: Set<string>) {
+    const toDelete = new Set(roots);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const n of all) {
+        if (n.parentNode && toDelete.has(n.parentNode) && !toDelete.has(n.id)) {
+          toDelete.add(n.id);
+          changed = true;
+        }
+      }
+    }
+    return toDelete;
+  }
+
+  /** Remove nodes and edges after a deletion, handling tooltips + descendants */
+  function pruneAfterRemoval(initialIds: string[]) {
+    setNodes((nds) => {
+      // start with explicitly removed ids
+      const base = new Set<string>(initialIds);
+
+      // if a Visualization is removed, also remove its attached tooltips
+      for (const id of Array.from(base)) {
+        const n = nds.find((x) => x.id === id);
+        if (n?.data?.kind === 'Visualization') {
+          nds.forEach((t) => {
+            if (
+              t.data?.kind === 'Tooltip' &&
+              (t.data as any)?.attachedTo === id
+            ) {
+              base.add(t.id);
+            }
+          });
+        }
+      }
+
+      // also remove descendants of anything in `base` (tooltip children, etc.)
+      const toDelete = collectDescendants(nds, base);
+
+      // finally filter nodes
+      const kept = nds.filter((n) => !toDelete.has(n.id));
+
+      // remove edges connected to any removed id
+      setEdges((eds) =>
+        eds.filter((e) => !toDelete.has(e.source) && !toDelete.has(e.target))
+      );
+
+      // clear selection if it got removed
+      if (selectedId && toDelete.has(selectedId)) {
+        setSelectedId(null);
+      }
+
+      return kept;
+    });
+  }
+
+  function isDescendant(node: Node, ancestorId: string, all: Node[]) {
+    let cur: Node | undefined = all.find((n) => n.id === node.id);
+    while (cur?.parentNode) {
+      if (cur.parentNode === ancestorId) return true;
+      cur = all.find((n) => n.id === cur!.parentNode);
+    }
+    return false;
+  }
+
+  function ancestorHasKind(
+    nodeId: string,
+    kind: NodeKind,
+    all: Node[]
+  ): string | null {
+    let cur = all.find((n) => n.id === nodeId);
+    while (cur?.parentNode) {
+      const p = all.find((n) => n.id === cur!.parentNode);
+      if (!p) break;
+      if (p.data?.kind === kind) return p.id;
+      cur = p;
+    }
+    return null;
+  }
+
   useEffect(() => {
     function onOpenTooltips(e: Event) {
       const ce = e as CustomEvent<{ nodeId: string }>;
@@ -1239,15 +1286,50 @@ export default function Editor() {
   }, [nodes, selectedId, openModal, closeModal, setNodes, setEdges]);
 
   useEffect(() => {
-    setNodes((nds) =>
-      nds.map((n) => {
-        if (n.data?.kind !== 'Tooltip') return n;
-        const attached = (n.data as any)?.attachedTo as string | undefined;
-        if (!attached) return n;
-        if (n.id === selectedId) return { ...n, hidden: false }; // keep visible when tooltip is selected
-        return { ...n, hidden: selectedId !== attached };
-      })
-    );
+    setNodes((nds) => {
+      const next = nds.map((n) => ({ ...n }));
+      const selected = selectedId
+        ? next.find((n) => n.id === selectedId)
+        : null;
+
+      for (const tip of next) {
+        if (tip.data?.kind !== 'Tooltip') continue;
+
+        const attachedTo = (tip.data as any)?.attachedTo as string | undefined;
+        if (!attachedTo) continue;
+
+        // already covered cases
+        const vizSelected = selectedId === attachedTo;
+        const tipSelected = selectedId === tip.id;
+        const tipChildSelected = selected
+          ? isDescendant(selected, tip.id, next)
+          : false;
+
+        // NEW: any child of the attached visualization is selected
+        const vizChildSelected =
+          selected && attachedTo
+            ? isDescendant(selected, attachedTo, next)
+            : false;
+
+        const visible =
+          vizSelected || tipSelected || tipChildSelected || vizChildSelected;
+
+        // toggle tooltip
+        tip.hidden = !visible;
+
+        // propagate visibility to all descendants of the tooltip
+        for (let i = 0; i < next.length; i++) {
+          const child = next[i];
+          if (isDescendant(child, tip.id, next)) {
+            if (child.hidden !== !visible) {
+              next[i] = { ...child, hidden: !visible };
+            }
+          }
+        }
+      }
+
+      return next;
+    });
   }, [selectedId, setNodes]);
 
   return (
@@ -1340,38 +1422,17 @@ export default function Editor() {
             edges={edges}
             onNodesChange={(chs) => {
               onNodesChange(chs);
+
               const removedIds = chs
                 .filter((c) => c.type === 'remove')
                 .map((c: any) => c.id as string);
+
               if (removedIds.length) {
-                setNodes((nds) => {
-                  const removedSet = new Set(removedIds);
-                  for (const id of removedIds) {
-                    const n = nds.find((x) => x.id === id);
-                    if (n?.data?.kind === 'Visualization') {
-                      nds.forEach((t) => {
-                        if (
-                          t.data?.kind === 'Tooltip' &&
-                          (t.data as any)?.attachedTo === id
-                        ) {
-                          removedSet.add(t.id);
-                        }
-                      });
-                    }
-                  }
-                  const kept = nds.filter((n) => !removedSet.has(n.id));
-                  return applyConstraints(kept);
-                });
-                setEdges((eds) =>
-                  eds.filter(
-                    (e) =>
-                      !removedIds.includes(e.source) &&
-                      !removedIds.includes(e.target)
-                  )
-                );
+                pruneAfterRemoval(removedIds);
               } else {
                 setNodes((nds) => applyConstraints(nds));
               }
+
               if (selectedId && !nodes.find((n) => n.id === selectedId)) {
                 setSelectedId(null);
               }
