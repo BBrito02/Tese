@@ -1,10 +1,6 @@
-// src/components/popups/TooltipPopup.tsx
 import React, { useMemo, useState } from 'react';
-import type { DataItem, DataType } from '../../domain/types';
+import type { DataItem, DataType, GraphType } from '../../domain/types';
 
-// this graph types will change once i start implementing the graph types directly in the nodes
-
-// type that helps identify existing tooltips
 export type ExistingTooltip = {
   id: string;
   title: string;
@@ -14,12 +10,10 @@ export type ExistingTooltip = {
 };
 
 type Props = {
-  /** data already available on the visualization (string | DataItem) */
   availableData: Array<string | DataItem>;
-  /** Tooltip nodes already in the canvas */
   availableTooltips: ExistingTooltip[];
   onCancel: () => void;
-  onSave?: (payload: unknown) => void; // still a no-op for now
+  onSave?: (payload: TooltipSaveSpec) => void;
 };
 
 const pill: React.CSSProperties = {
@@ -32,19 +26,20 @@ const pill: React.CSSProperties = {
   whiteSpace: 'nowrap',
 };
 
-const chip: React.CSSProperties = {
-  padding: '6px 10px',
-  borderRadius: 999,
-  border: '1px solid #e5e7eb',
-  background: '#f8fafc',
-  fontWeight: 700,
-  fontSize: 12,
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 6,
+// Result sent to Editor on Save
+export type TooltipSaveSpec = {
+  mode: 'existing' | 'new';
+  attachTo: { type: 'viz' | 'data'; ref?: string };
+  activation: 'hover' | 'click';
+  existingId?: string;
+  newTooltip?: {
+    title: string;
+    description?: string;
+    data: Array<string | DataItem>;
+    graphType?: GraphType | '';
+  };
 };
 
-// format option as "<badge> – <name>" or just "<name>" if no badge
 const optionLabel = (t: ExistingTooltip) => {
   const name = t.title || '(untitled tooltip)';
   return t.badge ? `${t.badge} – ${name}` : name;
@@ -56,25 +51,26 @@ export default function TooltipPopup({
   onCancel,
   onSave,
 }: Props) {
-  // ---------------- Source toggle ----------------
   const hasExisting = availableTooltips.length > 0;
   const [source, setSource] = useState<'existing' | 'new'>(
     hasExisting ? 'existing' : 'new'
   );
 
-  // existing tooltip selection
   const [selectedTooltipId, setSelectedTooltipId] = useState<string>('');
 
-  // ---------------- New tooltip form ----------------
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
 
-  // data selection (for creating new tooltip)
   const [dataMode, setDataMode] = useState<'existing' | 'custom'>('existing');
   const [existingRef, setExistingRef] = useState<string>('');
   const [customName, setCustomName] = useState('');
   const [customType, setCustomType] = useState<DataType>('Other');
   const [customItems, setCustomItems] = useState<DataItem[]>([]);
+
+  // NEW: association + activation
+  const [attachTo, setAttachTo] = useState<'viz' | 'data'>('viz');
+  const [attachRef, setAttachRef] = useState<string>('');
+  const [activation, setActivation] = useState<'hover' | 'click'>('hover');
 
   const existingNames = useMemo(
     () => availableData.map((v) => (typeof v === 'string' ? v : v.name)),
@@ -90,6 +86,53 @@ export default function TooltipPopup({
       return;
     setCustomItems((arr) => arr.concat({ name: trimmed, dtype: customType }));
     setCustomName('');
+  };
+
+  // Validation for Save button
+  const canSave =
+    (source === 'existing'
+      ? selectedTooltipId.length > 0
+      : true) /* new tooltip always allowed */ &&
+    (attachTo === 'viz' || (attachTo === 'data' && attachRef.length > 0));
+
+  const handleSave = () => {
+    if (!onSave || !canSave) return;
+
+    const base = {
+      attachTo:
+        attachTo === 'viz'
+          ? { type: 'viz' as const }
+          : { type: 'data' as const, ref: attachRef },
+      activation,
+    };
+
+    if (source === 'existing') {
+      onSave({
+        mode: 'existing',
+        existingId: selectedTooltipId,
+        ...base,
+      });
+      return;
+    }
+
+    // Build data payload for a brand-new tooltip
+    const chosenData =
+      dataMode === 'existing'
+        ? existingRef
+          ? [existingRef]
+          : []
+        : customItems;
+
+    onSave({
+      mode: 'new',
+      ...base,
+      newTooltip: {
+        title: name || 'Tooltip',
+        description,
+        data: chosenData,
+        graphType: '' as GraphType | '',
+      },
+    });
   };
 
   return (
@@ -166,14 +209,14 @@ export default function TooltipPopup({
             </option>
             {availableTooltips.map((t) => (
               <option key={t.id} value={t.id}>
-                {optionLabel(t)} {/* ← shows "T# – Name" */}
+                {optionLabel(t)}
               </option>
             ))}
           </select>
         </div>
       )}
 
-      {/* New tooltip form (unchanged) */}
+      {/* New tooltip form */}
       {source === 'new' && (
         <>
           {/* Name */}
@@ -199,199 +242,108 @@ export default function TooltipPopup({
               }}
             />
           </div>
+        </>
+      )}
 
-          {/* Description */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '140px 1fr',
-              gap: 10,
-              alignItems: 'start',
-            }}
+      {/* NEW: Attach to */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '140px 1fr',
+          gap: 10,
+          alignItems: 'center',
+        }}
+      >
+        <div style={pill}>Attach to</div>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <label
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
           >
-            <div style={pill}>Description</div>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              placeholder="Tooltip description"
+            <input
+              type="radio"
+              name="tt-attach"
+              value="viz"
+              checked={attachTo === 'viz'}
+              onChange={() => setAttachTo('viz')}
+            />
+            Entire visualization
+          </label>
+
+          <label
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          >
+            <input
+              type="radio"
+              name="tt-attach"
+              value="data"
+              checked={attachTo === 'data'}
+              onChange={() => setAttachTo('data')}
+            />
+            Specific data
+          </label>
+
+          {attachTo === 'data' && (
+            <select
+              value={attachRef}
+              onChange={(e) => setAttachRef(e.target.value)}
               style={{
                 padding: '8px 12px',
                 border: '1px solid #e5e7eb',
                 borderRadius: 12,
                 background: '#fff',
-                resize: 'vertical',
+                fontWeight: 700,
               }}
-            />
-          </div>
+            >
+              <option value="" disabled>
+                Select data item
+              </option>
+              {existingNames.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      </div>
 
-          {/* Data for new tooltip */}
-          {/* Probably this is not needed, just an extra functinality when the user can just add the data later on the component itself instead of in the popup menu */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '140px 1fr',
-              gap: 10,
-              alignItems: 'start',
-            }}
+      {/* NEW: Activation */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '140px 1fr',
+          gap: 10,
+          alignItems: 'center',
+        }}
+      >
+        <div style={pill}>Activation</div>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <label
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
           >
-            <div style={pill}>Data</div>
-            <div style={{ display: 'grid', gap: 10 }}>
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                <label
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                  }}
-                >
-                  <input
-                    type="radio"
-                    name="tt-data-mode"
-                    value="existing"
-                    checked={dataMode === 'existing'}
-                    onChange={() => setDataMode('existing')}
-                  />
-                  Use visualization data
-                </label>
-                <label
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                  }}
-                >
-                  <input
-                    type="radio"
-                    name="tt-data-mode"
-                    value="custom"
-                    checked={dataMode === 'custom'}
-                    onChange={() => setDataMode('custom')}
-                  />
-                  Custom data
-                </label>
-              </div>
-
-              {dataMode === 'existing' ? (
-                <select
-                  value={existingRef}
-                  onChange={(e) => setExistingRef(e.target.value)}
-                  style={{
-                    padding: '8px 12px',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: 12,
-                    background: '#fff',
-                    fontWeight: 700,
-                    width: '100%',
-                  }}
-                >
-                  <option value="" disabled>
-                    Select an item
-                  </option>
-                  {existingNames.map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <>
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      gap: 8,
-                      alignItems: 'center',
-                    }}
-                  >
-                    <input
-                      value={customName}
-                      onChange={(e) => setCustomName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          addCustom();
-                        }
-                      }}
-                      placeholder="Custom data name"
-                      style={{
-                        flex: '1 1 180px',
-                        minWidth: 160,
-                        padding: '8px 12px',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: 12,
-                        background: '#fff',
-                        fontWeight: 700,
-                      }}
-                    />
-                    <select
-                      value={customType}
-                      onChange={(e) =>
-                        setCustomType(e.target.value as DataType)
-                      }
-                      style={{
-                        flex: '0 1 160px',
-                        minWidth: 140,
-                        padding: '8px 12px',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: 12,
-                        background: '#fff',
-                        fontWeight: 700,
-                      }}
-                    >
-                      <option value="Binary">Binary</option>
-                      <option value="Continuous">Continuous</option>
-                      <option value="Discrete">Discrete</option>
-                      <option value="Other">Other</option>
-                    </select>
-                    <button
-                      type="button"
-                      onClick={addCustom}
-                      title="Add custom data"
-                      style={{
-                        padding: '8px 12px',
-                        borderRadius: 12,
-                        border: '1px solid #38bdf8',
-                        background: '#38bdf8',
-                        color: '#fff',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Add
-                    </button>
-                  </div>
-
-                  {customItems.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                      {customItems.map((it, i) => (
-                        <span key={`${it.name}-${it.dtype}-${i}`} style={chip}>
-                          {it.name} · {it.dtype}
-                          <button
-                            onClick={() =>
-                              setCustomItems((arr) =>
-                                arr.filter((_, idx) => idx !== i)
-                              )
-                            }
-                            title="Remove"
-                            style={{
-                              border: 'none',
-                              background: 'transparent',
-                              cursor: 'pointer',
-                              fontWeight: 900,
-                            }}
-                          >
-                            ×
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-        </>
-      )}
+            <input
+              type="radio"
+              name="tt-activation"
+              value="hover"
+              checked={activation === 'hover'}
+              onChange={() => setActivation('hover')}
+            />
+            Hover
+          </label>
+          <label
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          >
+            <input
+              type="radio"
+              name="tt-activation"
+              value="click"
+              checked={activation === 'click'}
+              onChange={() => setActivation('click')}
+            />
+            Click
+          </label>
+        </div>
+      </div>
 
       {/* Actions */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
@@ -408,18 +360,17 @@ export default function TooltipPopup({
           Cancel
         </button>
         <button
-          onClick={() => {
-            /* still no-op by request */
-          }}
+          onClick={handleSave}
+          disabled={!canSave}
           style={{
             padding: '8px 12px',
             borderRadius: 8,
             border: '1px solid #38bdf8',
-            background: '#38bdf8',
+            background: canSave ? '#38bdf8' : '#a3d9ef',
             color: '#fff',
-            cursor: 'default',
+            cursor: canSave ? 'pointer' : 'not-allowed',
           }}
-          title="Not implemented yet"
+          title={canSave ? 'Save changes' : 'Complete the form'}
         >
           Save changes
         </button>

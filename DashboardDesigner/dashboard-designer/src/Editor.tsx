@@ -56,7 +56,12 @@ import SavePopup from './components/popups/SavePopup';
 import { allowedChildKinds } from './domain/rules';
 import AddComponentPopup from './components/popups/ComponentPopup';
 
+import TooltipEdge from './canvas/TooltipEdge';
+
+import { activationIcons, type ActivationKey } from './domain/icons';
+
 const NODE_TYPES = { class: NodeClass };
+const EDGE_TYPES = { tooltip: TooltipEdge };
 
 const PANEL_WIDTH = 280;
 const PANEL_MARGIN = 7;
@@ -198,10 +203,35 @@ export default function Editor() {
 
   const deleteSelectedNode = useCallback(() => {
     if (!selectedId) return;
-    setNodes((nds) => nds.filter((n) => n.id !== selectedId));
+
+    setNodes((nds) => {
+      const toDelete = new Set<string>([selectedId]);
+
+      // if selected is a Visualization, also delete its tooltips
+      const sel = nds.find((n) => n.id === selectedId);
+      if (sel?.data?.kind === 'Visualization') {
+        nds.forEach((n) => {
+          if (
+            n.data?.kind === 'Tooltip' &&
+            (n.data as any)?.attachedTo === selectedId
+          ) {
+            toDelete.add(n.id);
+          }
+        });
+      }
+
+      return nds.filter((n) => !toDelete.has(n.id));
+    });
+
     setEdges((eds) =>
       eds.filter((e) => e.source !== selectedId && e.target !== selectedId)
     );
+
+    // also drop edges for any tooltip that was removed in setNodes above
+    setEdges((eds) =>
+      eds.filter((e) => !(e.source === selectedId || e.target === selectedId))
+    );
+
     setSelectedId(null);
   }, [selectedId, setNodes, setEdges]);
 
@@ -247,6 +277,69 @@ export default function Editor() {
     }
     return null;
   }
+
+  type ActivationMarker = {
+    id: string; // edge id (or unique)
+    src: string; // icon url
+    screenX: number; // absolute within the canvas overlay
+    screenY: number;
+    isSelected: boolean;
+  };
+
+  const [markers, setMarkers] = useState<ActivationMarker[]>([]);
+
+  // flow → screen helper using the current viewport
+  function flowToScreen(pt: { x: number; y: number }) {
+    const vp = (rf && (rf as any).getViewport?.()) || { x: 0, y: 0, zoom: 1 };
+    return { x: vp.x + pt.x * vp.zoom, y: vp.y + pt.y * vp.zoom };
+  }
+
+  const recomputeMarkers = useCallback(() => {
+    if (!rf) return;
+    const result: ActivationMarker[] = [];
+
+    const tooltipEdges = edges.filter(
+      (e: any) => (e.data && e.data.kind) === 'tooltip-link'
+    );
+
+    for (const e of tooltipEdges as any[]) {
+      const viz = nodes.find((n) => n.id === e.source);
+      if (!viz) continue;
+
+      const { x: absX, y: absY } = getAbsolutePosition(viz, nodes);
+      const { w, h } = getNodeSize(viz);
+
+      // anchor at the middle-right of the viz
+      const anchorFlow = { x: absX + w, y: absY + h / 2 };
+      const s = flowToScreen(anchorFlow);
+
+      const screenX = s.x - 9; // half-in/half-out nudge
+      const screenY = s.y;
+
+      const activation: ActivationKey =
+        (e.data?.activation as ActivationKey) || 'hover';
+
+      result.push({
+        id: `marker-${e.id}`,
+        src: activationIcons[activation],
+        screenX,
+        screenY,
+        isSelected: selectedId === e.source, // ⬅️ mark if viz is selected
+      });
+    }
+
+    setMarkers(result);
+  }, [rf, nodes, edges, selectedId]); // ⬅️ include selectedId
+
+  // when nodes/edges change
+  useEffect(() => {
+    recomputeMarkers();
+  }, [recomputeMarkers]);
+
+  // also recompute on pan/zoom/move (React Flow callback)
+  const handleMove = useCallback(() => {
+    recomputeMarkers();
+  }, [recomputeMarkers]);
 
   // Which parent we’re hovering over while dragging from the palette
   const [dragTargetParentId, setDragTargetParentId] = useState<string | null>(
@@ -660,7 +753,56 @@ export default function Editor() {
         graphType: GraphType;
       };
 
-  // Editor.tsx
+  // create a tooltip node outside the dashboard and a dotted edge from viz -> tooltip
+  function createTooltipForVisualization(
+    vizId: string,
+    spec: { title: string; description?: string; activation: 'hover' | 'click' }
+  ) {
+    setNodes((nds) => {
+      const viz = nds.find((n) => n.id === vizId);
+      if (!viz) return nds;
+
+      const { w: vw, h: vh } = getNodeSize(viz);
+      const abs = getAbsolutePosition(viz, nds);
+
+      // tooltip size + position (to the RIGHT of the viz, outside)
+      const size = { width: 220, height: 140 };
+      const margin = 18;
+      const pos = {
+        x: abs.x + vw + margin, // to the right
+        y: Math.max(12, abs.y), // align top-ish
+      };
+
+      const tooltipId = nanoid();
+      const withTooltip = nds.concat({
+        id: tooltipId,
+        type: 'class',
+        position: pos, // canvas coords (no parent)
+        data: {
+          kind: 'Tooltip',
+          title: spec.title || 'Tooltip',
+          description: spec.description,
+          badge: nextBadgeFor('Tooltip', nds), // <-- badge ✅
+        } as NodeData,
+        style: size,
+        // NOT parentNode: we want it outside the dashboard
+      });
+
+      // add dotted edge from viz -> tooltip with metadata
+      setEdges((eds) =>
+        eds.concat({
+          id: nanoid(),
+          source: vizId,
+          target: tooltipId,
+          style: { stroke: '#64748b', strokeDasharray: '6 4' }, // dotted ✅
+          data: { kind: 'tooltip-link', activation: spec.activation },
+        } as any)
+      );
+
+      return withTooltip;
+    });
+  }
+
   const createChildInParent = useCallback(
     (parentId: string, payload: ChildPayload) => {
       setNodes((nds) => {
@@ -896,18 +1038,6 @@ export default function Editor() {
     return <>{children}</>;
   }
 
-  // helper: only handle the "normal node" payload (not GraphType / VisualVariable)
-  function isNodePayload(
-    p: any
-  ): p is { kind: NodeKind; title: string; description?: string } {
-    return (
-      p &&
-      typeof p.kind === 'string' &&
-      !('graphType' in p) &&
-      !('variables' in p)
-    );
-  }
-
   useEffect(() => {
     if (modal?.type !== 'add-component') return;
 
@@ -967,7 +1097,158 @@ export default function Editor() {
         </ModalCleanup>
       ),
     });
-  }, [modal]); // ← only re-run when `modal` changes
+  }, [modal]);
+
+  useEffect(() => {
+    function onOpenTooltips(e: Event) {
+      const ce = e as CustomEvent<{ nodeId: string }>;
+      const vizId = ce.detail?.nodeId;
+      if (!vizId) return;
+
+      const n = nodes.find((x) => x.id === vizId);
+      const availableData = ((n?.data as any)?.data ?? []).map((v: any) =>
+        typeof v === 'string' ? { name: v, dtype: 'Other' } : v
+      );
+
+      const availableTooltips: ExistingTooltip[] = nodes
+        .filter((x) => x.data?.kind === 'Tooltip')
+        .map((t) => ({
+          id: t.id,
+          title: (t.data as any)?.title ?? '',
+          badge: (t.data as any)?.badge ?? '',
+        }));
+
+      const getAbs = (id: string) => {
+        const nn = nodes.find((a) => a.id === id);
+        if (!nn) return { x: 0, y: 0, w: 0, h: 0 };
+        const w = (nn as any).width ?? (nn.style as any)?.width ?? 180;
+        const h = (nn as any).height ?? (nn.style as any)?.height ?? 100;
+        const { x, y } = (getAbsolutePosition as any)(nn, nodes);
+        return { x, y, w: Number(w) || 0, h: Number(h) || 0 };
+      };
+
+      openModal({
+        title: 'Tooltip menu',
+        node: (
+          <TooltipPopup
+            availableData={availableData}
+            availableTooltips={availableTooltips}
+            onCancel={closeModal}
+            onSave={(spec: any) => {
+              const { mode, attachTo, activation } = spec;
+              const vizId = ce.detail?.nodeId;
+              if (!vizId) return;
+
+              const abs = getAbs(vizId);
+              const tW = 250,
+                tH = 180;
+              const pos = { x: abs.x - tW - 24, y: abs.y + 8 };
+
+              const tipId: string | null =
+                mode === 'existing'
+                  ? (spec.existingId as string)
+                  : mode === 'new'
+                  ? nanoid()
+                  : null;
+
+              if (!tipId) return;
+
+              setNodes((nds) => {
+                let next = nds.map((x) => ({ ...x }));
+
+                if (mode === 'existing') {
+                  next = next.map((x) =>
+                    x.id === tipId
+                      ? {
+                          ...x,
+                          parentNode: undefined,
+                          extent: undefined,
+                          position: pos,
+                          style: { ...(x.style || {}), width: tW, height: tH },
+                          data: {
+                            ...(x.data || {}),
+                            kind: 'Tooltip',
+                            attachedTo: vizId,
+                            attachTarget: attachTo,
+                            activation,
+                            badge:
+                              (x.data as any)?.badge ??
+                              nextBadgeFor('Tooltip', nds),
+                          },
+                          hidden: selectedId !== vizId,
+                        }
+                      : x
+                  );
+                  // Mode == 'new'
+                } else {
+                  const data: NodeData = {
+                    kind: 'Tooltip',
+                    title: spec.newTooltip.title || 'Tooltip',
+                    description: spec.newTooltip.description,
+                    data: spec.newTooltip.data,
+                    attachedTo: vizId,
+                    attachTarget: attachTo,
+                    activation,
+                    badge: nextBadgeFor('Tooltip', nds),
+                  } as any;
+
+                  next = next.concat({
+                    id: tipId,
+                    type: 'class',
+                    position: pos,
+                    data,
+                    style: { width: tW, height: tH },
+                    hidden: selectedId !== vizId,
+                  });
+                }
+                return next;
+              });
+
+              const vizAbs = getAbs(vizId); // {x,y,w,h}
+              const vizCenterX = vizAbs.x + vizAbs.w / 2;
+              const tipCenterX = pos.x + tW / 2; // use the pos you computed for the tooltip
+              const sourceSide: 'left' | 'right' =
+                tipCenterX >= vizCenterX ? 'right' : 'left';
+
+              setEdges((eds) => {
+                if (eds.some((e) => e.source === vizId && e.target === tipId))
+                  return eds;
+                return eds.concat({
+                  id: `e-viz-${vizId}-tip-${tipId}`,
+                  source: vizId,
+                  target: tipId,
+                  type: 'tooltip',
+                  style: { strokeDasharray: '4 4' },
+                  data: {
+                    activation, // 'hover' | 'click'
+                    sourceSide, // <-- store it
+                  },
+                } as any);
+              });
+
+              closeModal();
+            }}
+          />
+        ),
+      });
+    }
+
+    const handler = onOpenTooltips as EventListener;
+    window.addEventListener('designer:open-tooltips', handler);
+    return () => window.removeEventListener('designer:open-tooltips', handler);
+  }, [nodes, selectedId, openModal, closeModal, setNodes, setEdges]);
+
+  useEffect(() => {
+    setNodes((nds) =>
+      nds.map((n) => {
+        if (n.data?.kind !== 'Tooltip') return n;
+        const attached = (n.data as any)?.attachedTo as string | undefined;
+        if (!attached) return n;
+        if (n.id === selectedId) return { ...n, hidden: false }; // keep visible when tooltip is selected
+        return { ...n, hidden: selectedId !== attached };
+      })
+    );
+  }, [selectedId, setNodes]);
 
   return (
     <div
@@ -1046,9 +1327,10 @@ export default function Editor() {
         <div
           className="canvas"
           ref={wrapperRef}
-          style={{ flex: 1, minWidth: 0 }}
+          style={{ flex: 1, minWidth: 0, position: 'relative' }}
         >
           <ReactFlow
+            style={{ position: 'relative', zIndex: 0 }}
             minZoom={0.1}
             maxZoom={2}
             selectionOnDrag={lassoMode}
@@ -1057,16 +1339,50 @@ export default function Editor() {
             nodes={nodes}
             edges={edges}
             onNodesChange={(chs) => {
-              onNodesChange(chs); // let React Flow apply the changes
-              setNodes((nds) => applyConstraints(nds)); // then enforce constraints
-              if (selectedId && !nodes.find((n) => n.id === selectedId))
+              onNodesChange(chs);
+              const removedIds = chs
+                .filter((c) => c.type === 'remove')
+                .map((c: any) => c.id as string);
+              if (removedIds.length) {
+                setNodes((nds) => {
+                  const removedSet = new Set(removedIds);
+                  for (const id of removedIds) {
+                    const n = nds.find((x) => x.id === id);
+                    if (n?.data?.kind === 'Visualization') {
+                      nds.forEach((t) => {
+                        if (
+                          t.data?.kind === 'Tooltip' &&
+                          (t.data as any)?.attachedTo === id
+                        ) {
+                          removedSet.add(t.id);
+                        }
+                      });
+                    }
+                  }
+                  const kept = nds.filter((n) => !removedSet.has(n.id));
+                  return applyConstraints(kept);
+                });
+                setEdges((eds) =>
+                  eds.filter(
+                    (e) =>
+                      !removedIds.includes(e.source) &&
+                      !removedIds.includes(e.target)
+                  )
+                );
+              } else {
+                setNodes((nds) => applyConstraints(nds));
+              }
+              if (selectedId && !nodes.find((n) => n.id === selectedId)) {
                 setSelectedId(null);
+              }
             }}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onInit={setRf}
             nodeTypes={NODE_TYPES}
+            edgeTypes={EDGE_TYPES}
             onSelectionChange={handleSelectionChange}
+            onMove={handleMove}
             fitView
           >
             <Background />
@@ -1083,6 +1399,38 @@ export default function Editor() {
               </ControlButton>
             </Controls>
           </ReactFlow>
+
+          {/* Activation icon overlay - above RF */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              pointerEvents: 'none',
+              zIndex: 100000, // ⬅️ higher than RF’s nodes/handles
+            }}
+          >
+            {markers.map((m) => (
+              <img
+                key={m.id}
+                src={m.src}
+                alt=""
+                style={{
+                  position: 'absolute',
+                  left: m.screenX,
+                  top: m.screenY,
+                  width: 20,
+                  height: 20,
+                  transform: 'translate(-50%, -50%)',
+                  borderRadius: '50%',
+                  background: '#fff',
+                  boxShadow: '0 2px 6px rgba(0,0,0,.25)',
+                  zIndex: m.isSelected ? 100001 : 100000, // ⬅️ above selection outline
+                  pointerEvents: 'none',
+                }}
+                draggable={false}
+              />
+            ))}
+          </div>
         </div>
         <ComponentsMenu
           node={selectedNode}

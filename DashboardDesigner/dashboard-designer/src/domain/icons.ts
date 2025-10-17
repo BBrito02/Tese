@@ -24,3 +24,10 @@ export const GRAPH_TYPE_ICONS: Record<GraphType, string> = {
   HeatMap: '/icons/graphtype_heatmap.png',
   Clock: '/icons/graphtype_clock.png',
 };
+
+export const activationIcons = {
+  hover: '/icons/hover.png',
+  click: '/icons/click.png',
+} as const;
+
+export type ActivationKey = keyof typeof activationIcons;
