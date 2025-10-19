@@ -862,47 +862,47 @@ export default function Editor() {
     return () => window.removeEventListener('designer:add-component', handler);
   }, [createChildInParent]);
 
-  useEffect(() => {
-    function onOpenTooltips(e: Event) {
-      const ce = e as CustomEvent<{ nodeId: string }>;
-      const nodeId = ce.detail?.nodeId;
-      if (!nodeId) return;
+  // useEffect(() => {
+  //   function onOpenTooltips(e: Event) {
+  //     const ce = e as CustomEvent<{ nodeId: string }>;
+  //     const nodeId = ce.detail?.nodeId;
+  //     if (!nodeId) return;
 
-      // find the node that asked for the tooltip modal
-      const n = nodes.find((x) => x.id === nodeId);
+  //     // find the node that asked for the tooltip modal
+  //     const n = nodes.find((x) => x.id === nodeId);
 
-      // normalize its data list to DataItem[]
-      const availableData = ((n?.data as any)?.data ?? []).map((v: any) =>
-        typeof v === 'string' ? { name: v, dtype: 'Other' } : v
-      );
+  //     // normalize its data list to DataItem[]
+  //     const availableData = ((n?.data as any)?.data ?? []).map((v: any) =>
+  //       typeof v === 'string' ? { name: v, dtype: 'Other' } : v
+  //     );
 
-      // gather all tooltip nodes in the graph
-      const availableTooltips: ExistingTooltip[] = nodes
-        .filter((x) => x.data?.kind === 'Tooltip')
-        .map((t) => ({
-          id: t.id,
-          title: (t.data as any)?.title ?? '',
-          badge: (t.data as any)?.badge ?? '',
-        }));
+  //     // gather all tooltip nodes in the graph
+  //     const availableTooltips: ExistingTooltip[] = nodes
+  //       .filter((x) => x.data?.kind === 'Tooltip')
+  //       .map((t) => ({
+  //         id: t.id,
+  //         title: (t.data as any)?.title ?? '',
+  //         badge: (t.data as any)?.badge ?? '',
+  //       }));
 
-      openModal({
-        title: 'Tooltip menu',
-        node: (
-          <TooltipPopup
-            availableData={availableData}
-            availableTooltips={availableTooltips}
-            onCancel={closeModal}
-            // To be done later on, when i finish the essentials
-            // onSave={(payload) => { /* wire up later if needed */ closeModal(); }}
-          />
-        ),
-      });
-    }
+  //     openModal({
+  //       title: 'Tooltip menu',
+  //       node: (
+  //         <TooltipPopup
+  //           availableData={availableData}
+  //           availableTooltips={availableTooltips}
+  //           onCancel={closeModal}
+  //           // To be done later on, when i finish the essentials
+  //           // onSave={(payload) => { /* wire up later if needed */ closeModal(); }}
+  //         />
+  //       ),
+  //     });
+  //   }
 
-    const handler = onOpenTooltips as EventListener;
-    window.addEventListener('designer:open-tooltips', handler);
-    return () => window.removeEventListener('designer:open-tooltips', handler);
-  }, [nodes, openModal, closeModal]);
+  //   const handler = onOpenTooltips as EventListener;
+  //   window.addEventListener('designer:open-tooltips', handler);
+  //   return () => window.removeEventListener('designer:open-tooltips', handler);
+  // }, [nodes, openModal, closeModal]);
 
   // Editor.tsx
   useEffect(() => {

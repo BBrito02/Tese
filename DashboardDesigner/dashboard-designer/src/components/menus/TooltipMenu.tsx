@@ -104,7 +104,7 @@ export default function TooltipMenu(p: KindProps) {
 
       {/* Description Section */}
       <DescriptionSection
-        placeholder="Describe this graph"
+        placeholder="Describe this tooltip"
         value={d.description}
         disabled={disabled}
         onChange={(val) => p.onChange({ description: val })} // <- adapt string → patch

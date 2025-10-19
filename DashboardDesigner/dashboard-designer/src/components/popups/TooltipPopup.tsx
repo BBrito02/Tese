@@ -1,15 +1,14 @@
 import React, { useMemo, useState } from 'react';
-import type { DataItem, DataType, GraphType } from '../../domain/types';
+import type { DataItem } from '../../domain/types';
 
 export type ExistingTooltip = {
   id: string;
   title: string;
-  description?: string;
-  data?: Array<string | DataItem>;
   badge?: string;
 };
 
 type Props = {
+  // still used to populate the "attach to specific data" select
   availableData: Array<string | DataItem>;
   availableTooltips: ExistingTooltip[];
   onCancel: () => void;
@@ -26,7 +25,7 @@ const pill: React.CSSProperties = {
   whiteSpace: 'nowrap',
 };
 
-// Result sent to Editor on Save
+// Result sent to Editor on Save (no description, no data)
 export type TooltipSaveSpec = {
   mode: 'existing' | 'new';
   attachTo: { type: 'viz' | 'data'; ref?: string };
@@ -34,9 +33,6 @@ export type TooltipSaveSpec = {
   existingId?: string;
   newTooltip?: {
     title: string;
-    description?: string;
-    data: Array<string | DataItem>;
-    graphType?: GraphType | '';
   };
 };
 
@@ -57,17 +53,9 @@ export default function TooltipPopup({
   );
 
   const [selectedTooltipId, setSelectedTooltipId] = useState<string>('');
+  const [name, setName] = useState(''); // only field for new tooltip
 
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-
-  const [dataMode, setDataMode] = useState<'existing' | 'custom'>('existing');
-  const [existingRef, setExistingRef] = useState<string>('');
-  const [customName, setCustomName] = useState('');
-  const [customType, setCustomType] = useState<DataType>('Other');
-  const [customItems, setCustomItems] = useState<DataItem[]>([]);
-
-  // NEW: association + activation
+  // association + activation
   const [attachTo, setAttachTo] = useState<'viz' | 'data'>('viz');
   const [attachRef, setAttachRef] = useState<string>('');
   const [activation, setActivation] = useState<'hover' | 'click'>('hover');
@@ -77,22 +65,9 @@ export default function TooltipPopup({
     [availableData]
   );
 
-  const addCustom = () => {
-    const trimmed = customName.trim();
-    if (!trimmed) return;
-    if (
-      customItems.some((it) => it.name === trimmed && it.dtype === customType)
-    )
-      return;
-    setCustomItems((arr) => arr.concat({ name: trimmed, dtype: customType }));
-    setCustomName('');
-  };
-
   // Validation for Save button
   const canSave =
-    (source === 'existing'
-      ? selectedTooltipId.length > 0
-      : true) /* new tooltip always allowed */ &&
+    (source === 'existing' ? selectedTooltipId.length > 0 : true) &&
     (attachTo === 'viz' || (attachTo === 'data' && attachRef.length > 0));
 
   const handleSave = () => {
@@ -101,8 +76,8 @@ export default function TooltipPopup({
     const base = {
       attachTo:
         attachTo === 'viz'
-          ? { type: 'viz' as const }
-          : { type: 'data' as const, ref: attachRef },
+          ? ({ type: 'viz' } as const)
+          : ({ type: 'data', ref: attachRef } as const),
       activation,
     };
 
@@ -115,22 +90,11 @@ export default function TooltipPopup({
       return;
     }
 
-    // Build data payload for a brand-new tooltip
-    const chosenData =
-      dataMode === 'existing'
-        ? existingRef
-          ? [existingRef]
-          : []
-        : customItems;
-
     onSave({
       mode: 'new',
       ...base,
       newTooltip: {
         title: name || 'Tooltip',
-        description,
-        data: chosenData,
-        graphType: '' as GraphType | '',
       },
     });
   };
@@ -216,36 +180,33 @@ export default function TooltipPopup({
         </div>
       )}
 
-      {/* New tooltip form */}
+      {/* New tooltip form (only Name now) */}
       {source === 'new' && (
-        <>
-          {/* Name */}
-          <div
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '140px 1fr',
+            gap: 10,
+            alignItems: 'center',
+          }}
+        >
+          <div style={pill}>Name</div>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Tooltip name"
             style={{
-              display: 'grid',
-              gridTemplateColumns: '140px 1fr',
-              gap: 10,
-              alignItems: 'center',
+              padding: '8px 12px',
+              border: '1px solid #e5e7eb',
+              borderRadius: 12,
+              background: '#fff',
+              fontWeight: 700,
             }}
-          >
-            <div style={pill}>Name</div>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Random Name"
-              style={{
-                padding: '8px 12px',
-                border: '1px solid #e5e7eb',
-                borderRadius: 12,
-                background: '#fff',
-                fontWeight: 700,
-              }}
-            />
-          </div>
-        </>
+          />
+        </div>
       )}
 
-      {/* NEW: Attach to */}
+      {/* Attach to */}
       <div
         style={{
           display: 'grid',
@@ -307,7 +268,7 @@ export default function TooltipPopup({
         </div>
       </div>
 
-      {/* NEW: Activation */}
+      {/* Activation */}
       <div
         style={{
           display: 'grid',
