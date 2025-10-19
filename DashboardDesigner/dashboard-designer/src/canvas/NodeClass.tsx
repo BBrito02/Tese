@@ -22,9 +22,6 @@ const MIN_SIZE = {
   Graph: { w: 60, h: 40 },
 };
 
-const dataLabel = (v: string | DataItem) =>
-  typeof v === 'string' ? v : v.name;
-
 function DataPills({
   items,
   onClick,
@@ -71,42 +68,6 @@ function DataPills({
           </button>
         );
       })}
-    </div>
-  );
-}
-
-// function to print all the data attrributes in a single box
-function SingleDataBox({
-  items,
-  compact = false,
-}: {
-  items?: (string | DataItem)[];
-  compact?: boolean;
-}) {
-  const text = (items ?? []).map(dataLabel).join(', ');
-  if (!text) return null;
-
-  return (
-    <div
-      style={{
-        display: 'inline-block',
-        width: 'auto',
-        maxWidth: '90%',
-        minWidth: compact ? 40 : 60,
-        boxSizing: 'border-box',
-        padding: compact ? '1px 3px' : '4px 5px',
-        border: '1px solid #e5e7eb',
-        borderRadius: 5,
-        background: '#f8fafc',
-        fontWeight: 700,
-        textAlign: 'center',
-        whiteSpace: 'normal',
-        wordBreak: 'break-word',
-        lineHeight: compact ? 1.05 : 1.2, // avoid clipped glyphs
-        fontSize: compact ? 11 : 12,
-      }}
-    >
-      {text}
     </div>
   );
 }

@@ -1,7 +1,6 @@
-import type { KindProps } from './common';
 import { TypeField } from './sections';
 
-export default function ButtonMenu(p: KindProps) {
+export default function GraphMenu() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {/* Header */}
