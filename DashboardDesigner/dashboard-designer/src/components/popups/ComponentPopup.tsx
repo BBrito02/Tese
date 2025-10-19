@@ -235,31 +235,6 @@ export default function AddComponentPopup({ kinds, onCancel, onSave }: Props) {
               }}
             />
           </div>
-          <div>
-            <label
-              style={{
-                display: 'block',
-                fontSize: 12,
-                opacity: 0.8,
-                marginBottom: 6,
-              }}
-            >
-              Description
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              placeholder="Optional description"
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                borderRadius: 10,
-                border: '1px solid #e5e7eb',
-                resize: 'vertical',
-              }}
-            />
-          </div>
         </>
       )}
 

@@ -158,6 +158,37 @@ export function TypeField(props: { value: string }) {
   );
 }
 
+export function SubTypeField(props: { value: string }) {
+  return (
+    <div>
+      <label
+        style={{
+          display: 'block',
+          fontSize: 12,
+          opacity: 0.8,
+          marginBottom: 6,
+        }}
+      >
+        Grpah type
+      </label>
+      <div style={{ position: 'relative' }}>
+        <input
+          value={props.value}
+          readOnly
+          disabled
+          style={{
+            ...WhiteField,
+            paddingRight: 34,
+            opacity: 1,
+            color: '#0f172a',
+          }}
+        />
+        <LuTag size={16} style={smallIconRight} />
+      </div>
+    </div>
+  );
+}
+
 /**
  * Generic section that shows a title, optional (+) button, and a chip list.
  * Use `items` as string[] or DataItem[]. If the list is empty, shows GhostLine.
@@ -187,6 +218,46 @@ export function ListSection(props: {
         )}
       </div>
       <Chips items={items} />
+    </div>
+  );
+}
+
+// sections.tsx (unchanged)
+export function DescriptionSection({
+  label = 'Description',
+  placeholder = 'Describe this component',
+  value,
+  onChange,
+  disabled,
+  rows = 4,
+}: {
+  label?: string;
+  placeholder?: string;
+  value?: string;
+  onChange: (v: string) => void;
+  disabled?: boolean;
+  rows?: number;
+}) {
+  return (
+    <div>
+      <label
+        style={{
+          display: 'block',
+          fontSize: 12,
+          opacity: 0.8,
+          marginBottom: 6,
+        }}
+      >
+        {label}
+      </label>
+      <textarea
+        placeholder={placeholder}
+        value={value ?? ''}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        rows={rows}
+        style={{ ...WhiteField, resize: 'vertical' as const }}
+      />
     </div>
   );
 }

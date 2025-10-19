@@ -13,6 +13,7 @@ import LegendMenu from './LegendMenu';
 import TooltipMenu from './TooltipMenu';
 // import DataActionMenu from './DataActionMenu';
 import PlaceholderMenu from './PlaceholderMenu';
+import GraphMenu from './GraphMenu';
 
 // Associates every component to its respective menu (Data action still has the Base Menu)
 export const MENUS: Partial<Record<NodeKind, (p: KindProps) => JSX.Element>> = {
@@ -25,6 +26,7 @@ export const MENUS: Partial<Record<NodeKind, (p: KindProps) => JSX.Element>> = {
   Parameter: ParameterMenu,
   DataAction: BaseMenu,
   Placeholder: PlaceholderMenu,
+  Graph: GraphMenu,
 };
 
 export type { KindProps };

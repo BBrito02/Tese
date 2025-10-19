@@ -1,5 +1,4 @@
 import type { KindProps } from './common';
-import { WhiteField } from './common';
 import type {
   DataItem,
   GraphType,
@@ -11,6 +10,7 @@ import {
   TypeField,
   ListSection,
   AddComponentSection,
+  DescriptionSection,
 } from './sections';
 import { useModal } from '../ui/ModalHost';
 import { allowedChildKinds } from '../../domain/rules';
@@ -103,26 +103,12 @@ export default function TooltipMenu(p: KindProps) {
       />
 
       {/* Description Section */}
-      <div>
-        <label
-          style={{
-            display: 'block',
-            fontSize: 12,
-            opacity: 0.8,
-            marginBottom: 6,
-          }}
-        >
-          Description
-        </label>
-        <textarea
-          placeholder="Describe this tooltip"
-          value={d.description ?? ''}
-          onChange={(e) => p.onChange({ description: e.target.value })}
-          disabled={disabled}
-          rows={4}
-          style={{ ...WhiteField, resize: 'vertical' as const }}
-        />
-      </div>
+      <DescriptionSection
+        placeholder="Describe this graph"
+        value={d.description}
+        disabled={disabled}
+        onChange={(val) => p.onChange({ description: val })} // <- adapt string → patch
+      />
     </div>
   );
 }

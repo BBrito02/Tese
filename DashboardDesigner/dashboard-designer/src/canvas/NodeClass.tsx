@@ -22,12 +22,6 @@ const MIN_SIZE = {
   Graph: { w: 60, h: 40 },
 };
 
-const COMPACT_FOOTER_KINDS = new Set<NodeData['kind']>([
-  'Filter',
-  'Button',
-  'Legend',
-]);
-
 const dataLabel = (v: string | DataItem) =>
   typeof v === 'string' ? v : v.name;
 

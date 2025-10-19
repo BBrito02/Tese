@@ -74,6 +74,7 @@ export default function Editor() {
   const [rf, setRf] = useState<ReactFlowInstance | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
   const selectedNode = useMemo(
     () => nodes.find((n) => n.id === selectedId),
     [nodes, selectedId]
@@ -164,6 +165,9 @@ export default function Editor() {
       }
       // Always keep the clicked node selected (no special-casing Graph).
       const n = sel[0];
+
+      // const kind = n?.data?.kind as NodeKind | undefined;
+      // setSelectedId(kind === 'Graph' ? null : n.id);
       setSelectedId(n.id);
     },
     [lassoMode]
@@ -184,15 +188,15 @@ export default function Editor() {
   );
 
   const updateSelectedNode = useCallback(
-    (patch: Partial<NodeData>) => {
+    (patch: Partial<NodeData>, opts?: { reflow?: boolean }) => {
+      const reflow = opts?.reflow ?? false; // default: NO constraints
       if (!selectedId) return;
-      setNodes((nds) =>
-        applyConstraints(
-          nds.map((n) =>
-            n.id === selectedId ? { ...n, data: { ...n.data, ...patch } } : n
-          )
-        )
-      );
+      setNodes((nds) => {
+        const next = nds.map((n) =>
+          n.id === selectedId ? { ...n, data: { ...n.data, ...patch } } : n
+        );
+        return reflow ? applyConstraints(next) : next;
+      });
     },
     [selectedId, setNodes]
   );
@@ -1444,6 +1448,9 @@ export default function Editor() {
             edgeTypes={EDGE_TYPES}
             onSelectionChange={handleSelectionChange}
             onMove={handleMove}
+            onPaneClick={() => {
+              setSelectedId(null);
+            }}
             fitView
           >
             <Background />
@@ -1493,14 +1500,17 @@ export default function Editor() {
             ))}
           </div>
         </div>
-        <ComponentsMenu
-          node={selectedNode}
-          onChange={updateSelectedNode}
-          onDelete={deleteSelectedNode}
-          onOpen={(t) =>
-            selectedId && setModal({ type: t, nodeId: selectedId })
-          }
-        />
+        {(selectedNode || menuExiting) && (
+          <ComponentsMenu
+            key={selectedNode?.id ?? 'components-menu'}
+            node={selectedNode}
+            onChange={updateSelectedNode}
+            onDelete={deleteSelectedNode}
+            onOpen={(t) =>
+              selectedNode && setModal({ type: t, nodeId: selectedNode.id })
+            }
+          />
+        )}
 
         <DragOverlay dropAnimation={{ duration: 150 }}>
           {dragPreview ? <NodeGhost payload={dragPreview} /> : null}
