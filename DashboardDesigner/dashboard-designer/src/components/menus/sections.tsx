@@ -49,13 +49,41 @@ const headerRow: React.CSSProperties = {
   justifyContent: 'space-between',
 };
 
-// label of the component
-const labelOf = (v: ListItem) => (typeof v === 'string' ? v : v.name);
+// --- New styles for tooltip pills ---
+const tooltipPill: React.CSSProperties = {
+  fontSize: 12,
+  padding: '4px 8px',
+  borderRadius: 999,
+  background: '#eef2ff', // light blue background
+  border: '1px solid #c7d2fe',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 6,
+  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+};
 
-// type of the component
-const typeOf = (v: ListItem) => (typeof v === 'string' ? undefined : v.dtype);
+const tooltipBadge: React.CSSProperties = {
+  width: 20,
+  height: 20,
+  borderRadius: 999,
+  background: '#fff', // white badge now
+  border: '1px solid #cbd5e1',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontSize: 11,
+  fontWeight: 700,
+  color: '#000000ff', // dark blue text inside the badge
+};
 
-// function that prints the data attributes
+// helper to detect tooltip strings
+const parseTooltip = (s: string) => {
+  const m = s.match(/^(\w+\d+)\s+(.*)$/); // e.g., "T0 Tester-Tooltip"
+  if (!m) return null;
+  return { badge: m[1], title: m[2] };
+};
+
+// function that prints the data attributes + tooltips
 export function Chips({ items }: { items: ListItem[] }) {
   if (!items?.length) {
     return (
@@ -64,14 +92,55 @@ export function Chips({ items }: { items: ListItem[] }) {
       </div>
     );
   }
+
   return (
     <div style={{ marginTop: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
       {items.map((it, i) => {
-        const label = labelOf(it);
-        const dtype = typeOf(it);
+        // --- Data items (keep old blue style) ---
+        if (typeof it !== 'string') {
+          const label = it.name;
+          const dtype = it.dtype;
+          return (
+            <span
+              key={`data-${label}-${dtype}-${i}`}
+              style={{
+                fontSize: 12,
+                padding: '4px 8px',
+                borderRadius: 999,
+                background: '#eef2ff',
+                border: '1px solid #c7d2fe',
+                display: 'inline-flex',
+                alignItems: 'center',
+              }}
+              title={`${label}${dtype ? ` · ${dtype}` : ''}`}
+            >
+              {label}
+              {dtype && <span style={dtypeBadge}>{dtype}</span>}
+            </span>
+          );
+        }
+
+        // --- Tooltip entries (new white badge + blue background) ---
+        const parsed = parseTooltip(it);
+        if (parsed) {
+          return (
+            <span
+              key={`tip-${it}-${i}`}
+              style={tooltipPill}
+              title={parsed.title}
+            >
+              <span style={tooltipBadge}>{parsed.badge}</span>
+              <span style={{ fontWeight: 600, color: '#000000ff' }}>
+                {parsed.title}
+              </span>
+            </span>
+          );
+        }
+
+        // --- Fallback: plain string ---
         return (
           <span
-            key={`${label}-${dtype ?? ''}-${i}`}
+            key={`str-${it}-${i}`}
             style={{
               fontSize: 12,
               padding: '4px 8px',
@@ -81,10 +150,9 @@ export function Chips({ items }: { items: ListItem[] }) {
               display: 'inline-flex',
               alignItems: 'center',
             }}
-            title={dtype ? `${label} · ${dtype}` : label}
+            title={it}
           >
-            {label}
-            {dtype && <span style={dtypeBadge}>{dtype}</span>}
+            {it}
           </span>
         );
       })}

@@ -1207,7 +1207,23 @@ export default function Editor() {
               setNodes((nds) => {
                 let next = nds.map((x) => ({ ...x }));
 
+                let tipBadge: string = '';
+                let tipTitle: string = 'Tooltip';
+
                 if (mode === 'existing') {
+                  const existing = next.find((x) => x.id === tipId);
+
+                  const existingBadge = (existing?.data as any)?.badge as
+                    | string
+                    | undefined;
+                  const existingTitle = (existing?.data as any)?.title as
+                    | string
+                    | undefined;
+
+                  tipBadge =
+                    existingBadge ?? nextBadgeFor('Tooltip', next) ?? '';
+                  tipTitle = existingTitle ?? 'Tooltip';
+
                   next = next.map((x) =>
                     x.id === tipId
                       ? {
@@ -1222,25 +1238,26 @@ export default function Editor() {
                             attachedTo: vizId,
                             attachTarget: attachTo,
                             activation,
-                            badge:
-                              (x.data as any)?.badge ??
-                              nextBadgeFor('Tooltip', nds),
+                            badge: tipBadge,
+                            title: tipTitle,
                           },
                           hidden: selectedId !== vizId,
                         }
                       : x
                   );
-                  // Mode == 'new'
                 } else {
+                  tipBadge = nextBadgeFor('Tooltip', next) ?? '';
+                  tipTitle = spec?.newTooltip?.title?.trim() || 'Tooltip';
+
                   const data: NodeData = {
                     kind: 'Tooltip',
-                    title: spec.newTooltip.title || 'Tooltip',
-                    description: spec.newTooltip.description,
-                    data: spec.newTooltip.data,
+                    title: tipTitle,
+                    description: spec?.newTooltip?.description,
+                    data: spec?.newTooltip?.data,
                     attachedTo: vizId,
                     attachTarget: attachTo,
                     activation,
-                    badge: nextBadgeFor('Tooltip', nds),
+                    badge: tipBadge,
                   } as any;
 
                   next = next.concat({
@@ -1252,28 +1269,40 @@ export default function Editor() {
                     hidden: selectedId !== vizId,
                   });
                 }
+
+                // Append "T# Title" to the viz node’s data.tooltips (as strings), deduped
+                const label = `${tipBadge ? tipBadge + ' ' : ''}${tipTitle}`;
+                next = next.map((n) => {
+                  if (n.id !== vizId) return n;
+                  const existingList = Array.isArray((n.data as any)?.tooltips)
+                    ? ([...(n.data as any).tooltips] as string[])
+                    : [];
+                  if (existingList.includes(label)) return n;
+                  return {
+                    ...n,
+                    data: {
+                      ...n.data,
+                      tooltips: [...existingList, label],
+                    },
+                  };
+                });
+
                 return next;
               });
 
-              const vizAbs = getAbs(vizId); // {x,y,w,h}
-              const vizCenterX = vizAbs.x + vizAbs.w / 2;
-              const tipCenterX = pos.x + tW / 2; // use the pos you computed for the tooltip
-              const sourceSide: 'left' | 'right' =
-                tipCenterX >= vizCenterX ? 'right' : 'left';
-
+              // keep your existing edge creation
               setEdges((eds) => {
                 if (eds.some((e) => e.source === vizId && e.target === tipId))
                   return eds;
+
+                // (optional) keep your sourceSide calc here if you had it before
                 return eds.concat({
                   id: `e-viz-${vizId}-tip-${tipId}`,
                   source: vizId,
                   target: tipId,
                   type: 'tooltip',
                   style: { strokeDasharray: '4 4' },
-                  data: {
-                    activation, // 'hover' | 'click'
-                    sourceSide, // <-- store it
-                  },
+                  data: { activation },
                 } as any);
               });
 
