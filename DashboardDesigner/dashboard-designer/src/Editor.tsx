@@ -1221,8 +1221,9 @@ export default function Editor() {
                   (eds as AppEdge[]).some(
                     (e) => e.source === vizId && e.target === tipId
                   )
-                )
+                ) {
                   return eds;
+                }
 
                 return (eds as AppEdge[]).concat({
                   id: `e-viz-${vizId}-tip-${tipId}`,
@@ -1230,7 +1231,7 @@ export default function Editor() {
                   target: tipId,
                   type: 'tooltip',
                   style: { strokeDasharray: '4 4' },
-                  data: { activation },
+                  data: { activation, targetH: tH },
                 } as AppEdge) as any;
               });
 

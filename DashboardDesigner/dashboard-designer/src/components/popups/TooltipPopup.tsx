@@ -49,7 +49,7 @@ export default function TooltipPopup({
 }: Props) {
   const hasExisting = availableTooltips.length > 0;
   const [source, setSource] = useState<'existing' | 'new'>(
-    hasExisting ? 'existing' : 'new'
+    hasExisting ? 'new' : 'new'
   );
 
   const [selectedTooltipId, setSelectedTooltipId] = useState<string>('');

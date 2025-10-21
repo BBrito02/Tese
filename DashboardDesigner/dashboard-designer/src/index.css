@@ -26,3 +26,23 @@ body,
   height: 0;
   display: none; /* extra safety */
 }
+
+/* Make edges render above nodes */
+#editor-root .react-flow__edges {
+  z-index: 100 !important;
+}
+
+/* Keep nodes below edges */
+#editor-root .react-flow__nodes {
+  z-index: 50 !important;
+}
+
+/* Prevent the visible path from stealing clicks from nodes */
+#editor-root .react-flow__edge-path {
+  pointer-events: none;
+}
+
+/* And the wide hit-area path as well (we don't need to click tooltip edges) */
+#editor-root .react-flow__edge-interaction {
+  pointer-events: none;
+}
