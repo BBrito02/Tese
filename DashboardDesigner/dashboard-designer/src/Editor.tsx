@@ -1033,6 +1033,7 @@ export default function Editor() {
       const all = nds as AppNode[];
       const base = new Set<string>(initialIds);
 
+      // if a viz is deleted, also delete its attached tooltips (you already had this)
       for (const id of Array.from(base)) {
         const n = all.find((x) => x.id === id);
         if (n?.data?.kind === 'Visualization') {
@@ -1049,8 +1050,48 @@ export default function Editor() {
 
       const toDelete = collectDescendants(all, base);
 
+      // ---- NEW: gather labels of tooltips we are deleting, grouped by viz id
+      const labelsByViz = new Map<string, Set<string>>();
+      for (const tip of all) {
+        if (!toDelete.has(tip.id)) continue;
+        if (tip.data?.kind !== 'Tooltip') continue;
+
+        const attachedTo = (tip.data as any)?.attachedTo as string | undefined;
+        const badge = (tip.data as any)?.badge as string | undefined;
+        const title = (tip.data as any)?.title as string | undefined;
+        if (!attachedTo || !title) continue;
+
+        const label = `${badge ? badge + ' ' : ''}${title}`;
+        if (!labelsByViz.has(attachedTo))
+          labelsByViz.set(attachedTo, new Set());
+        labelsByViz.get(attachedTo)!.add(label);
+      }
+
+      // keep nodes that are not being deleted
       const kept = all.filter((n) => !toDelete.has(n.id));
 
+      // ---- NEW: remove deleted tooltip labels from each affected visualization
+      for (let i = 0; i < kept.length; i++) {
+        const n = kept[i];
+        if (n.data?.kind !== 'Visualization') continue;
+
+        const toPrune = labelsByViz.get(n.id);
+        if (!toPrune || toPrune.size === 0) continue;
+
+        const current = Array.isArray((n.data as any)?.tooltips)
+          ? ([...(n.data as any).tooltips] as string[])
+          : [];
+
+        const pruned = current.filter((lbl) => !toPrune.has(lbl));
+        if (pruned.length !== current.length) {
+          kept[i] = {
+            ...n,
+            data: { ...(n.data as any), tooltips: pruned } as any,
+          } as AppNode;
+        }
+      }
+
+      // existing edge cleanup (you already had this)
       setEdges((eds) =>
         (eds as AppEdge[]).filter(
           (e) => !toDelete.has(e.source) && !toDelete.has(e.target)
@@ -1111,23 +1152,19 @@ export default function Editor() {
             availableData={availableData}
             availableTooltips={availableTooltips}
             onCancel={closeModal}
-            onSave={(spec: any) => {
-              const { mode, attachTo, activation } = spec;
+            onSave={(spec) => {
+              const { mode, attachRef, activation } = spec;
               const vizId = ce.detail?.nodeId;
               if (!vizId) return;
 
+              // position for new tooltip stays the same...
               const abs = getAbs(vizId);
               const tW = 250,
                 tH = 180;
               const pos = { x: abs.x - tW - 24, y: abs.y + 8 };
 
-              const tipId: string | null =
-                mode === 'existing'
-                  ? (spec.existingId as string)
-                  : mode === 'new'
-                  ? nanoid()
-                  : null;
-
+              const tipId = mode === 'existing' ? spec.existingId! : nanoid();
+              const sourceHandle = `data:${attachRef}`;
               if (!tipId) return;
 
               setNodes((nds) => {
@@ -1162,11 +1199,9 @@ export default function Editor() {
                             kind: 'Tooltip',
                             title: tipTitle,
                             attachedTo: vizId,
-                            attachTarget: attachTo,
+                            attachTarget: attachRef,
                             activation,
                             badge: tipBadge,
-                            // (optional) include description only if TooltipNodeData supports it:
-                            // description: (x.data as any)?.description,
                           } as NodeData,
                           hidden: selectedId !== vizId,
                         }
@@ -1179,10 +1214,8 @@ export default function Editor() {
                   const data: NodeData = {
                     kind: 'Tooltip',
                     title: tipTitle,
-                    description: spec?.newTooltip?.description,
-                    data: spec?.newTooltip?.data,
                     attachedTo: vizId,
-                    attachTarget: attachTo,
+                    attachTarget: attachRef, // use the selected data pill
                     activation,
                     badge: tipBadge,
                   } as any;
@@ -1216,24 +1249,60 @@ export default function Editor() {
                 return next as unknown as RFNode<NodeData>[];
               });
 
-              setEdges((eds) => {
-                if (
-                  (eds as AppEdge[]).some(
-                    (e) => e.source === vizId && e.target === tipId
-                  )
-                ) {
-                  return eds;
-                }
+              const dataHandleId = (label: string) => `data:${slug(label)}`;
 
-                return (eds as AppEdge[]).concat({
-                  id: `e-viz-${vizId}-tip-${tipId}`,
-                  source: vizId,
-                  target: tipId,
-                  type: 'tooltip',
-                  style: { strokeDasharray: '4 4' },
-                  data: { activation, targetH: tH },
-                } as AppEdge) as any;
-              });
+              const hasHandleNow = () => {
+                const viz = nodes.find((n) => n.id === vizId);
+                const items = (viz?.data as any)?.data ?? [];
+                return items.some(
+                  (it: any) =>
+                    dataHandleId(typeof it === 'string' ? it : it.name) ===
+                    sourceHandle
+                );
+              };
+
+              const addEdgeOnce = () => {
+                setEdges((eds) => {
+                  if (
+                    (eds as AppEdge[]).some(
+                      (e) =>
+                        e.source === vizId &&
+                        e.target === tipId &&
+                        e.sourceHandle === sourceHandle
+                    )
+                  )
+                    return eds;
+
+                  return (eds as AppEdge[]).concat({
+                    id: `e-viz-${vizId}-${sourceHandle}-tip-${tipId}`,
+                    source: vizId,
+                    sourceHandle, // must match pill Handle id
+                    target: tipId,
+                    type: 'tooltip',
+                    style: { strokeDasharray: '4 4' },
+                    data: { activation, attachRef, targetH: 180 },
+                  } as AppEdge) as any;
+                });
+              };
+
+              const slug = (s: string) =>
+                s
+                  .toLowerCase()
+                  .trim()
+                  .replace(/\s+/g, '-')
+                  .replace(/[^a-z0-9_-]/g, '');
+
+              let tries = 0;
+              const tryAdd = () => {
+                if (hasHandleNow()) {
+                  addEdgeOnce();
+                } else if (tries++ < 8) {
+                  requestAnimationFrame(tryAdd);
+                } else {
+                  // optional: console.warn('Data handle not found:', sourceHandle);
+                }
+              };
+              tryAdd();
 
               closeModal();
             }}

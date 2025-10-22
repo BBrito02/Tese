@@ -8,7 +8,6 @@ export type ExistingTooltip = {
 };
 
 type Props = {
-  // still used to populate the "attach to specific data" select
   availableData: Array<string | DataItem>;
   availableTooltips: ExistingTooltip[];
   onCancel: () => void;
@@ -25,21 +24,18 @@ const pill: React.CSSProperties = {
   whiteSpace: 'nowrap',
 };
 
-// Result sent to Editor on Save (no description, no data)
 export type TooltipSaveSpec = {
   mode: 'existing' | 'new';
-  attachTo: { type: 'viz' | 'data'; ref?: string };
   activation: 'hover' | 'click';
+  attachRef: string; // REQUIRED: label of the data attribute
   existingId?: string;
-  newTooltip?: {
-    title: string;
-  };
+  newTooltip?: { title: string };
 };
 
-const optionLabel = (t: ExistingTooltip) => {
-  const name = t.title || '(untitled tooltip)';
-  return t.badge ? `${t.badge} – ${name}` : name;
-};
+const optionLabel = (t: ExistingTooltip) =>
+  t.badge
+    ? `${t.badge} – ${t.title || '(untitled tooltip)'}`
+    : t.title || '(untitled tooltip)';
 
 export default function TooltipPopup({
   availableData,
@@ -52,12 +48,9 @@ export default function TooltipPopup({
     hasExisting ? 'new' : 'new'
   );
 
-  const [selectedTooltipId, setSelectedTooltipId] = useState<string>('');
-  const [name, setName] = useState(''); // only field for new tooltip
-
-  // association + activation
-  const [attachTo, setAttachTo] = useState<'viz' | 'data'>('viz');
-  const [attachRef, setAttachRef] = useState<string>('');
+  const [selectedTooltipId, setSelectedTooltipId] = useState('');
+  const [name, setName] = useState('');
+  const [attachRef, setAttachRef] = useState(''); // chosen data attribute
   const [activation, setActivation] = useState<'hover' | 'click'>('hover');
 
   const existingNames = useMemo(
@@ -65,39 +58,35 @@ export default function TooltipPopup({
     [availableData]
   );
 
-  // Validation for Save button
   const canSave =
-    (source === 'existing' ? selectedTooltipId.length > 0 : true) &&
-    (attachTo === 'viz' || (attachTo === 'data' && attachRef.length > 0));
+    attachRef.length > 0 &&
+    (source === 'existing' ? selectedTooltipId.length > 0 : true);
 
   const handleSave = () => {
     if (!onSave || !canSave) return;
-
-    const base = {
-      attachTo:
-        attachTo === 'viz'
-          ? ({ type: 'viz' } as const)
-          : ({ type: 'data', ref: attachRef } as const),
-      activation,
-    };
-
     if (source === 'existing') {
       onSave({
         mode: 'existing',
         existingId: selectedTooltipId,
-        ...base,
+        attachRef,
+        activation,
       });
-      return;
+    } else {
+      onSave({
+        mode: 'new',
+        attachRef,
+        activation,
+        newTooltip: { title: name || 'Tooltip' },
+      });
     }
-
-    onSave({
-      mode: 'new',
-      ...base,
-      newTooltip: {
-        title: name || 'Tooltip',
-      },
-    });
   };
+
+  const slugify = (s: string) =>
+    s
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9_-]/g, '');
 
   return (
     <div style={{ display: 'grid', gap: 16 }}>
@@ -130,6 +119,7 @@ export default function TooltipPopup({
             />
             Use existing tooltip
           </label>
+
           <label
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
           >
@@ -180,7 +170,7 @@ export default function TooltipPopup({
         </div>
       )}
 
-      {/* New tooltip form (only Name now) */}
+      {/* New tooltip name */}
       {source === 'new' && (
         <div
           style={{
@@ -206,7 +196,7 @@ export default function TooltipPopup({
         </div>
       )}
 
-      {/* Attach to */}
+      {/* Attach to — DATA ONLY */}
       <div
         style={{
           display: 'grid',
@@ -215,57 +205,27 @@ export default function TooltipPopup({
           alignItems: 'center',
         }}
       >
-        <div style={pill}>Attach to</div>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <label
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-          >
-            <input
-              type="radio"
-              name="tt-attach"
-              value="viz"
-              checked={attachTo === 'viz'}
-              onChange={() => setAttachTo('viz')}
-            />
-            Entire visualization
-          </label>
-
-          <label
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-          >
-            <input
-              type="radio"
-              name="tt-attach"
-              value="data"
-              checked={attachTo === 'data'}
-              onChange={() => setAttachTo('data')}
-            />
-            Specific data
-          </label>
-
-          {attachTo === 'data' && (
-            <select
-              value={attachRef}
-              onChange={(e) => setAttachRef(e.target.value)}
-              style={{
-                padding: '8px 12px',
-                border: '1px solid #e5e7eb',
-                borderRadius: 12,
-                background: '#fff',
-                fontWeight: 700,
-              }}
-            >
-              <option value="" disabled>
-                Select data item
-              </option>
-              {existingNames.map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
+        <div style={pill}>Data attribute</div>
+        <select
+          value={attachRef}
+          onChange={(e) => setAttachRef(e.target.value)}
+          style={{
+            padding: '8px 12px',
+            border: '1px solid #e5e7eb',
+            borderRadius: 12,
+            background: '#fff',
+            fontWeight: 700,
+          }}
+        >
+          <option value="" disabled>
+            (No data attributes in this visualization)
+          </option>
+          {existingNames.map((n) => (
+            <option key={slugify(n)} value={slugify(n)}>
+              {n}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Activation */}
@@ -278,7 +238,7 @@ export default function TooltipPopup({
         }}
       >
         <div style={pill}>Activation</div>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 12 }}>
           <label
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
           >

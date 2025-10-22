@@ -1,4 +1,5 @@
-import { Handle, Position } from 'reactflow';
+import { Handle, Position, useUpdateNodeInternals } from 'reactflow';
+import { useEffect, useMemo } from 'react';
 import type { NodeProps } from 'reactflow';
 import { useDroppable } from '@dnd-kit/core';
 import type { NodeData } from '../domain/types';
@@ -22,58 +23,9 @@ const MIN_SIZE = {
   Graph: { w: 60, h: 40 },
 };
 
-function DataPills({
-  items,
-  onClick,
-}: {
-  items: (string | DataItem)[];
-  onClick?: (index: number) => void;
-}) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 8,
-        width: '100%',
-      }}
-    >
-      {items.map((it, i) => {
-        const label = typeof it === 'string' ? it : it.name;
-        const title = typeof it === 'string' ? it : `${it.name} · ${it.dtype}`;
-        return (
-          <button
-            key={`${label}-${i}`}
-            title={title}
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={() => onClick?.(i)}
-            className="nodrag nopan"
-            style={{
-              padding: '6px 10px',
-              borderRadius: 5,
-              border: '1px solid #e5e7eb',
-              background: '#f8fafc',
-              fontWeight: 700,
-              fontSize: 12,
-              cursor: onClick ? 'pointer' : 'default',
-              maxWidth: '100%',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 // Node view — all kinds can accept children (droppable)
 export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
+  const updateNodeInternals = useUpdateNodeInternals();
   const { setNodeRef, isOver } = useDroppable({ id });
 
   const minW = MIN_SIZE[data.kind].w;
@@ -88,9 +40,110 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
       ? ((data as any).data as (string | DataItem)[] | undefined)
       : undefined;
 
+  const pillHandleIds = useMemo(
+    () =>
+      (footerItems ?? []).map((it) => {
+        const label = typeof it === 'string' ? it : it.name;
+        return `data:${label
+          .toLowerCase()
+          .trim()
+          .replace(/\s+/g, '-')
+          .replace(/[^a-z0-9_-]/g, '')}`;
+      }),
+    [footerItems]
+  );
+
+  useEffect(() => {
+    // Wait one tick so the <Handle> nodes are in the DOM, then recompute.
+    const t = setTimeout(() => updateNodeInternals(id), 0);
+    return () => clearTimeout(t);
+  }, [id, updateNodeInternals, pillHandleIds.join('|')]);
+
   const hasFooter = Array.isArray(footerItems) && footerItems.length > 0;
 
   const isGraph = data.kind === 'Graph';
+
+  const slugify = (s: string) =>
+    s
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9_-]/g, '');
+
+  const dataHandleId = (label: string) => `data:${slugify(label)}`;
+
+  function DataPills({
+    items,
+    onClick,
+  }: {
+    items: (string | DataItem)[];
+    onClick?: (index: number) => void;
+  }) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: 8,
+          width: '100%',
+        }}
+      >
+        {items.map((it, i) => {
+          const label = typeof it === 'string' ? it : it.name;
+          const title =
+            typeof it === 'string' ? it : `${it.name} · ${it.dtype}`;
+          const handleId = dataHandleId(label);
+
+          return (
+            <div
+              key={`${label}-${i}`}
+              style={{ position: 'relative', display: 'inline-block' }}
+            >
+              <button
+                title={title}
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={() => onClick?.(i)}
+                style={{
+                  padding: '6px 10px',
+                  borderRadius: 5,
+                  border: '1px solid #e5e7eb',
+                  background: '#f8fafc',
+                  fontWeight: 700,
+                  fontSize: 12,
+                  cursor: onClick ? 'pointer' : 'default',
+                  maxWidth: '100%',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {label}
+              </button>
+
+              <Handle
+                id={handleId}
+                type="source"
+                position={Position.Bottom}
+                className="nodrag nopan"
+                style={{
+                  position: 'absolute',
+                  left: '50%',
+                  bottom: -6,
+                  transform: 'translateX(-50%)',
+                  width: 10,
+                  height: 10,
+                  border: '1px solid #222',
+                  background: '#111',
+                }}
+              />
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -248,8 +301,12 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
       </div>
 
       {/* Handles */}
+      {/* Handles on the node frame */}
       <Handle type="target" position={Position.Left} />
-      <Handle type="source" position={Position.Right} />
+      {/* Disable the generic source for visualization so edges start from data pills only */}
+      {data.kind !== 'Visualization' && (
+        <Handle type="source" position={Position.Right} />
+      )}
     </div>
   );
 }
