@@ -1176,16 +1176,15 @@ export default function Editor() {
                 if (mode === 'existing') {
                   const existing = next.find((x) => x.id === tipId);
 
-                  const existingBadge = (existing?.data as any)?.badge as
-                    | string
-                    | undefined;
-                  const existingTitle = (existing?.data as any)?.title as
-                    | string
-                    | undefined;
-
-                  tipBadge =
-                    existingBadge ?? nextBadgeFor('Tooltip', next) ?? '';
-                  tipTitle = existingTitle ?? 'Tooltip';
+                  const prev = (existing?.data as any) ?? {};
+                  const finalTitle =
+                    typeof prev.title === 'string' && prev.title.trim().length
+                      ? prev.title
+                      : tipTitle || 'Tooltip';
+                  const finalBadge =
+                    typeof prev.badge === 'string' && prev.badge.trim().length
+                      ? prev.badge
+                      : tipBadge || nextBadgeFor('Tooltip', next) || '';
 
                   next = next.map((x) =>
                     x.id === tipId
@@ -1196,12 +1195,17 @@ export default function Editor() {
                           position: pos,
                           style: { ...(x.style || {}), width: tW, height: tH },
                           data: {
+                            // keep everything the tooltip already had
+                            ...prev,
                             kind: 'Tooltip',
-                            title: tipTitle,
+                            // prefer the tooltip’s own title/badge; fall back to computed
+                            title: finalTitle,
+                            badge: finalBadge,
+
+                            // only these three are updated for the link
                             attachedTo: vizId,
                             attachTarget: attachRef,
                             activation,
-                            badge: tipBadge,
                           } as NodeData,
                           hidden: selectedId !== vizId,
                         }
