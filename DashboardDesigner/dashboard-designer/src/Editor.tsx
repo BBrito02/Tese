@@ -883,6 +883,165 @@ export default function Editor() {
       window.removeEventListener('designer:patch-node-data', handler);
   }, [updateNodeById]);
 
+  useEffect(() => {
+    function onAddGraphs(e: Event) {
+      const { parentId, graphTypes } =
+        (e as CustomEvent<{ parentId: string; graphTypes: GraphType[] }>)
+          .detail || {};
+      if (!parentId || !Array.isArray(graphTypes) || graphTypes.length === 0)
+        return;
+
+      setNodes((nds) => {
+        const all = (nds as AppNode[]).map((n) => ({ ...n }));
+        const parent = all.find((n) => n.id === parentId);
+        if (!parent) return nds;
+
+        // existing Graph children under this parent
+        const existing = all.filter(
+          (n) => n.parentNode === parentId && (n.data as any)?.kind === 'Graph'
+        );
+
+        // layout helpers
+        const { w: pW } = getNodeSize(parent);
+        const innerLeft = PAD_X;
+        const innerTop = HEADER_H + PAD_TOP;
+        const innerRight = pW - PAD_X;
+        const innerWidth = Math.max(0, innerRight - innerLeft);
+        const gSize = { width: 200, height: 140 };
+        const cols = Math.max(
+          1,
+          Math.floor((innerWidth + GRID_GAP) / (gSize.width + GRID_GAP))
+        );
+
+        // ensure we have one Graph node per requested type
+        graphTypes.forEach((gt, idx) => {
+          const reuse = existing[idx]; // reuse slot if present
+          if (reuse) {
+            const i = all.findIndex((n) => n.id === reuse.id);
+            all[i] = {
+              ...reuse,
+              data: { ...(reuse.data as any), graphType: gt } as any,
+            };
+          } else {
+            const col = idx % cols;
+            const row = Math.floor(idx / cols);
+            const x = innerLeft + col * (gSize.width + GRID_GAP);
+            const y = innerTop + row * (gSize.height + GRID_GAP);
+            all.push({
+              id: nanoid(),
+              type: 'class',
+              position: { x, y },
+              parentNode: parentId,
+              extent: 'parent',
+              style: gSize,
+              data: {
+                kind: 'Graph',
+                title: 'Graph',
+                graphType: gt,
+                badge: nextBadgeFor('Graph', all),
+              } as NodeData,
+            } as AppNode);
+          }
+        });
+
+        // optional: keep any extra existing graphs beyond the selection
+        const reflowed = applyConstraints(all as any) as AppNode[];
+        return reflowed as unknown as RFNode<NodeData>[];
+      });
+    }
+
+    const handler = onAddGraphs as unknown as EventListener;
+    window.addEventListener('designer:add-graphs', handler);
+    return () => window.removeEventListener('designer:add-graphs', handler);
+  }, [setNodes]);
+
+  useEffect(() => {
+    function onEditGraphs(e: Event) {
+      const { parentId, graphTypes } =
+        (e as CustomEvent<{ parentId: string; graphTypes: GraphType[] }>)
+          .detail || {};
+      if (!parentId || !Array.isArray(graphTypes)) return;
+
+      setNodes((nds) => {
+        let all = (nds as AppNode[]).map((n) => ({ ...n }));
+        const parent = all.find((n) => n.id === parentId);
+        if (!parent) return nds;
+
+        const existing = all.filter(
+          (n) => n.parentNode === parentId && (n.data as any)?.kind === 'Graph'
+        );
+        const existingMap = new Map<GraphType, AppNode>();
+        existing.forEach((n) => existingMap.set((n.data as any).graphType, n));
+
+        const wanted = new Set(graphTypes);
+
+        // remove those not wanted anymore
+        const toRemoveIds = existing
+          .filter((n) => !wanted.has((n.data as any).graphType))
+          .map((n) => n.id);
+        all = all.filter((n) => !toRemoveIds.includes(n.id));
+
+        // layout helpers
+        const { w: pW } = getNodeSize(parent);
+        const innerLeft = PAD_X;
+        const innerTop = HEADER_H + PAD_TOP;
+        const innerRight = pW - PAD_X;
+        const innerWidth = Math.max(0, innerRight - innerLeft);
+        const gSize = { width: 200, height: 140 };
+        const cols = Math.max(
+          1,
+          Math.floor((innerWidth + GRID_GAP) / (gSize.width + GRID_GAP))
+        );
+
+        // keep the remaining graphs first
+        const kept = all.filter(
+          (n) => n.parentNode === parentId && (n.data as any)?.kind === 'Graph'
+        );
+
+        // add the missing ones
+        const needToAdd = graphTypes.filter((gt) => !existingMap.has(gt));
+        needToAdd.forEach((gt, i) => {
+          const idx = kept.length + i;
+          const col = idx % cols;
+          const row = Math.floor(idx / cols);
+          const x = innerLeft + col * (gSize.width + GRID_GAP);
+          const y = innerTop + row * (gSize.height + GRID_GAP);
+
+          all.push({
+            id: nanoid(),
+            type: 'class',
+            position: { x, y },
+            parentNode: parentId,
+            extent: 'parent',
+            style: gSize,
+            data: {
+              kind: 'Graph',
+              title: 'Graph',
+              graphType: gt,
+              badge: nextBadgeFor('Graph', all),
+            } as NodeData,
+          } as AppNode);
+        });
+
+        // store selection on parent so popup can preselect next time
+        all = all.map((n) =>
+          n.id === parentId
+            ? ({
+                ...n,
+                data: { ...n.data, graphTypes: graphTypes.slice() },
+              } as any)
+            : n
+        );
+
+        return applyConstraints(all as any) as unknown as RFNode<NodeData>[];
+      });
+    }
+
+    const handler = onEditGraphs as EventListener;
+    window.addEventListener('designer:edit-graphs', handler);
+    return () => window.removeEventListener('designer:edit-graphs', handler);
+  }, [setNodes]);
+
   // Handles “set graph type” events by creating/updating a child Graph under a parent.
   useEffect(() => {
     function onSetGraphType(e: Event) {

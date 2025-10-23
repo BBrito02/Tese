@@ -32,27 +32,28 @@ export default function TooltipMenu(p: KindProps) {
       node: (
         <AddComponentPopup
           kinds={kinds as any}
+          initialVisualVars={d.visualVars ?? []}
+          initialGraphTypes={d.graphTypes ?? []} // ← preselect
           onCancel={closeModal}
           onSave={(payload) => {
             if (payload.kind === 'GraphType') {
               window.dispatchEvent(
-                new CustomEvent('designer:set-graph-type', {
+                new CustomEvent('designer:edit-graphs', {
                   detail: {
-                    nodeId: p.node.id,
-                    graphType: payload.graphType as GraphType,
+                    parentId: p.node.id,
+                    graphTypes: payload.graphTypes,
                   },
                 })
               );
               closeModal();
               return;
             }
-
             if (payload.kind === 'VisualVariable') {
               p.onChange({ visualVars: payload.variables });
               closeModal();
               return;
             }
-
+            // default child add
             window.dispatchEvent(
               new CustomEvent('designer:add-component', {
                 detail: { parentId: p.node.id, payload },

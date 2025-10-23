@@ -106,14 +106,14 @@ interface VisualizationNodeData extends NodeDataBase {
   data?: DataItem[]; //when adding display the data on the bottom of the component
   tooltips?: string[]; //will be added thru the tooltip menu(to be done later)
   interactions?: string[]; //will be added thru the interactions menu(to be done later)
-  graphType?: GraphType;
+  graphTypes?: GraphType[];
   visualVars?: VisualVariable[];
 }
 
 interface TooltipNodeData extends NodeDataBase {
   kind: 'Tooltip';
   data?: DataItem[]; //when adding display the data on the bottom of the component
-  graphType?: GraphType;
+  graphTypes?: GraphType[];
   visualVars?: VisualVariable[];
 }
 

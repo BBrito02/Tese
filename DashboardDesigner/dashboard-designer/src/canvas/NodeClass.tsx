@@ -62,6 +62,9 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
   const hasFooter = Array.isArray(footerItems) && footerItems.length > 0;
 
   const isGraph = data.kind === 'Graph';
+  const graphTypes: GraphType[] = Array.isArray((data as any).graphTypes)
+    ? ((data as any).graphTypes as GraphType[])
+    : [];
 
   const slugify = (s: string) =>
     s
@@ -263,24 +266,23 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
           }}
         >
           {isGraph ? (
-            <div style={{ position: 'absolute', inset: 0 }}>
-              {(data as any).graphType ? (
-                <img
-                  src={GRAPH_TYPE_ICONS[(data as any).graphType as GraphType]}
-                  alt={(data as any).graphType}
-                  draggable={false}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'contain',
-                    display: 'block',
-                    pointerEvents: 'none',
-                    userSelect: 'none',
-                  }}
-                />
-              ) : null}
-            </div>
-          ) : null}
+            (data as any).graphType ? (
+              <img
+                src={GRAPH_TYPE_ICONS[(data as any).graphType as GraphType]}
+                alt={(data as any).graphType}
+                draggable={false}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  display: 'block',
+                  pointerEvents: 'none',
+                  userSelect: 'none',
+                }}
+              />
+            ) : null
+          ) : null}{' '}
+          {/* ← no fallback grid preview */}
         </div>
 
         {/* Footer */}

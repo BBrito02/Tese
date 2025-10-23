@@ -8,17 +8,31 @@ type Props = {
   onSave: (
     payload:
       | { kind: NodeKind; title: string; description?: string }
-      | { kind: 'GraphType'; graphType: GraphType }
+      | { kind: 'GraphType'; graphTypes: GraphType[] } // ← array here
       | { kind: 'VisualVariable'; variables: VisualVariable[] }
   ) => void;
+  initialVisualVars?: VisualVariable[];
+  initialGraphTypes?: GraphType[];
 };
 
-export default function AddComponentPopup({ kinds, onCancel, onSave }: Props) {
+export default function AddComponentPopup({
+  kinds,
+  onCancel,
+  onSave,
+  initialVisualVars = [],
+  initialGraphTypes = [],
+}: Props) {
   const [kind, setKind] = useState<Props['kinds'][number]>(kinds[0]);
 
   // sets the new attributes
-  const [variables, setVariables] = useState<VisualVariable[]>([]);
-  const [graphType, setGraphType] = useState<GraphType>('Line');
+  const [variables, setVariables] =
+    useState<VisualVariable[]>(initialVisualVars);
+
+  const [selectedGraphTypes, setSelectedGraphTypes] = useState<Set<GraphType>>(
+    new Set(initialGraphTypes)
+  );
+
+  const GRAPH_TYPES = Object.keys(GRAPH_TYPE_ICONS) as GraphType[];
 
   // DEFAULT node states
   const [title, setTitle] = useState('');
@@ -28,16 +42,13 @@ export default function AddComponentPopup({ kinds, onCancel, onSave }: Props) {
 
   // Reset unrelated fields when switching "Type"
   useEffect(() => {
-    if (kind === 'GraphType') {
-      setVariables([]); // not used
-      // keep last chosen graphType or set default
-    } else if (kind === 'VisualVariable') {
-      setVariables([]); // start fresh
-    } else {
-      setTitle('');
-      setDescription('');
+    if (kind === 'VisualVariable') {
+      setVariables(initialVisualVars);
     }
-  }, [kind]);
+    if (kind === 'GraphType') {
+      setSelectedGraphTypes(new Set(initialGraphTypes));
+    }
+  }, [kind, initialVisualVars, initialGraphTypes]);
 
   function toggleVar(v: VisualVariable) {
     setVariables((xs) =>
@@ -45,36 +56,37 @@ export default function AddComponentPopup({ kinds, onCancel, onSave }: Props) {
     );
   }
 
-  const canSave = useMemo(() => {
-    if (kind === 'GraphType') return Boolean(graphType);
-    if (kind === 'VisualVariable') return variables.length > 0;
-    return title.trim().length > 0;
-  }, [kind, title, graphType, variables]);
+  function toggleGraph(gt: GraphType) {
+    setSelectedGraphTypes((prev) => {
+      const next = new Set(prev);
+      next.has(gt) ? next.delete(gt) : next.add(gt);
+      return next;
+    });
+  }
 
-  const save = () => {
+  const canSave =
+    kind === 'GraphType'
+      ? selectedGraphTypes.size > 0
+      : kind === 'VisualVariable'
+      ? variables.length > 0
+      : title.trim().length > 0;
+
+  function save() {
     if (!canSave) return;
-
     if (kind === 'GraphType') {
-      onSave({ kind, graphType });
+      onSave({ kind, graphTypes: Array.from(selectedGraphTypes) }); // ← send array
       return;
     }
-
     if (kind === 'VisualVariable') {
       onSave({ kind, variables });
       return;
     }
-
     onSave({
       kind: kind as NodeKind,
       title: title.trim(),
-      description: description.trim() || undefined,
+      description: description || undefined,
     });
-  };
-
-  // Safe keys typed as GraphType[]
-  const GRAPH_TYPES = Object.keys(
-    GRAPH_TYPE_ICONS
-  ) as (keyof typeof GRAPH_TYPE_ICONS)[] as GraphType[];
+  }
 
   return (
     <div style={{ display: 'grid', gap: 12 }}>
@@ -121,39 +133,37 @@ export default function AddComponentPopup({ kinds, onCancel, onSave }: Props) {
               gap: 8,
             }}
           >
-            {GRAPH_TYPES.map((gt) => (
-              <label
-                key={gt}
-                title={gt}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  border: '1px solid #e5e7eb',
-                  borderRadius: 10,
-                  padding: '6px 8px',
-                  cursor: 'pointer',
-                  background: graphType === gt ? '#eef2ff' : '#fff',
-                }}
-              >
-                <input
-                  type="radio"
-                  name="graphType"
-                  checked={graphType === gt}
-                  onChange={() => setGraphType(gt)}
-                />
-                <img
-                  src={GRAPH_TYPE_ICONS[gt]}
-                  alt={gt}
-                  style={{ width: 22, height: 22, objectFit: 'contain' }}
-                />
-                <span
-                  style={{ fontWeight: 600, fontSize: 12, lineHeight: 1.1 }}
+            {GRAPH_TYPES.map((gt) => {
+              const checked = selectedGraphTypes.has(gt);
+              return (
+                <label
+                  key={gt}
+                  title={gt}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    border: '1px solid #e5e7eb',
+                    borderRadius: 10,
+                    padding: '6px 8px',
+                    background: checked ? '#eef2ff' : '#fff',
+                    cursor: 'pointer',
+                  }}
                 >
-                  {gt}
-                </span>
-              </label>
-            ))}
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggleGraph(gt)}
+                  />
+                  <img
+                    src={GRAPH_TYPE_ICONS[gt]}
+                    alt={gt}
+                    style={{ width: 22, height: 22, objectFit: 'contain' }}
+                  />
+                  <span style={{ fontWeight: 600, fontSize: 12 }}>{gt}</span>
+                </label>
+              );
+            })}
           </div>
         </div>
       )}
