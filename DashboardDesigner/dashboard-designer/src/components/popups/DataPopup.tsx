@@ -1,170 +1,169 @@
-import React, { useState } from 'react';
-import type { DataItem, DataType } from '../../domain/types';
+import React, { useMemo, useState } from 'react';
+import type { DataItem } from '../../domain/types';
 
 type Props = {
   initial: DataItem[];
-  onSave: (items: DataItem[]) => void;
   onCancel: () => void;
+  onSave: (items: DataItem[]) => void;
 };
 
-const labelPill: React.CSSProperties = {
+const pill: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 8,
+  padding: '6px 10px',
+  borderRadius: 999,
+  background: '#e2e8f0',
+  color: '#0f172a',
+  fontWeight: 700,
+};
+
+const labelCell: React.CSSProperties = {
+  width: 110,
+  height: 36,
+  lineHeight: '36px',
+  borderRadius: 18,
   background: '#cbd5e1',
   color: '#0f172a',
-  borderRadius: 999,
-  padding: '6px 12px',
-  fontWeight: 700,
   textAlign: 'center',
+  fontWeight: 800,
 };
 
-// the data popup class itself
-export default function DataPopup({ initial, onSave, onCancel }: Props) {
+const field: React.CSSProperties = {
+  height: 36,
+  borderRadius: 10,
+  border: '1px solid #e5e7eb',
+  padding: '0 12px',
+  fontWeight: 600,
+  width: '100%',
+  boxSizing: 'border-box',
+};
+
+const row: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: '120px minmax(0, 1fr)',
+  gap: 12,
+  alignItems: 'center',
+};
+
+function norm(s: string) {
+  return s.trim().toLowerCase();
+}
+
+export default function DataPopup({ initial, onCancel, onSave }: Props) {
   const [items, setItems] = useState<DataItem[]>(initial ?? []);
   const [name, setName] = useState('');
-  const [dtype, setDtype] = useState<DataType>('Other');
+  const [dtype, setDtype] = useState<DataItem['dtype']>('Other');
 
-  //function that adds a data item
-  const addItem = () => {
-    const n = name.trim();
-    if (!n) return;
-    setItems((xs) => [...xs, { name: n, dtype }]);
+  const names = useMemo(() => new Set(items.map((d) => norm(d.name))), [items]);
+
+  const nameTrim = name.trim();
+  const isDuplicate = nameTrim.length > 0 && names.has(norm(nameTrim));
+  const isNameEmpty = nameTrim.length === 0;
+
+  const canAdd = !isNameEmpty && !isDuplicate;
+  const canSave = items.length > 0;
+
+  function add() {
+    if (!canAdd) return;
+    setItems((xs) => xs.concat({ name: nameTrim, dtype }));
     setName('');
-    setDtype('Other');
-  };
+  }
 
-  // function that removes a data item
-  const removeItem = (idx: number) =>
-    setItems((arr) => arr.filter((_, i) => i !== idx));
+  function removeAt(i: number) {
+    setItems((xs) => xs.filter((_, idx) => idx !== i));
+  }
 
   return (
-    <div style={{ display: 'grid', gap: 16 }}>
-      <div style={{ display: 'grid', gap: 10 }}>
-        {/* Row: Name + input */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '140px 1fr',
-            gap: 10,
-            alignItems: 'center',
-          }}
-        >
-          <div style={labelPill}>Name</div>
+    <div style={{ display: 'grid', gap: 14 }}>
+      <div style={{ ...row }}>
+        <div style={labelCell}>Name</div>
+        <div>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Random Name"
-            onKeyDown={(e) => e.key === 'Enter' && addItem()}
+            placeholder="e.g., Country"
+            aria-invalid={isDuplicate}
             style={{
-              padding: '8px 12px',
-              border: '1px solid #e5e7eb',
-              borderRadius: 12,
-              background: '#fff',
-              fontWeight: 700,
+              ...field,
+              borderColor: isDuplicate ? '#ef4444' : '#e5e7eb',
+              outline: 'none',
+              boxShadow: isDuplicate ? '0 0 0 3px rgba(239,68,68,.15)' : 'none',
             }}
           />
+          {isDuplicate && (
+            <div style={{ color: '#ef4444', fontSize: 12, marginTop: 6 }}>
+              A data attribute with this name already exists in this component.
+            </div>
+          )}
         </div>
-        {/* Row: Type + select */}
-        <div
+      </div>
+
+      <div style={{ ...row }}>
+        <div style={labelCell}>Type</div>
+        <select
+          value={dtype}
+          onChange={(e) => setDtype(e.target.value as DataItem['dtype'])}
+          style={field}
+        >
+          <option>Binary</option>
+          <option>Continuous</option>
+          <option>Discrete</option>
+          <option>Other</option>
+        </select>
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <button
+          onClick={add}
+          disabled={!canAdd}
           style={{
-            display: 'grid',
-            gridTemplateColumns: '140px 1fr',
-            gap: 10,
-            alignItems: 'center',
+            padding: '10px 18px',
+            borderRadius: 999,
+            border: '1px solid #7cc1d1',
+            background: canAdd ? '#63b3c3' : '#b8dbe3',
+            color: '#fff',
+            fontWeight: 800,
+            cursor: canAdd ? 'pointer' : 'not-allowed',
+            minWidth: 180,
           }}
         >
-          <div style={labelPill}>Type</div>
-          <select
-            value={dtype}
-            onChange={(e) => setDtype(e.target.value as DataType)}
-            style={{
-              padding: '8px 12px',
-              border: '1px solid #e5e7eb',
-              borderRadius: 12,
-              background: '#fff',
-              fontWeight: 700,
-            }}
-          >
-            <option value="Binary">Binary</option>
-            <option value="Continuous">Continuous</option>
-            <option value="Discrete">Discrete</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-
-        {/* Add button */}
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <button
-            onClick={addItem}
-            disabled={!name.trim()}
-            style={{
-              padding: '10px 16px',
-              borderRadius: 999,
-              border: 'none',
-              background: '#67b7cc',
-              color: '#fff',
-              fontWeight: 800,
-              cursor: name.trim() ? 'pointer' : 'not-allowed',
-              width: 240,
-            }}
-          >
-            Add to list
-          </button>
-        </div>
+          Add to list
+        </button>
       </div>
 
-      {/* Preview of items added in this session */}
       <div>
-        <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 6 }}>
+        <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 6 }}>
           Current data
         </div>
-        {items.length === 0 ? (
-          <div
-            style={{
-              height: 14,
-              borderRadius: 10,
-              border: '1px solid #e5e7eb',
-              background: '#fff',
-            }}
-          />
-        ) : (
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {items.map((it, i) => (
-              <span
-                key={`${it.name}-${i}`}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {items.map((d, i) => (
+            <span key={`${d.name}-${i}`} style={pill}>
+              {d.name} · {d.dtype}
+              <button
+                onClick={() => removeAt(i)}
+                aria-label={`Remove ${d.name}`}
                 style={{
-                  fontSize: 12,
-                  padding: '4px 8px',
-                  borderRadius: 999,
-                  background: '#eef2ff',
-                  border: '1px solid #c7d2fe',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
+                  marginLeft: 6,
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  fontWeight: 900,
                 }}
-                title={`${it.name} · ${it.dtype}`}
+                title="Remove"
               >
-                {it.name} · {it.dtype}
-                <button
-                  type="button"
-                  onClick={() => removeItem(i)}
-                  aria-label={`Remove ${it.name}`}
-                  title="Remove"
-                  style={{
-                    border: 'none',
-                    background: 'transparent',
-                    cursor: 'pointer',
-                    fontWeight: 900,
-                    lineHeight: 1,
-                  }}
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
+                ×
+              </button>
+            </span>
+          ))}
+          {items.length === 0 && (
+            <span style={{ fontSize: 12, opacity: 0.6 }}>
+              (no items yet — add one above)
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* Actions */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
         <button
           onClick={onCancel}
@@ -179,14 +178,15 @@ export default function DataPopup({ initial, onSave, onCancel }: Props) {
           Cancel
         </button>
         <button
-          onClick={() => onSave(items)}
+          onClick={() => canSave && onSave(items)}
+          disabled={!canSave}
           style={{
             padding: '8px 12px',
             borderRadius: 8,
             border: '1px solid #38bdf8',
-            background: '#38bdf8',
+            background: canSave ? '#38bdf8' : '#93c5fd',
             color: '#fff',
-            cursor: 'pointer',
+            cursor: canSave ? 'pointer' : 'not-allowed',
           }}
         >
           Save changes

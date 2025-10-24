@@ -10,9 +10,12 @@ import type {
 } from '../../domain/types';
 
 type AddableKind = NodeKind | 'GraphType' | 'VisualVariable';
+
+// Accept BOTH single and multiple graph-type results
 type AddComponentResult =
   | { kind: NodeKind; title: string; description?: string }
   | { kind: 'GraphType'; graphType: GraphType }
+  | { kind: 'GraphType'; graphTypes: GraphType[] }
   | { kind: 'VisualVariable'; variables: VisualVariable[] };
 
 type ModalPayload = { title: string; node: React.ReactNode };
@@ -21,7 +24,6 @@ type ModalCtx = {
   openModal: (payload: ModalPayload) => void;
   closeModal: () => void;
 
-  // already added earlier
   openDataModal: (
     initial: Array<string | DataItem>,
     onSave: (items: DataItem[]) => void,
@@ -81,7 +83,7 @@ export default function ModalHost({ children }: { children: React.ReactNode }) {
               kinds={Array.from(kinds)}
               onCancel={() => setPayload(null)}
               onSave={(result) => {
-                onSave(result);
+                onSave(result as AddComponentResult);
                 setPayload(null);
               }}
             />
