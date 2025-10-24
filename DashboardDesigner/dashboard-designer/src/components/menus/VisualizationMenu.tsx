@@ -1,6 +1,6 @@
 // VisualizationMenu.tsx
 import type { KindProps } from './common';
-import type { DataItem, NodeKind, GraphType } from '../../domain/types';
+import type { DataItem, NodeKind } from '../../domain/types';
 import {
   NameField,
   TypeField,

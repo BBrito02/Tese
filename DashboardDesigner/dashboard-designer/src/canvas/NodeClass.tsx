@@ -62,9 +62,7 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
   const hasFooter = Array.isArray(footerItems) && footerItems.length > 0;
 
   const isGraph = data.kind === 'Graph';
-  const graphTypes: GraphType[] = Array.isArray((data as any).graphTypes)
-    ? ((data as any).graphTypes as GraphType[])
-    : [];
+  const isParameter = data.kind === 'Parameter';
 
   const slugify = (s: string) =>
     s
@@ -255,17 +253,17 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
         )}
 
         {/* Body */}
+        {/* Body */}
         <div
           style={{
-            minHeight: 0,
+            minHeight: 0, // critical in grid to prevent overflow
             display: 'flex',
-            alignItems: 'stretch',
+            alignItems: data.kind === 'Parameter' ? 'center' : 'stretch',
             justifyContent: 'center',
-            padding: isGraph ? 0 : 10,
-            position: 'relative',
+            padding: 10,
           }}
         >
-          {isGraph ? (
+          {data.kind === 'Graph' ? (
             (data as any).graphType ? (
               <img
                 src={GRAPH_TYPE_ICONS[(data as any).graphType as GraphType]}
@@ -281,10 +279,34 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
                 }}
               />
             ) : null
-          ) : null}{' '}
-          {/* ← no fallback grid preview */}
+          ) : isParameter ? (
+            <select
+              className="nodrag nopan"
+              onPointerDown={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: '100%',
+                maxWidth: 260,
+                boxSizing: 'border-box',
+                padding: '6px 8px',
+                borderRadius: 8,
+                border: '1px solid #e5e7eb',
+                background: '#fff',
+              }}
+              defaultValue=""
+            >
+              <option value="" disabled>
+                Select an item
+              </option>
+              {(data as any).options?.map((o: string, i: number) => (
+                <option key={`${o}-${i}`} value={o}>
+                  {o}
+                </option>
+              ))}
+            </select>
+          ) : null}
         </div>
-
         {/* Footer */}
         {!isGraph &&
           (hasFooter ? (

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { NodeKind, GraphType, VisualVariable } from '../../domain/types';
 import { VISUAL_VAR_ICONS, GRAPH_TYPE_ICONS } from '../../domain/icons';
 
@@ -36,7 +36,6 @@ export default function AddComponentPopup({
 
   // DEFAULT node states
   const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
 
   const isSpecial = kind === 'GraphType' || kind === 'VisualVariable';
 
@@ -74,7 +73,7 @@ export default function AddComponentPopup({
   function save() {
     if (!canSave) return;
     if (kind === 'GraphType') {
-      onSave({ kind, graphTypes: Array.from(selectedGraphTypes) }); // ← send array
+      onSave({ kind, graphTypes: Array.from(selectedGraphTypes) });
       return;
     }
     if (kind === 'VisualVariable') {
@@ -84,7 +83,6 @@ export default function AddComponentPopup({
     onSave({
       kind: kind as NodeKind,
       title: title.trim(),
-      description: description || undefined,
     });
   }
 

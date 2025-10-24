@@ -1,5 +1,5 @@
 import type { KindProps } from './common';
-import type { DataItem, GraphType, NodeKind } from '../../domain/types';
+import type { DataItem, NodeKind } from '../../domain/types';
 import {
   NameField,
   TypeField,

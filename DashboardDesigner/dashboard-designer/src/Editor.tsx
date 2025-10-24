@@ -659,8 +659,8 @@ export default function Editor() {
     return (
       k === 'Dashboard' ||
       k === 'Visualization' ||
-      k === 'Tooltip' ||
-      k === 'Parameter'
+      k === 'Tooltip' //||
+      //k === 'Parameter'
     );
   }
 
