@@ -657,9 +657,7 @@ export default function Editor() {
   // Tells whether a kind can contain children (i.e., is a container).
   function isContainerKind(k: NodeKind | undefined) {
     return (
-      k === 'Dashboard' ||
-      k === 'Visualization' ||
-      k === 'Tooltip' //||
+      k === 'Dashboard' || k === 'Visualization' || k === 'Tooltip' //||
       //k === 'Parameter'
     );
   }
@@ -826,6 +824,50 @@ export default function Editor() {
     },
     [setNodes]
   );
+
+  function graphTypesByParent(nodes: AppNode[]): Map<string, GraphType[]> {
+    const map = new Map<string, GraphType[]>();
+    for (const n of nodes) {
+      if (n.data?.kind === 'Graph') {
+        const gt = (n.data as any).graphType as GraphType | undefined;
+        const pid = n.parentNode;
+        if (pid && gt) {
+          const arr = map.get(pid) ?? [];
+          arr.push(gt);
+          map.set(pid, arr);
+        }
+      }
+    }
+    return map;
+  }
+
+  /**
+   * Returns a new array with each container's data.graphTypes
+   * synchronized to the current set of Graph children.
+   */
+  function syncParentGraphTypes(nodes: AppNode[]): AppNode[] {
+    const byParent = graphTypesByParent(nodes);
+    return nodes.map((n) => {
+      const k = n.data?.kind as NodeKind | undefined;
+      // only the kinds that can host Graph children need the field
+      if (!k || (k !== 'Visualization' && k !== 'Tooltip')) return n;
+
+      const wanted = byParent.get(n.id) ?? [];
+      const cur = Array.isArray((n.data as any).graphTypes)
+        ? ((n.data as any).graphTypes as GraphType[])
+        : [];
+
+      // if already equal, keep as is to avoid unnecessary renders
+      const same =
+        cur.length === wanted.length && cur.every((x, i) => x === wanted[i]); // order is stable enough for us
+
+      if (same) return n;
+      return {
+        ...n,
+        data: { ...(n.data as any), graphTypes: wanted } as NodeData,
+      } as AppNode;
+    });
+  }
 
   // Listens for “add component” events and inserts the requested child into its parent.
   useEffect(() => {
@@ -1248,6 +1290,9 @@ export default function Editor() {
             data: { ...(n.data as any), tooltips: pruned } as any,
           } as AppNode;
         }
+
+        const synced = syncParentGraphTypes(kept as AppNode[]);
+        return synced as unknown as RFNode<NodeData>[];
       }
 
       // existing edge cleanup (you already had this)
@@ -1621,12 +1666,13 @@ export default function Editor() {
               if (removedIds.length) {
                 pruneAfterRemoval(removedIds);
               } else {
-                setNodes(
-                  (nds) =>
-                    applyConstraints(
-                      nds as AppNode[]
-                    ) as unknown as RFNode<NodeData>[]
-                );
+                setNodes((nds) => {
+                  const constrained = applyConstraints(
+                    nds as AppNode[]
+                  ) as unknown as AppNode[];
+                  const synced = syncParentGraphTypes(constrained);
+                  return synced as unknown as RFNode<NodeData>[];
+                });
               }
 
               if (selectedId && !nodes.find((n) => n.id === selectedId)) {
