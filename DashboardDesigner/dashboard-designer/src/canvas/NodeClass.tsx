@@ -40,6 +40,11 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
       ? ((data as any).data as (string | DataItem)[] | undefined)
       : undefined;
 
+  const tooltipCount =
+    data.kind === 'Visualization' && Array.isArray((data as any).tooltips)
+      ? (data as any).tooltips.length
+      : 0;
+
   const pillHandleIds = useMemo(
     () =>
       (footerItems ?? []).map((it) => {
@@ -248,6 +253,30 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
                     draggable={false}
                   />
                 ))}
+              {/* ➜ add this */}
+              {tooltipCount > 0 && (
+                <span
+                  title={`${tooltipCount} tooltip${
+                    tooltipCount === 1 ? '' : 's'
+                  }`}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: 22,
+                    minWidth: 22,
+                    padding: '0 6px',
+                    borderRadius: 999,
+                    fontWeight: 800,
+                    fontSize: 11,
+                    background: '#e2e8f0', // slate-200
+                    color: '#0f172a', // slate-900
+                    border: '1px solid #cbd5e1',
+                  }}
+                >
+                  T({tooltipCount})
+                </span>
+              )}
             </div>
           </div>
         )}
