@@ -82,6 +82,12 @@ export default function DataPopup({ initial, onCancel, onSave }: Props) {
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                if (canAdd) add();
+              }
+            }}
             placeholder="e.g., Country"
             aria-invalid={isDuplicate}
             style={{
