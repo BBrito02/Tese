@@ -356,10 +356,11 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
       {/* Handles */}
       {/* Handles on the node frame */}
       <Handle type="target" position={Position.Left} />
+      <Handle type="source" position={Position.Right} />
       {/* Disable the generic source for visualization so edges start from data pills only */}
-      {data.kind !== 'Visualization' && (
+      {/* {data.kind !== 'Visualization' && (
         <Handle type="source" position={Position.Right} />
-      )}
+      )} */}
     </div>
   );
 }
