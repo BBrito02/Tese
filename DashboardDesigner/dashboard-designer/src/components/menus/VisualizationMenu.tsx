@@ -93,14 +93,7 @@ export default function VisualizationMenu(p: KindProps) {
         addTooltip="Associate data"
         disabled={disabled}
       />
-
-      <ListSection
-        title="Objectives"
-        items={objectives}
-        onAdd={() => {}}
-        addTooltip="Add objective"
-        disabled={disabled}
-      />
+      
       <ListSection
         title="Interaction list"
         items={interactions}

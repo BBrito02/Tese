@@ -48,14 +48,6 @@ export default function DashboardMenu(p: KindProps) {
       />
 
       <ListSection
-        title="Objectives"
-        items={objectives}
-        onAdd={() => {}}
-        addTooltip="Add objective"
-        disabled={disabled}
-      />
-
-      <ListSection
         title="Interaction list"
         items={interactions}
         onAdd={() => {}}
