@@ -16,7 +16,6 @@ export default function VisualizationMenu(p: KindProps) {
   const disabled = p.disabled;
   const { openModal, closeModal, openDataModal } = useModal();
 
-  const objectives: string[] = d.objectives ?? [];
   const interactions: string[] = d.interactions ?? [];
   const tooltips: string[] = d.tooltips ?? [];
   const dataList: (string | DataItem)[] = d.data ?? [];
@@ -93,7 +92,7 @@ export default function VisualizationMenu(p: KindProps) {
         addTooltip="Associate data"
         disabled={disabled}
       />
-      
+
       <ListSection
         title="Interaction list"
         items={interactions}

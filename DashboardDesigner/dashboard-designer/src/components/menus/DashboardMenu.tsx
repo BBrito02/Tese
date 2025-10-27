@@ -14,7 +14,6 @@ export default function DashboardMenu(p: KindProps) {
   const disabled = p.disabled;
   const { openAddComponentModal } = useModal();
 
-  const objectives: string[] = d.objectives ?? [];
   const interactions: string[] = d.interactions ?? [];
 
   const handleAddComponent = () => {
