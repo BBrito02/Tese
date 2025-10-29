@@ -235,24 +235,48 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
                 gap: 6,
               }}
             >
+              {/* Visual variables (icon only, clickable) */}
               {Array.isArray((data as any).visualVars) &&
-                (data as any).visualVars.map((vv: VisualVariable) => (
-                  <img
-                    key={vv}
-                    src={VISUAL_VAR_ICONS[vv]}
-                    alt={vv}
-                    title={vv}
-                    style={{
-                      width: 30,
-                      height: 25,
-                      objectFit: 'contain',
-                      borderRadius: 4,
-                      background: 'rgba(255, 255, 255, 1)',
-                      border: '1px solid #e5e7eb',
-                    }}
-                    draggable={false}
-                  />
-                ))}
+                (data as any).visualVars.map(
+                  (vv: VisualVariable, i: number) => (
+                    <button
+                      key={`${vv}-${i}`}
+                      className="nodrag nopan"
+                      title={`${vv} — click to manage`}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // open the VV manager for THIS node
+                        window.dispatchEvent(
+                          new CustomEvent('designer:open-visualvars', {
+                            detail: { nodeId: id },
+                          })
+                        );
+                      }}
+                      style={{
+                        width: 24,
+                        height: 24,
+                        padding: 0,
+                        borderRadius: 6,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: '#fff',
+                        border: '1px solid #e5e7eb',
+                        boxShadow: '0 1px 3px rgba(0,0,0,.15)',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <img
+                        src={VISUAL_VAR_ICONS[vv]}
+                        alt="" // icon-only; tooltip via title
+                        draggable={false}
+                        style={{ width: 16, height: 16, objectFit: 'contain' }}
+                      />
+                    </button>
+                  )
+                )}
               {/* ➜ add this */}
               {tooltipCount > 0 && (
                 <span

@@ -17,7 +17,12 @@ import type {
 import 'reactflow/dist/style.css';
 import { nanoid } from 'nanoid';
 import NodeClass from './canvas/NodeClass';
-import type { GraphType, NodeData, NodeKind } from './domain/types';
+import type {
+  GraphType,
+  NodeData,
+  NodeKind,
+  VisualVariable,
+} from './domain/types';
 import { canConnect } from './domain/rules';
 import SideMenu from './components/SideMenu';
 import type { DragData } from './components/SideMenu';
@@ -63,6 +68,8 @@ import AddComponentPopup from './components/popups/ComponentPopup';
 import TooltipEdge from './canvas/TooltipEdge';
 
 import { activationIcons, type ActivationKey } from './domain/icons';
+
+import VisualVariablePopup from './components/popups/VisualVariablePopup';
 
 const NODE_TYPES = { class: NodeClass };
 const EDGE_TYPES = { tooltip: TooltipEdge };
@@ -117,6 +124,42 @@ export default function Editor() {
         onWidth as EventListener
       );
   }, []);
+
+  useEffect(() => {
+    function onOpenVisualVars(e: Event) {
+      const { nodeId } = (e as CustomEvent<{ nodeId: string }>).detail || {};
+      if (!nodeId) return;
+
+      const node = nodes.find((n) => n.id === nodeId);
+      const current = Array.isArray((node?.data as any)?.visualVars)
+        ? ([...(node!.data as any).visualVars] as VisualVariable[])
+        : [];
+
+      openModal({
+        title: 'Visual variables',
+        node: (
+          <VisualVariablePopup
+            initial={current}
+            onCancel={closeModal}
+            onSave={(vars) => {
+              // patch the node data
+              window.dispatchEvent(
+                new CustomEvent('designer:patch-node-data', {
+                  detail: { nodeId, patch: { visualVars: vars } },
+                })
+              );
+              closeModal();
+            }}
+          />
+        ),
+      });
+    }
+
+    const handler = onOpenVisualVars as EventListener;
+    window.addEventListener('designer:open-visualvars', handler);
+    return () =>
+      window.removeEventListener('designer:open-visualvars', handler);
+  }, [nodes, openModal, closeModal]);
 
   // Clears the selection when entering lasso mode.
   useEffect(() => {

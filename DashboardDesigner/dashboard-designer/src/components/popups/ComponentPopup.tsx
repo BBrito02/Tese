@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { NodeKind, GraphType, VisualVariable } from '../../domain/types';
 import { VISUAL_VAR_ICONS, GRAPH_TYPE_ICONS } from '../../domain/icons';
+import VisualVariablePopup from '../popups/VisualVariablePopup';
 
 type Props = {
   kinds: (NodeKind | 'GraphType' | 'VisualVariable')[];
@@ -169,51 +170,16 @@ export default function AddComponentPopup({
       {/* VisualVariable form */}
       {kind === 'VisualVariable' && (
         <div style={{ display: 'grid', gap: 10 }}>
-          <div style={{ fontWeight: 700, fontSize: 12, opacity: 0.8 }}>
-            Visual variables
-          </div>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-              gap: 8,
+          <VisualVariablePopup
+            initial={variables}
+            onCancel={onCancel}
+            onSave={(nextVars: VisualVariable[]) => {
+              // keep local state in sync
+              setVariables(nextVars);
+              // bubble up so the node updates immediately
+              onSave({ kind: 'VisualVariable', variables: nextVars });
             }}
-          >
-            {(['Size', 'Shape', 'Color'] as VisualVariable[]).map((vv) => {
-              const selected = variables.includes(vv);
-              return (
-                <button
-                  key={vv}
-                  type="button"
-                  onClick={() => toggleVar(vv)}
-                  aria-pressed={selected}
-                  title={vv}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    border: '1px solid #e5e7eb',
-                    borderRadius: 10,
-                    padding: '6px 8px',
-                    background: selected ? '#eef2ff' : '#fff',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <input type="checkbox" readOnly checked={selected} />
-                  <img
-                    src={VISUAL_VAR_ICONS[vv]}
-                    alt={vv}
-                    style={{ width: 22, height: 22, objectFit: 'contain' }}
-                  />
-                  <span
-                    style={{ fontWeight: 600, fontSize: 12, lineHeight: 1.1 }}
-                  >
-                    {vv}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+          />
         </div>
       )}
 
@@ -247,40 +213,43 @@ export default function AddComponentPopup({
       )}
 
       {/* Actions */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'flex-end',
-          gap: 8,
-          marginTop: 4,
-        }}
-      >
-        <button
-          onClick={onCancel}
+      {/* Actions (hidden for VisualVariable because the embedded popup has its own) */}
+      {kind !== 'VisualVariable' && (
+        <div
           style={{
-            padding: '8px 12px',
-            borderRadius: 8,
-            border: '1px solid #e5e7eb',
-            background: '#fff',
+            display: 'flex',
+            justifyContent: 'flex-end',
+            gap: 8,
+            marginTop: 4,
           }}
         >
-          Cancel
-        </button>
-        <button
-          onClick={save}
-          disabled={!canSave}
-          style={{
-            padding: '8px 12px',
-            borderRadius: 8,
-            border: '1px solid #38bdf8',
-            background: canSave ? '#38bdf8' : '#93c5fd',
-            color: '#fff',
-            cursor: canSave ? 'pointer' : 'not-allowed',
-          }}
-        >
-          Save
-        </button>
-      </div>
+          <button
+            onClick={onCancel}
+            style={{
+              padding: '8px 12px',
+              borderRadius: 8,
+              border: '1px solid #e5e7eb',
+              background: '#fff',
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={save}
+            disabled={!canSave}
+            style={{
+              padding: '8px 12px',
+              borderRadius: 8,
+              border: '1px solid #38bdf8',
+              background: canSave ? '#38bdf8' : '#93c5fd',
+              color: '#fff',
+              cursor: canSave ? 'pointer' : 'not-allowed',
+            }}
+          >
+            Save
+          </button>
+        </div>
+      )}
     </div>
   );
 }
