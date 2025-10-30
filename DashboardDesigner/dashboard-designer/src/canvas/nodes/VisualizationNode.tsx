@@ -31,7 +31,9 @@ export default function VisualizationNode(p: NodeProps<NodeData>) {
       visualVars={visualVars} // renders VV icons (clickable -> opens VV popup)
       tooltipCount={tooltipCount} // shows T(n)
       // optional per-kind card tweaks:
-      cardStyle={undefined}
+      cardStyle={{
+        background: '#deebf7',
+      }}
       headerStyle={undefined}
       bodyStyle={undefined}
       footerStyle={undefined}

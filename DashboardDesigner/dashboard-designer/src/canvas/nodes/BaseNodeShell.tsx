@@ -10,7 +10,6 @@ import { NodeResizer } from '@reactflow/node-resizer';
 import '@reactflow/node-resizer/dist/style.css';
 
 import type { NodeData, DataItem, VisualVariable } from '../../domain/types';
-import { KIND_STYLES } from '../kinds/styles';
 import { VISUAL_VAR_ICONS } from '../../domain/icons';
 
 // Per-kind minimums (match your previous sizes)
@@ -135,7 +134,6 @@ export default function BaseNodeShell({
     : 'transparent';
 
   // sanitize incoming styles to avoid mixing border props
-  const kindCardBase = stripBorderStyles(KIND_STYLES[data.kind]?.card) || {};
   const cardStyleClean = stripBorderStyles(cardStyle) || {};
 
   function DataPills({
@@ -181,7 +179,10 @@ export default function BaseNodeShell({
                 style={{
                   padding: '6px 10px',
                   borderRadius: 5,
-                  border: '1px solid #e5e7eb',
+                  // longhand border to avoid conflicts
+                  borderWidth: 1,
+                  borderStyle: 'solid',
+                  borderColor: '#e5e7eb',
                   background: '#f8fafc',
                   fontWeight: 700,
                   fontSize: 12,
@@ -207,7 +208,10 @@ export default function BaseNodeShell({
                   transform: 'translateX(-50%)',
                   width: 10,
                   height: 10,
-                  border: '1px solid #222',
+                  // longhand border here too
+                  borderWidth: 1,
+                  borderStyle: 'solid',
+                  borderColor: '#222',
                   background: '#111',
                 }}
               />
@@ -256,7 +260,6 @@ export default function BaseNodeShell({
           overflow: 'hidden',
           boxSizing: 'border-box',
           // spread sanitized styles (no border props inside)
-          ...kindCardBase,
           ...cardStyleClean,
         }}
       >
@@ -329,7 +332,7 @@ export default function BaseNodeShell({
                       alignItems: 'center',
                       justifyContent: 'center',
                       background: '#fff',
-                      // keep longhand to avoid conflicts
+                      // longhand to avoid conflicts
                       borderWidth: 1,
                       borderStyle: 'solid',
                       borderColor: '#e5e7eb',

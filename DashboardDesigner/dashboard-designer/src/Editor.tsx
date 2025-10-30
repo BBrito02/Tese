@@ -64,7 +64,7 @@ import SavePopup from './components/popups/SavePopup';
 import { allowedChildKinds } from './domain/rules';
 import AddComponentPopup from './components/popups/ComponentPopup';
 
-import TooltipEdge from './canvas/TooltipEdge';
+import TooltipEdge from './canvas/edges/TooltipEdge';
 
 import { activationIcons, type ActivationKey } from './domain/icons';
 

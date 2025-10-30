@@ -6,7 +6,7 @@ export default function DashboardNode(p: NodeProps<NodeData>) {
   return (
     <BaseNodeShell
       {...p}
-      cardStyle={{ borderRadius: 18, background: '#ffffff' }}
+      cardStyle={{ borderRadius: 18, background: '#f5f5f5' }}
     />
   );
 }

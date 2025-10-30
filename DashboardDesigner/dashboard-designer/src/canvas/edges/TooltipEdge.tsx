@@ -1,5 +1,5 @@
 import { BaseEdge, EdgeLabelRenderer, type EdgeProps } from 'reactflow';
-import { activationIcons, type ActivationKey } from '../domain/icons';
+import { activationIcons, type ActivationKey } from '../../domain/icons';
 
 const ICON_SIZE = 25;
 
