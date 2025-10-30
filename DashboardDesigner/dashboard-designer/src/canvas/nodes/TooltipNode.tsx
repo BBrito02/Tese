@@ -13,12 +13,9 @@ export default function TooltipNode(p: NodeProps<NodeData>) {
       footerItems={footer}
       visualVars={vv}
       // neutral card + subtle border, no blue highlight
-      highlightBorder={false}
-      borderWidth={1}
       cardStyle={{
         background: '#fffef7',
         borderRadius: 10,
-        boxShadow: '0 2px 8px rgba(0,0,0,.06)',
       }}
       headerStyle={{ padding: 8 }}
     />
