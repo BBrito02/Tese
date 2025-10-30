@@ -45,6 +45,10 @@ export type BaseNodeShellProps = NodeProps<NodeData> & {
   isParameter?: boolean;
   leftHandle?: boolean;
   rightHandle?: boolean;
+
+  // border/highlight behavior
+  highlightBorder?: boolean; // default true
+  borderWidth?: number; // default 2
 };
 
 // helper to remove border-related props to avoid mixing shorthand/longhand
@@ -57,7 +61,6 @@ function stripBorderStyles(
     borderStyle,
     borderWidth,
     borderColor,
-    // also remove side-specifics just in case
     borderTop,
     borderRight,
     borderBottom,
@@ -98,6 +101,9 @@ export default function BaseNodeShell({
   isParameter = false,
   leftHandle = true,
   rightHandle = true,
+
+  highlightBorder = true,
+  borderWidth = 2,
 }: BaseNodeShellProps) {
   const updateNodeInternals = useUpdateNodeInternals();
   const { setNodeRef, isOver } = useDroppable({ id });
@@ -105,6 +111,7 @@ export default function BaseNodeShell({
   const minW = MIN_SIZE[data.kind]?.w ?? 180;
   const minH = MIN_SIZE[data.kind]?.h ?? 100;
 
+  // Build pill handle ids so RF recomputes anchors when list changes
   const pillHandleIds = useMemo(
     () =>
       (footerItems ?? []).map((it) => {
@@ -126,12 +133,14 @@ export default function BaseNodeShell({
 
   const hasFooter = Array.isArray(footerItems) && footerItems.length > 0;
 
-  // compute border color based on state, but always set longhand props
+  // compute border color based on state, but allow disabling highlight
   const dynamicBorderColor = isOver
     ? '#38bdf8'
     : selected
     ? '#60a5fa'
     : 'transparent';
+
+  const borderColor = highlightBorder ? dynamicBorderColor : '#e5e7eb';
 
   // sanitize incoming styles to avoid mixing border props
   const cardStyleClean = stripBorderStyles(cardStyle) || {};
@@ -179,7 +188,6 @@ export default function BaseNodeShell({
                 style={{
                   padding: '6px 10px',
                   borderRadius: 5,
-                  // longhand border to avoid conflicts
                   borderWidth: 1,
                   borderStyle: 'solid',
                   borderColor: '#e5e7eb',
@@ -208,7 +216,6 @@ export default function BaseNodeShell({
                   transform: 'translateX(-50%)',
                   width: 10,
                   height: 10,
-                  // longhand border here too
                   borderWidth: 1,
                   borderStyle: 'solid',
                   borderColor: '#222',
@@ -252,14 +259,13 @@ export default function BaseNodeShell({
           minHeight: 0,
           borderRadius: 12,
           background: '#fff',
-          // ⬇️ Use only longhand border props; no mixing
-          borderWidth: 2,
+          // Use only longhand border props
+          borderWidth,
           borderStyle: 'solid',
-          borderColor: dynamicBorderColor,
+          borderColor,
           boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
           overflow: 'hidden',
           boxSizing: 'border-box',
-          // spread sanitized styles (no border props inside)
           ...cardStyleClean,
         }}
       >
@@ -332,7 +338,6 @@ export default function BaseNodeShell({
                       alignItems: 'center',
                       justifyContent: 'center',
                       background: '#fff',
-                      // longhand to avoid conflicts
                       borderWidth: 1,
                       borderStyle: 'solid',
                       borderColor: '#e5e7eb',
@@ -366,7 +371,6 @@ export default function BaseNodeShell({
                     fontSize: 11,
                     background: '#e2e8f0',
                     color: '#0f172a',
-                    // longhand here too
                     borderWidth: 1,
                     borderStyle: 'solid',
                     borderColor: '#cbd5e1',

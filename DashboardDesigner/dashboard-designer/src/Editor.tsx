@@ -46,9 +46,7 @@ import { nextBadgeFor } from './domain/types';
 import type { SaveFile, ExportNode } from './domain/saveFormat';
 import { SAVE_VERSION } from './domain/saveFormat';
 
-import TooltipPopup, {
-  type ExistingTooltip,
-} from './components/popups/TooltipPopup';
+import TooltipPopup from './components/popups/TooltipPopup';
 
 import {
   FaCloudDownloadAlt,
@@ -1438,14 +1436,6 @@ export default function Editor() {
         typeof v === 'string' ? { name: v, dtype: 'Other' } : v
       );
 
-      const availableTooltips: ExistingTooltip[] = nodes
-        .filter((x) => x.data?.kind === 'Tooltip')
-        .map((t) => ({
-          id: t.id,
-          title: (t.data as any)?.title ?? '',
-          badge: (t.data as any)?.badge ?? '',
-        }));
-
       const getAbs = (id: string) => {
         const nn = nodes.find((a) => a.id === id) as AppNode | undefined;
         if (!nn) return { x: 0, y: 0, w: 0, h: 0 };
@@ -1460,101 +1450,59 @@ export default function Editor() {
         node: (
           <TooltipPopup
             availableData={availableData}
-            availableTooltips={availableTooltips}
             onCancel={closeModal}
             onSave={(spec) => {
-              const { mode, attachRef, activation } = spec;
+              const { attachRef, activation, newTooltip } = spec;
               const vizId = ce.detail?.nodeId;
               if (!vizId) return;
 
-              // position for new tooltip stays the same...
+              // Position near the viz (left side)
               const abs = getAbs(vizId);
               const tW = 250,
                 tH = 180;
               const pos = { x: abs.x - tW - 24, y: abs.y + 8 };
 
-              const tipId = mode === 'existing' ? spec.existingId! : nanoid();
-              const sourceHandle = `data:${attachRef}`;
-              if (!tipId) return;
+              const tipId = nanoid();
 
               setNodes((nds) => {
                 let next = (nds as AppNode[]).map((x) => ({ ...x }));
 
-                let tipBadge = '';
-                let tipTitle = 'Tooltip';
+                const tipBadge = nextBadgeFor('Tooltip', next) ?? '';
+                const tipTitle = newTooltip?.title?.trim() || 'Tooltip';
 
-                if (mode === 'existing') {
-                  const existing = next.find((x) => x.id === tipId);
+                const data: NodeData = {
+                  kind: 'Tooltip',
+                  title: tipTitle,
+                  attachedTo: vizId,
+                  attachTarget:
+                    attachRef === 'viz'
+                      ? { type: 'viz' }
+                      : { type: 'data', ref: attachRef },
+                  activation,
+                  badge: tipBadge,
+                } as any;
 
-                  const prev = (existing?.data as any) ?? {};
-                  const finalTitle =
-                    typeof prev.title === 'string' && prev.title.trim().length
-                      ? prev.title
-                      : tipTitle || 'Tooltip';
-                  const finalBadge =
-                    typeof prev.badge === 'string' && prev.badge.trim().length
-                      ? prev.badge
-                      : tipBadge || nextBadgeFor('Tooltip', next) || '';
+                next = next.concat({
+                  id: tipId,
+                  type: nodeTypeFor('Tooltip'), // ✅ use your helper to map NodeKind -> RF node type
+                  position: pos,
+                  data,
+                  style: { width: tW, height: tH },
+                  hidden: selectedId !== vizId,
+                } as AppNode);
 
-                  next = next.map((x) =>
-                    x.id === tipId
-                      ? {
-                          ...x,
-                          parentNode: undefined,
-                          extent: undefined,
-                          position: pos,
-                          style: { ...(x.style || {}), width: tW, height: tH },
-                          data: {
-                            // keep everything the tooltip already had
-                            ...prev,
-                            kind: 'Tooltip',
-                            // prefer the tooltip’s own title/badge; fall back to computed
-                            title: finalTitle,
-                            badge: finalBadge,
-
-                            // only these three are updated for the link
-                            attachedTo: vizId,
-                            attachTarget: attachRef,
-                            activation,
-                          } as NodeData,
-                          hidden: selectedId !== vizId,
-                        }
-                      : x
-                  );
-                } else {
-                  tipBadge = nextBadgeFor('Tooltip', next) ?? '';
-                  tipTitle = spec?.newTooltip?.title?.trim() || 'Tooltip';
-
-                  const data: NodeData = {
-                    kind: 'Tooltip',
-                    title: tipTitle,
-                    attachedTo: vizId,
-                    attachTarget: attachRef, // use the selected data pill
-                    activation,
-                    badge: tipBadge,
-                  } as any;
-
-                  next = next.concat({
-                    id: tipId,
-                    type: nodeTypeFor('Tooltip'),
-                    position: pos,
-                    data,
-                    style: { width: tW, height: tH },
-                    hidden: selectedId !== vizId,
-                  } as AppNode);
-                }
-
+                // Add label to viz's header counter
                 const label = `${tipBadge ? tipBadge + ' ' : ''}${tipTitle}`;
-                next = next.map((n) => {
-                  if (n.id !== vizId) return n;
-                  const existingList = Array.isArray((n.data as any)?.tooltips)
-                    ? ([...(n.data as any).tooltips] as string[])
+                next = next.map((nn) => {
+                  if (nn.id !== vizId) return nn;
+                  const existingList = Array.isArray((nn.data as any)?.tooltips)
+                    ? ([...(nn.data as any).tooltips] as string[])
                     : [];
-                  if (existingList.includes(label)) return n;
+                  if (existingList.includes(label)) return nn;
                   return {
-                    ...n,
+                    ...nn,
                     data: {
-                      ...n.data,
+                      ...nn.data,
                       tooltips: [...existingList, label],
                     },
                   };
@@ -1563,42 +1511,7 @@ export default function Editor() {
                 return next as unknown as RFNode<NodeData>[];
               });
 
-              const dataHandleId = (label: string) => `data:${slug(label)}`;
-
-              const hasHandleNow = () => {
-                const viz = nodes.find((n) => n.id === vizId);
-                const items = (viz?.data as any)?.data ?? [];
-                return items.some(
-                  (it: any) =>
-                    dataHandleId(typeof it === 'string' ? it : it.name) ===
-                    sourceHandle
-                );
-              };
-
-              const addEdgeOnce = () => {
-                setEdges((eds) => {
-                  if (
-                    (eds as AppEdge[]).some(
-                      (e) =>
-                        e.source === vizId &&
-                        e.target === tipId &&
-                        e.sourceHandle === sourceHandle
-                    )
-                  )
-                    return eds;
-
-                  return (eds as AppEdge[]).concat({
-                    id: `e-viz-${vizId}-${sourceHandle}-tip-${tipId}`,
-                    source: vizId,
-                    sourceHandle, // must match pill Handle id
-                    target: tipId,
-                    type: 'tooltip',
-                    style: { strokeDasharray: '4 4' },
-                    data: { activation, attachRef, targetH: 180 },
-                  } as AppEdge) as any;
-                });
-              };
-
+              // Build edge
               const slug = (s: string) =>
                 s
                   .toLowerCase()
@@ -1606,17 +1519,67 @@ export default function Editor() {
                   .replace(/\s+/g, '-')
                   .replace(/[^a-z0-9_-]/g, '');
 
-              let tries = 0;
-              const tryAdd = () => {
-                if (hasHandleNow()) {
-                  addEdgeOnce();
-                } else if (tries++ < 8) {
-                  requestAnimationFrame(tryAdd);
-                } else {
-                  // optional: console.warn('Data handle not found:', sourceHandle);
-                }
-              };
-              tryAdd();
+              if (attachRef === 'viz') {
+                // direct edge without sourceHandle
+                setEdges(
+                  (eds) =>
+                    (eds as AppEdge[]).concat({
+                      id: `e-viz-${vizId}-tip-${tipId}`,
+                      source: vizId,
+                      target: tipId,
+                      type: 'tooltip',
+                      style: { strokeDasharray: '4 4' },
+                      data: { activation, targetH: 180 },
+                    } as AppEdge) as any
+                );
+              } else {
+                // attach to a data pill source handle
+                const sourceHandle = `data:${attachRef}`;
+
+                const hasHandleNow = () => {
+                  const viz = nodes.find((nn) => nn.id === vizId);
+                  const items = (viz?.data as any)?.data ?? [];
+                  return items.some(
+                    (it: any) =>
+                      `data:${slug(typeof it === 'string' ? it : it.name)}` ===
+                      sourceHandle
+                  );
+                };
+
+                const addEdgeOnce = () => {
+                  setEdges((eds) => {
+                    if (
+                      (eds as AppEdge[]).some(
+                        (e) =>
+                          e.source === vizId &&
+                          e.target === tipId &&
+                          e.sourceHandle === sourceHandle
+                      )
+                    )
+                      return eds;
+
+                    return (eds as AppEdge[]).concat({
+                      id: `e-viz-${vizId}-${sourceHandle}-tip-${tipId}`,
+                      source: vizId,
+                      sourceHandle,
+                      target: tipId,
+                      type: 'tooltip',
+                      style: { strokeDasharray: '4 4' },
+                      data: { activation, attachRef, targetH: 180 },
+                    } as AppEdge) as any;
+                  });
+                };
+
+                let tries = 0;
+                const tryAdd = () => {
+                  if (hasHandleNow()) {
+                    addEdgeOnce();
+                  } else if (tries++ < 8) {
+                    requestAnimationFrame(tryAdd);
+                  }
+                };
+                tryAdd();
+              }
 
               closeModal();
             }}
