@@ -16,7 +16,6 @@ import type {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { nanoid } from 'nanoid';
-import NodeClass from './canvas/NodeClass';
 import type {
   GraphType,
   NodeData,
@@ -71,7 +70,58 @@ import { activationIcons, type ActivationKey } from './domain/icons';
 
 import VisualVariablePopup from './components/popups/VisualVariablePopup';
 
-const NODE_TYPES = { class: NodeClass };
+import DashboardNode from './canvas/nodes/DashboardNode';
+import VisualizationNode from './canvas/nodes/VisualizationNode';
+import TooltipNode from './canvas/nodes/TooltipNode';
+import LegendNode from './canvas/nodes/LegendNode';
+import ButtonNode from './canvas/nodes/ButtonNode';
+import FilterNode from './canvas/nodes/FilterNode';
+import ParameterNode from './canvas/nodes/ParameterNode';
+import DataActionNode from './canvas/nodes/DataActionNode';
+import PlaceholderNode from './canvas/nodes/PlaceholderNode';
+import GraphNode from './canvas/nodes/GraphNode';
+
+const NODE_TYPES = {
+  dashboard: DashboardNode,
+  visualization: VisualizationNode,
+  tooltip: TooltipNode,
+  legend: LegendNode,
+  button: ButtonNode,
+  filter: FilterNode,
+  parameter: ParameterNode,
+  dataaction: DataActionNode,
+  placeholder: PlaceholderNode,
+  graph: GraphNode,
+};
+
+// Helper to choose the type based on domain kind
+function nodeTypeFor(kind: NodeKind): keyof typeof NODE_TYPES {
+  switch (kind) {
+    case 'Dashboard':
+      return 'dashboard';
+    case 'Visualization':
+      return 'visualization';
+    case 'Tooltip':
+      return 'tooltip';
+    case 'Legend':
+      return 'legend';
+    case 'Button':
+      return 'button';
+    case 'Filter':
+      return 'filter';
+    case 'Parameter':
+      return 'parameter';
+    case 'DataAction':
+      return 'dataaction';
+    case 'Placeholder':
+      return 'placeholder';
+    case 'Graph':
+      return 'graph';
+    default:
+      return 'visualization';
+  }
+}
+
 const EDGE_TYPES = { tooltip: TooltipEdge };
 
 const PANEL_WIDTH = 280;
@@ -538,7 +588,7 @@ export default function Editor() {
     setNodes((nds) =>
       nds.concat({
         id: nanoid(),
-        type: 'class',
+        type: nodeTypeFor(data.kind), // <-- IMPORTANT
         position,
         data: { ...data, badge: nextBadgeFor(data.kind, nds as AppNode[]) },
         style: size,
@@ -550,18 +600,24 @@ export default function Editor() {
   const buildSave = useCallback((): SaveFile => {
     const vp = (rf && (rf as any).getViewport?.()) || { x: 0, y: 0, zoom: 1 };
 
-    const exNodes: ExportNode[] = nodes.map((n) => ({
-      id: n.id,
-      type: n.type ?? 'class',
-      position: n.position,
-      data: n.data,
-      style: {
-        width: (n as any).width ?? (n.style as any)?.width,
-        height: (n as any).height ?? (n.style as any)?.height,
-      },
-      ...(n.parentNode ? { parentNode: n.parentNode } : {}),
-      ...(n.extent === 'parent' ? { extent: 'parent' as const } : {}),
-    }));
+    const exNodes: ExportNode[] = nodes.map((n) => {
+      // If type is missing (legacy), infer from data.kind
+      const kind = (n.data as any)?.kind as NodeKind | undefined;
+      const inferred = kind ? nodeTypeFor(kind) : 'visualization';
+
+      return {
+        id: n.id,
+        type: (n.type as any) ?? inferred, // <-- no "class" fallback anymore
+        position: n.position,
+        data: n.data,
+        style: {
+          width: (n as any).width ?? (n.style as any)?.width,
+          height: (n as any).height ?? (n.style as any)?.height,
+        },
+        ...(n.parentNode ? { parentNode: n.parentNode } : {}),
+        ...(n.extent === 'parent' ? { extent: 'parent' as const } : {}),
+      };
+    });
 
     return {
       version: SAVE_VERSION,
@@ -575,15 +631,22 @@ export default function Editor() {
   // Restores a previously saved graph (nodes, edges, viewport).
   const loadSave = useCallback(
     (save: SaveFile) => {
-      const restoredNodes: AppNode[] = save.nodes.map((n) => ({
-        id: n.id,
-        type: n.type,
-        position: n.position,
-        data: n.data,
-        style: { width: n.style?.width, height: n.style?.height },
-        parentNode: n.parentNode as any,
-        extent: n.extent as any,
-      }));
+      const restoredNodes: AppNode[] = save.nodes.map((n) => {
+        const kind = (n.data as any)?.kind as NodeKind | undefined;
+        // If the saved type is missing/legacy, derive from kind
+        const fallbackType = kind ? nodeTypeFor(kind) : 'visualization';
+        const finalType = (n.type as keyof typeof NODE_TYPES) ?? fallbackType;
+
+        return {
+          id: n.id,
+          type: finalType,
+          position: n.position,
+          data: n.data,
+          style: { width: n.style?.width, height: n.style?.height },
+          parentNode: n.parentNode as any,
+          extent: n.extent as any,
+        };
+      });
 
       setNodes(restoredNodes as unknown as RFNode<NodeData>[]);
       setEdges(save.edges as AppEdge[]);
@@ -851,7 +914,7 @@ export default function Editor() {
 
         return all.concat({
           id: nanoid(),
-          type: 'class',
+          type: nodeTypeFor(data.kind), // <-- IMPORTANT
           position: { x, y },
           parentNode: parentId,
           extent: 'parent',
@@ -1014,7 +1077,7 @@ export default function Editor() {
             const y = innerTop + row * (gSize.height + GRID_GAP);
             all.push({
               id: nanoid(),
-              type: 'class',
+              type: nodeTypeFor('Graph'),
               position: { x, y },
               parentNode: parentId,
               extent: 'parent',
@@ -1094,7 +1157,7 @@ export default function Editor() {
 
           all.push({
             id: nanoid(),
-            type: 'class',
+            type: nodeTypeFor('Graph'),
             position: { x, y },
             parentNode: parentId,
             extent: 'parent',
@@ -1158,7 +1221,7 @@ export default function Editor() {
         const pos = { x: 16, y: 16 };
         return withParent.concat({
           id: nanoid(),
-          type: 'class',
+          type: nodeTypeFor('Graph'),
           position: pos,
           parentNode: nodeId,
           extent: 'parent',
@@ -1473,7 +1536,7 @@ export default function Editor() {
 
                   next = next.concat({
                     id: tipId,
-                    type: 'class',
+                    type: nodeTypeFor('Tooltip'),
                     position: pos,
                     data,
                     style: { width: tW, height: tH },

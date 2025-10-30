@@ -1,16 +1,20 @@
-import { Handle, Position, useUpdateNodeInternals } from 'reactflow';
+import {
+  Handle,
+  Position,
+  useUpdateNodeInternals,
+  type NodeProps,
+} from 'reactflow';
 import { useEffect, useMemo } from 'react';
-import type { NodeProps } from 'reactflow';
 import { useDroppable } from '@dnd-kit/core';
-import type { NodeData } from '../domain/types';
 import { NodeResizer } from '@reactflow/node-resizer';
 import '@reactflow/node-resizer/dist/style.css';
-import type { DataItem } from '../domain/types';
-import { KIND_STYLES } from './kinds/styles';
-import { VISUAL_VAR_ICONS, GRAPH_TYPE_ICONS } from '../domain/icons';
-import type { VisualVariable, GraphType } from '../domain/types';
 
-const MIN_SIZE = {
+import type { NodeData, DataItem, VisualVariable } from '../../domain/types';
+import { KIND_STYLES } from '../kinds/styles';
+import { VISUAL_VAR_ICONS } from '../../domain/icons';
+
+// Per-kind minimums (match your previous sizes)
+const MIN_SIZE: Record<string, { w: number; h: number }> = {
   Dashboard: { w: 260, h: 200 },
   Visualization: { w: 260, h: 200 },
   Tooltip: { w: 250, h: 180 },
@@ -23,60 +27,116 @@ const MIN_SIZE = {
   Graph: { w: 60, h: 40 },
 };
 
-// Node view — all kinds can accept children (droppable)
-export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
+export type BaseNodeShellProps = NodeProps<NodeData> & {
+  // renderables
+  body?: React.ReactNode;
+  footerItems?: (string | DataItem)[];
+  visualVars?: VisualVariable[];
+  tooltipCount?: number;
+
+  // style overrides
+  cardStyle?: React.CSSProperties;
+  headerStyle?: React.CSSProperties;
+  bodyStyle?: React.CSSProperties;
+  footerStyle?: React.CSSProperties;
+
+  // layout toggles
+  hideHeader?: boolean;
+  hideFooter?: boolean;
+  isParameter?: boolean;
+  leftHandle?: boolean;
+  rightHandle?: boolean;
+};
+
+// helper to remove border-related props to avoid mixing shorthand/longhand
+function stripBorderStyles(
+  s?: React.CSSProperties
+): React.CSSProperties | undefined {
+  if (!s) return s;
+  const {
+    border,
+    borderStyle,
+    borderWidth,
+    borderColor,
+    // also remove side-specifics just in case
+    borderTop,
+    borderRight,
+    borderBottom,
+    borderLeft,
+    borderTopStyle,
+    borderRightStyle,
+    borderBottomStyle,
+    borderLeftStyle,
+    borderTopWidth,
+    borderRightWidth,
+    borderBottomWidth,
+    borderLeftWidth,
+    borderTopColor,
+    borderRightColor,
+    borderBottomColor,
+    borderLeftColor,
+    ...rest
+  } = s;
+  return rest;
+}
+
+export default function BaseNodeShell({
+  id,
+  data,
+  selected,
+  body,
+  footerItems,
+  visualVars,
+  tooltipCount = 0,
+
+  cardStyle,
+  headerStyle,
+  bodyStyle,
+  footerStyle,
+
+  hideHeader = false,
+  hideFooter = false,
+  isParameter = false,
+  leftHandle = true,
+  rightHandle = true,
+}: BaseNodeShellProps) {
   const updateNodeInternals = useUpdateNodeInternals();
   const { setNodeRef, isOver } = useDroppable({ id });
 
-  const minW = MIN_SIZE[data.kind].w;
-  const minH = MIN_SIZE[data.kind].h;
-
-  // nodes that have data attributes
-  const footerItems: (string | DataItem)[] | undefined =
-    data.kind === 'Visualization' ||
-    data.kind === 'Legend' ||
-    data.kind === 'Tooltip' ||
-    data.kind === 'Filter'
-      ? ((data as any).data as (string | DataItem)[] | undefined)
-      : undefined;
-
-  const tooltipCount =
-    data.kind === 'Visualization' && Array.isArray((data as any).tooltips)
-      ? (data as any).tooltips.length
-      : 0;
+  const minW = MIN_SIZE[data.kind]?.w ?? 180;
+  const minH = MIN_SIZE[data.kind]?.h ?? 100;
 
   const pillHandleIds = useMemo(
     () =>
       (footerItems ?? []).map((it) => {
         const label = typeof it === 'string' ? it : it.name;
-        return `data:${label
+        const slug = label
           .toLowerCase()
           .trim()
           .replace(/\s+/g, '-')
-          .replace(/[^a-z0-9_-]/g, '')}`;
+          .replace(/[^a-z0-9_-]/g, '');
+        return `data:${slug}`;
       }),
     [footerItems]
   );
 
   useEffect(() => {
-    // Wait one tick so the <Handle> nodes are in the DOM, then recompute.
     const t = setTimeout(() => updateNodeInternals(id), 0);
     return () => clearTimeout(t);
   }, [id, updateNodeInternals, pillHandleIds.join('|')]);
 
   const hasFooter = Array.isArray(footerItems) && footerItems.length > 0;
 
-  const isGraph = data.kind === 'Graph';
-  const isParameter = data.kind === 'Parameter';
+  // compute border color based on state, but always set longhand props
+  const dynamicBorderColor = isOver
+    ? '#38bdf8'
+    : selected
+    ? '#60a5fa'
+    : 'transparent';
 
-  const slugify = (s: string) =>
-    s
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, '-')
-      .replace(/[^a-z0-9_-]/g, '');
-
-  const dataHandleId = (label: string) => `data:${slugify(label)}`;
+  // sanitize incoming styles to avoid mixing border props
+  const kindCardBase = stripBorderStyles(KIND_STYLES[data.kind]?.card) || {};
+  const cardStyleClean = stripBorderStyles(cardStyle) || {};
 
   function DataPills({
     items,
@@ -85,6 +145,13 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
     items: (string | DataItem)[];
     onClick?: (index: number) => void;
   }) {
+    const slug = (s: string) =>
+      s
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9_-]/g, '');
+
     return (
       <div
         style={{
@@ -100,7 +167,7 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
           const label = typeof it === 'string' ? it : it.name;
           const title =
             typeof it === 'string' ? it : `${it.name} · ${it.dtype}`;
-          const handleId = dataHandleId(label);
+          const handleId = `data:${slug(label)}`;
 
           return (
             <div
@@ -164,7 +231,6 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
         minHeight: minH,
       }}
     >
-      {/* Resize handles */}
       <NodeResizer
         isVisible={selected}
         minWidth={minW}
@@ -173,33 +239,36 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
         lineStyle={{ strokeWidth: 1.5 }}
       />
 
-      {/* INNER card: header | body | footer */}
       <div
         style={{
           position: 'absolute',
           inset: 0,
           display: 'grid',
-          gridTemplateRows: isGraph ? '1fr' : 'auto minmax(0, 1fr) auto',
+          gridTemplateRows: hideHeader ? '1fr' : 'auto minmax(0, 1fr) auto',
           minHeight: 0,
           borderRadius: 12,
           background: '#fff',
-          border: `2px solid ${
-            isOver ? '#38bdf8' : selected ? '#60a5fa' : 'transparent'
-          }`,
+          // ⬇️ Use only longhand border props; no mixing
+          borderWidth: 2,
+          borderStyle: 'solid',
+          borderColor: dynamicBorderColor,
           boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
           overflow: 'hidden',
           boxSizing: 'border-box',
-          ...(KIND_STYLES[data.kind]?.card || {}),
+          // spread sanitized styles (no border props inside)
+          ...kindCardBase,
+          ...cardStyleClean,
         }}
       >
-        {/* Header (hidden for Graph) */}
-        {!isGraph && (
+        {!hideHeader && (
           <div
             style={{
               padding: 10,
               display: 'flex',
               alignItems: 'center',
               gap: 8,
+              position: 'relative',
+              ...headerStyle,
             }}
           >
             {data.badge && (
@@ -226,7 +295,7 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
               <div style={{ fontWeight: 700 }}>{data.title}</div>
             </div>
 
-            {/* right-side icons (keep for non-Graph) */}
+            {/* right side: visual variables + tooltip counter */}
             <div
               style={{
                 marginLeft: 'auto',
@@ -235,49 +304,48 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
                 gap: 6,
               }}
             >
-              {/* Visual variables (icon only, clickable) */}
-              {Array.isArray((data as any).visualVars) &&
-                (data as any).visualVars.map(
-                  (vv: VisualVariable, i: number) => (
-                    <button
-                      key={`${vv}-${i}`}
-                      className="nodrag nopan"
-                      title={`${vv} — click to manage`}
-                      onPointerDown={(e) => e.stopPropagation()}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // open the VV manager for THIS node
-                        window.dispatchEvent(
-                          new CustomEvent('designer:open-visualvars', {
-                            detail: { nodeId: id },
-                          })
-                        );
-                      }}
-                      style={{
-                        width: 24,
-                        height: 24,
-                        padding: 0,
-                        borderRadius: 6,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        background: '#fff',
-                        border: '1px solid #e5e7eb',
-                        boxShadow: '0 1px 3px rgba(0,0,0,.15)',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <img
-                        src={VISUAL_VAR_ICONS[vv]}
-                        alt="" // icon-only; tooltip via title
-                        draggable={false}
-                        style={{ width: 16, height: 16, objectFit: 'contain' }}
-                      />
-                    </button>
-                  )
-                )}
-              {/* ➜ add this */}
+              {Array.isArray(visualVars) &&
+                visualVars.map((vv, i) => (
+                  <button
+                    key={`${vv}-${i}`}
+                    className="nodrag nopan"
+                    title={`${vv} — click to manage`}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.dispatchEvent(
+                        new CustomEvent('designer:open-visualvars', {
+                          detail: { nodeId: id },
+                        })
+                      );
+                    }}
+                    style={{
+                      width: 24,
+                      height: 24,
+                      padding: 0,
+                      borderRadius: 6,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: '#fff',
+                      // keep longhand to avoid conflicts
+                      borderWidth: 1,
+                      borderStyle: 'solid',
+                      borderColor: '#e5e7eb',
+                      boxShadow: '0 1px 3px rgba(0,0,0,.15)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <img
+                      src={VISUAL_VAR_ICONS[vv]}
+                      alt=""
+                      draggable={false}
+                      style={{ width: 16, height: 16, objectFit: 'contain' }}
+                    />
+                  </button>
+                ))}
+
               {tooltipCount > 0 && (
                 <span
                   title={`${tooltipCount} tooltip${
@@ -293,9 +361,12 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
                     borderRadius: 999,
                     fontWeight: 800,
                     fontSize: 11,
-                    background: '#e2e8f0', // slate-200
-                    color: '#0f172a', // slate-900
-                    border: '1px solid #cbd5e1',
+                    background: '#e2e8f0',
+                    color: '#0f172a',
+                    // longhand here too
+                    borderWidth: 1,
+                    borderStyle: 'solid',
+                    borderColor: '#cbd5e1',
                   }}
                 >
                   T({tooltipCount})
@@ -305,69 +376,28 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
           </div>
         )}
 
-        {/* Body */}
-        {/* Body */}
         <div
           style={{
-            minHeight: 0, // critical in grid to prevent overflow
+            minHeight: 0,
             display: 'flex',
-            alignItems: data.kind === 'Parameter' ? 'center' : 'stretch',
+            alignItems: isParameter ? 'center' : 'stretch',
             justifyContent: 'center',
             padding: 10,
+            ...bodyStyle,
           }}
         >
-          {data.kind === 'Graph' ? (
-            (data as any).graphType ? (
-              <img
-                src={GRAPH_TYPE_ICONS[(data as any).graphType as GraphType]}
-                alt={(data as any).graphType}
-                draggable={false}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'contain',
-                  display: 'block',
-                  pointerEvents: 'none',
-                  userSelect: 'none',
-                }}
-              />
-            ) : null
-          ) : isParameter ? (
-            <select
-              className="nodrag nopan"
-              onPointerDown={(e) => e.stopPropagation()}
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                width: '100%',
-                maxWidth: 260,
-                boxSizing: 'border-box',
-                padding: '6px 8px',
-                borderRadius: 8,
-                border: '1px solid #e5e7eb',
-                background: '#fff',
-              }}
-              defaultValue=""
-            >
-              <option value="" disabled>
-                Select an item
-              </option>
-              {(data as any).options?.map((o: string, i: number) => (
-                <option key={`${o}-${i}`} value={o}>
-                  {o}
-                </option>
-              ))}
-            </select>
-          ) : null}
+          {body}
         </div>
-        {/* Footer */}
-        {!isGraph &&
+
+        {!hideHeader &&
+          !hideFooter &&
           (hasFooter ? (
             <div
               style={{
                 margin: '1px',
                 display: 'flex',
                 justifyContent: 'center',
+                ...footerStyle,
               }}
             >
               <DataPills items={footerItems!} />
@@ -377,14 +407,8 @@ export default function NodeClass({ id, data, selected }: NodeProps<NodeData>) {
           ))}
       </div>
 
-      {/* Handles */}
-      {/* Handles on the node frame */}
-      <Handle type="target" position={Position.Left} />
-      <Handle type="source" position={Position.Right} />
-      {/* Disable the generic source for visualization so edges start from data pills only */}
-      {/* {data.kind !== 'Visualization' && (
-        <Handle type="source" position={Position.Right} />
-      )} */}
+      {leftHandle && <Handle type="target" position={Position.Left} />}
+      {rightHandle && <Handle type="source" position={Position.Right} />}
     </div>
   );
 }
