@@ -1,3 +1,14 @@
+export type InteractionType = 'click' | 'hover';
+export type InteractionResult = 'filter' | 'highlight' | 'dashboard' | 'link';
+
+export type Interaction = {
+  id: string; // unique id
+  name: string; // human-friendly label
+  trigger: InteractionType; // click | hover
+  result: InteractionResult; // what it does
+  targets: string[]; // array of target node ids
+};
+
 export type VisualVariable = 'Size' | 'Shape' | 'Color';
 
 export type GraphType =
@@ -51,6 +62,7 @@ interface NodeDataBase {
   badge?: string;
   visualVars?: VisualVariable[];
   graphType?: GraphType | null;
+  interactions?: Interaction[];
 }
 
 const KIND_PREFIX = {
@@ -97,7 +109,6 @@ export function nextBadgeFor(
 interface DashboardNodeData extends NodeDataBase {
   kind: 'Dashboard';
   objectives?: string[];
-  interactions?: string[];
 }
 
 interface VisualizationNodeData extends NodeDataBase {
@@ -105,7 +116,6 @@ interface VisualizationNodeData extends NodeDataBase {
   objectives?: string[];
   data?: DataItem[]; //when adding display the data on the bottom of the component
   tooltips?: string[]; //will be added thru the tooltip menu(to be done later)
-  interactions?: string[]; //will be added thru the interactions menu(to be done later)
   graphTypes?: GraphType[];
   visualVars?: VisualVariable[];
 }
@@ -120,25 +130,21 @@ interface TooltipNodeData extends NodeDataBase {
 interface LegendNodeData extends NodeDataBase {
   kind: 'Legend';
   data?: DataItem[]; //when adding display the data on the bottom of the component
-  interactions?: string[]; //will be added thru the interactions menu(to be done later)
   visualVars?: VisualVariable[];
 }
 
 interface ButtonNodeData extends NodeDataBase {
   kind: 'Button';
-  interactions?: string[]; //will be added thru the interactions menu(to be done later)
 }
 
 interface FilterNodeData extends NodeDataBase {
   kind: 'Filter';
   data?: DataItem[]; //when adding display the data on the bottom of the component
-  interactions?: string[]; //will be added thru the interactions menu(to be done later)
 }
 
 interface ParameterNodeData extends NodeDataBase {
   kind: 'Parameter';
   options?: string[]; //when adding display the different options on the center of the component in a drop-down menu
-  interactions?: string[]; //will be added thru the interactions menu(to be done later)
 }
 
 interface DataActionNodeData extends NodeDataBase {

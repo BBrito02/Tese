@@ -21,6 +21,7 @@ import type {
   NodeData,
   NodeKind,
   VisualVariable,
+  Interaction,
 } from './domain/types';
 import { canConnect } from './domain/rules';
 import SideMenu from './components/SideMenu';
@@ -47,6 +48,7 @@ import type { SaveFile, ExportNode } from './domain/saveFormat';
 import { SAVE_VERSION } from './domain/saveFormat';
 
 import TooltipPopup from './components/popups/TooltipPopup';
+import InteractionPopup from './components/popups/InteractionPopup';
 
 import {
   FaCloudDownloadAlt,
@@ -63,6 +65,7 @@ import { allowedChildKinds } from './domain/rules';
 import AddComponentPopup from './components/popups/ComponentPopup';
 
 import TooltipEdge from './canvas/edges/TooltipEdge';
+import InteractionEdge from './canvas/edges/InteractionEdge';
 
 import { activationIcons, type ActivationKey } from './domain/icons';
 
@@ -120,7 +123,7 @@ function nodeTypeFor(kind: NodeKind): keyof typeof NODE_TYPES {
   }
 }
 
-const EDGE_TYPES = { tooltip: TooltipEdge };
+const EDGE_TYPES = { tooltip: TooltipEdge, interaction: InteractionEdge };
 
 const PANEL_WIDTH = 280;
 const PANEL_MARGIN = 7;
@@ -138,6 +141,19 @@ export default function Editor() {
   const [rf, setRf] = useState<ReactFlowInstance | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // Keep interaction edges always visible (no hidden, no dimming)
+  const visibleEdges = useMemo(() => {
+    return edges.map((e) =>
+      e.type === 'interaction'
+        ? {
+            ...e,
+            hidden: false,
+            style: { ...e.style, opacity: 1 }, // ensure solid visibility
+          }
+        : e
+    );
+  }, [edges]);
 
   const selectedNode = useMemo(
     () => nodes.find((n) => n.id === selectedId),
@@ -1424,6 +1440,97 @@ export default function Editor() {
     return false;
   }
 
+  useEffect(() => {
+    function onOpenInteractions(e: Event) {
+      const ce = e as CustomEvent<{ nodeId: string }>;
+      const sourceId = ce.detail?.nodeId;
+      if (!sourceId) return;
+
+      const source = nodes.find((n) => n.id === sourceId);
+      if (!source) return;
+
+      // Build selectable targets (all nodes except the source)
+      const targets = (nodes as AppNode[])
+        .filter((n) => n.id !== sourceId)
+        .map((n) => ({
+          id: n.id,
+          title: (n.data as any)?.title || n.id,
+          kind: (n.data as any)?.kind || 'Node',
+        }));
+
+      openModal({
+        title: 'Add interaction',
+        node: (
+          <InteractionPopup
+            availableTargets={targets}
+            onCancel={closeModal}
+            onSave={({ name, trigger, result, targets }) => {
+              // 1) persist interaction on the source node
+              setNodes((nds) => {
+                const next = (nds as AppNode[]).map((n) => ({ ...n }));
+                const i = next.findIndex((n) => n.id === sourceId);
+                if (i >= 0) {
+                  const cur: Interaction[] = Array.isArray(
+                    (next[i].data as any).interactions
+                  )
+                    ? ([...(next[i].data as any).interactions] as Interaction[])
+                    : [];
+                  cur.push({
+                    id: nanoid(),
+                    name,
+                    trigger,
+                    result,
+                    targets,
+                  });
+                  next[i] = {
+                    ...next[i],
+                    data: {
+                      ...(next[i].data as any),
+                      interactions: cur,
+                    } as any,
+                  };
+                }
+                return next as unknown as RFNode<NodeData>[];
+              });
+
+              // 2) draw edges to all selected targets
+              setEdges((eds) => {
+                const add = targets
+                  .filter(
+                    (tid) =>
+                      !(eds as AppEdge[]).some(
+                        (e) =>
+                          e.type === 'interaction' &&
+                          e.source === sourceId &&
+                          e.target === tid
+                      )
+                  )
+                  .map(
+                    (tid) =>
+                      ({
+                        id: `ix-${sourceId}-${tid}-${nanoid(4)}`,
+                        source: sourceId,
+                        target: tid,
+                        type: 'interaction',
+                        data: { label: name },
+                      } as AppEdge)
+                  );
+                return (eds as AppEdge[]).concat(add) as any;
+              });
+
+              closeModal();
+            }}
+          />
+        ),
+      });
+    }
+
+    const handler = onOpenInteractions as EventListener;
+    window.addEventListener('designer:open-interactions', handler);
+    return () =>
+      window.removeEventListener('designer:open-interactions', handler);
+  }, [nodes, openModal, closeModal, setNodes, setEdges]);
+
   // Opens the Tooltips modal and wires saving to create/link tooltip nodes.
   useEffect(() => {
     function onOpenTooltips(e: Event) {
@@ -1528,7 +1635,6 @@ export default function Editor() {
                       source: vizId,
                       target: tipId,
                       type: 'tooltip',
-                      style: { strokeDasharray: '4 4' },
                       data: { activation, targetH: 180 },
                     } as AppEdge) as any
                 );
@@ -1564,7 +1670,6 @@ export default function Editor() {
                       sourceHandle,
                       target: tipId,
                       type: 'tooltip',
-                      style: { strokeDasharray: '4 4' },
                       data: { activation, attachRef, targetH: 180 },
                     } as AppEdge) as any;
                   });
@@ -1724,7 +1829,7 @@ export default function Editor() {
             selectionMode={SelectionMode.Partial}
             panOnDrag={!lassoMode && !isDraggingFromPalette}
             nodes={nodes}
-            edges={edges}
+            edges={visibleEdges}
             onNodesChange={(chs) => {
               onNodesChange(chs);
 

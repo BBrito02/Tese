@@ -1,6 +1,6 @@
 // VisualizationMenu.tsx
 import type { KindProps } from './common';
-import type { DataItem, NodeKind } from '../../domain/types';
+import type { DataItem, NodeKind, Interaction } from '../../domain/types';
 import {
   NameField,
   TypeField,
@@ -16,7 +16,17 @@ export default function VisualizationMenu(p: KindProps) {
   const disabled = p.disabled;
   const { openModal, closeModal, openDataModal } = useModal();
 
-  const interactions: string[] = d.interactions ?? [];
+  // store is Interaction[], ListSection wants strings -> format them
+  const interactions: Interaction[] = Array.isArray(d.interactions)
+    ? (d.interactions as Interaction[])
+    : [];
+  const interactionLabels: string[] = interactions.map((ix) => {
+    const tgtCount = Array.isArray(ix.targets) ? ix.targets.length : 0;
+    return `${ix.name} · ${ix.trigger}/${ix.result} · ${tgtCount} target${
+      tgtCount === 1 ? '' : 's'
+    }`;
+  });
+
   const tooltips: string[] = d.tooltips ?? [];
   const dataList: (string | DataItem)[] = d.data ?? [];
 
@@ -95,8 +105,14 @@ export default function VisualizationMenu(p: KindProps) {
 
       <ListSection
         title="Interaction list"
-        items={interactions}
-        onAdd={() => {}}
+        items={interactionLabels}
+        onAdd={() => {
+          window.dispatchEvent(
+            new CustomEvent('designer:open-interactions', {
+              detail: { nodeId: p.node.id },
+            })
+          );
+        }}
         addTooltip="Add interaction"
         disabled={disabled}
       />

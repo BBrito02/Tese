@@ -3,7 +3,7 @@ import { activationIcons, type ActivationKey } from '../../domain/icons';
 
 const ICON_SIZE = 25;
 
-// geometry constants
+// geometry constants (kept identical to TooltipEdge)
 const EXIT_GAP = 12;
 const H_GAP = 18;
 const V_STACK = 18;
@@ -22,10 +22,10 @@ function roundedElbowPath(x1: number, y1: number, x2: number, y2: number) {
   return `M ${x1} ${y1} L ${p1x} ${p1y} Q ${x1} ${y2} ${p2x} ${p2y} L ${x2} ${y2}`;
 }
 
-export default function TooltipEdge(props: EdgeProps) {
+export default function InteractionEdge(props: EdgeProps) {
   const { id, sourceX, sourceY, targetX, targetY, style, data } = props;
 
-  // tooltip sizing (your default Tooltip is ~220x120)
+  // keep same target geometry logic
   const TARGET_HALF_H = Math.max(12, Number(data?.targetH ?? 120));
   const TARGET_MARGIN = 0;
   const APPROACH_GAP = 28;
@@ -61,7 +61,7 @@ export default function TooltipEdge(props: EdgeProps) {
 
   const path = `${leg1} L ${awayX} ${exitY} ${leg2} ${leg3} ${leg4} ${leg5}`;
 
-  // activation icon near the source exit
+  // source icon (hover/click) — identical placement as TooltipEdge
   const key: ActivationKey =
     data?.activation === 'click' || data?.activation === 'hover'
       ? data.activation
@@ -92,7 +92,6 @@ export default function TooltipEdge(props: EdgeProps) {
           <path d="M 0 0 L 12 6 L 0 12 z" fill={STROKE} />
         </marker>
       </defs>
-
       <BaseEdge
         id={id}
         path={path}
@@ -101,7 +100,7 @@ export default function TooltipEdge(props: EdgeProps) {
         style={{
           stroke: STROKE,
           strokeWidth: 1.5,
-          // keep solid line (ensure no strokeDasharray is set here or in edge.style)
+          strokeDasharray: '4 4', // keep same dash as TooltipEdge
           ...style,
         }}
       />
