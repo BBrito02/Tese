@@ -489,10 +489,9 @@ export default function Editor() {
 
     if (!rf || !wrapperRef.current) return;
 
-    const bounds = wrapperRef.current.getBoundingClientRect();
-    const flowPt = rf.project({
-      x: nextCursor.x - bounds.left,
-      y: nextCursor.y - bounds.top,
+    const flowPt = rf.screenToFlowPosition({
+      x: nextCursor.x,
+      y: nextCursor.y,
     });
 
     let best: { id: string; kind: NodeKind; depth: number } | null = null;
@@ -567,10 +566,9 @@ export default function Editor() {
     setCursorPoint(null);
     if (!viewportPt) return;
 
-    const bounds = wrapperRef.current.getBoundingClientRect();
-    const flowCenter = rf.project({
-      x: viewportPt.x - bounds.left,
-      y: viewportPt.y - bounds.top,
+    const flowCenter = rf.screenToFlowPosition({
+      x: viewportPt.x,
+      y: viewportPt.y,
     });
 
     let data: NodeData;
