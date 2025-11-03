@@ -30,7 +30,7 @@ const pill: React.CSSProperties = {
 
 export default function InteractionPopup({
   initialName = '',
-  initialType = 'click',
+  initialType = 'Click',
   initialResult = 'filter',
   initialTargets = [],
   availableTargets,
@@ -123,7 +123,7 @@ export default function InteractionPopup({
       >
         <div style={pill}>Trigger</div>
         <div style={{ display: 'flex', gap: 12 }}>
-          {(['click', 'hover'] as InteractionType[]).map((t) => (
+          {(['Click', 'Hover'] as InteractionType[]).map((t) => (
             <label
               key={t}
               style={{
