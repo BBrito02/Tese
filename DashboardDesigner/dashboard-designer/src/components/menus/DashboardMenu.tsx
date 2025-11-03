@@ -7,14 +7,23 @@ import {
 } from './sections';
 import { useModal } from '../ui/ModalHost';
 import { allowedChildKinds } from '../../domain/rules';
-import type { NodeKind } from '../../domain/types';
+import type { Interaction, NodeKind } from '../../domain/types';
 
 export default function DashboardMenu(p: KindProps) {
   const d: any = p.node.data;
   const disabled = p.disabled;
   const { openAddComponentModal } = useModal();
 
-  const interactions: string[] = d.interactions ?? [];
+  // store is Interaction[], ListSection wants strings -> format them
+  const interactions: Interaction[] = Array.isArray(d.interactions)
+    ? (d.interactions as Interaction[])
+    : [];
+  const interactionLabels: string[] = interactions.map((ix) => {
+    const tgtCount = Array.isArray(ix.targets) ? ix.targets.length : 0;
+    return `${ix.name} · ${ix.trigger}/${ix.result} · ${tgtCount} target${
+      tgtCount === 1 ? '' : 's'
+    }`;
+  });
 
   const handleAddComponent = () => {
     const parentKind = (p.node.data?.kind ?? 'Dashboard') as NodeKind;
@@ -48,8 +57,14 @@ export default function DashboardMenu(p: KindProps) {
 
       <ListSection
         title="Interaction list"
-        items={interactions}
-        onAdd={() => {}}
+        items={interactionLabels}
+        onAdd={() => {
+          window.dispatchEvent(
+            new CustomEvent('designer:open-interactions', {
+              detail: { nodeId: p.node.id },
+            })
+          );
+        }}
         addTooltip="Add interaction"
         disabled={disabled}
       />
