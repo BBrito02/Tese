@@ -1389,31 +1389,38 @@ export default function Editor() {
       // keep nodes that are not being deleted
       const kept = all.filter((n) => !toDelete.has(n.id));
 
-      // ---- NEW: remove deleted tooltip labels from each affected visualization
+      // --- NEW: purge interactions that point to deleted nodes
       for (let i = 0; i < kept.length; i++) {
         const n = kept[i];
-        if (n.data?.kind !== 'Visualization') continue;
+        const interactions = Array.isArray((n.data as any)?.interactions)
+          ? ([...(n.data as any).interactions] as Interaction[])
+          : null;
 
-        const toPrune = labelsByViz.get(n.id);
-        if (!toPrune || toPrune.size === 0) continue;
+        if (!interactions || interactions.length === 0) continue;
 
-        const current = Array.isArray((n.data as any)?.tooltips)
-          ? ([...(n.data as any).tooltips] as string[])
-          : [];
+        let changed = false;
 
-        const pruned = current.filter((lbl) => !toPrune.has(lbl));
-        if (pruned.length !== current.length) {
+        // drop deleted targets from each interaction
+        const cleaned = interactions
+          .map((ix) => {
+            const nextTargets = ix.targets.filter((tid) => !toDelete.has(tid));
+            if (nextTargets.length !== ix.targets.length) changed = true;
+            return nextTargets.length > 0
+              ? { ...ix, targets: nextTargets }
+              : null;
+          })
+          .filter(Boolean) as Interaction[];
+
+        // if the interaction lost all targets, drop the interaction itself
+        if (changed) {
           kept[i] = {
             ...n,
-            data: { ...(n.data as any), tooltips: pruned } as any,
+            data: { ...(n.data as any), interactions: cleaned },
           } as AppNode;
         }
-
-        const synced = syncParentGraphTypes(kept as AppNode[]);
-        return synced as unknown as RFNode<NodeData>[];
       }
 
-      // existing edge cleanup (you already had this)
+      // existing edge cleanup
       setEdges((eds) =>
         (eds as AppEdge[]).filter(
           (e) => !toDelete.has(e.source) && !toDelete.has(e.target)
