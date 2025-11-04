@@ -212,10 +212,8 @@ export default function BaseNodeShell({
                 style={{
                   position: 'absolute',
                   left: '50%',
-                  bottom: -6,
+                  bottom: -3,
                   transform: 'translateX(-50%)',
-                  width: 10,
-                  height: 10,
                   borderWidth: 1,
                   borderStyle: 'solid',
                   borderColor: '#222',
