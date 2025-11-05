@@ -35,3 +35,9 @@ export function allowedChildKinds(parentKind?: NodeKind): NodeKind[] {
   // `as NodeKind[]` is safe because keys/values are NodeKind literals
   return [...ALLOWED_TO[parentKind]] as NodeKind[];
 }
+
+export function supportsInteractions(kind: NodeKind): boolean {
+  return ['Visualization', 'Button', 'Filter', 'Parameter', 'Legend'].includes(
+    kind
+  );
+}

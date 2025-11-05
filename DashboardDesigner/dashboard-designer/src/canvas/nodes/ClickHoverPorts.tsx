@@ -6,7 +6,6 @@ type Props = {
   /** shared id base so you can distinguish later: 'act' is fine */
   idPrefix?: string;
   /** vertical center in % (50 by default) */
-  topPct?: number;
 };
 
 /**
@@ -17,7 +16,6 @@ type Props = {
 export default function ClickHoverPorts({
   position = Position.Right,
   idPrefix = 'act',
-  topPct = 50,
 }: Props) {
   const common = {
     type: 'source' as const,
@@ -31,14 +29,14 @@ export default function ClickHoverPorts({
       <Handle
         id={`${idPrefix}:click`}
         {...common}
-        style={{ ...common.style, top: `calc(${topPct}% - 12px)` }}
+        style={{ ...common.style, top: `calc(${50}% - 12px)` }}
         title="Click"
       />
       {/* Hover (bottom dot) */}
       <Handle
         id={`${idPrefix}:hover`}
         {...common}
-        style={{ ...common.style, top: `calc(${topPct}% + 12px)` }}
+        style={{ ...common.style, top: `calc(${50}% + 12px)` }}
         title="Hover"
       />
     </>

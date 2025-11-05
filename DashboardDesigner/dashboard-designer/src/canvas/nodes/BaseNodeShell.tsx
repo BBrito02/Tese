@@ -8,6 +8,7 @@ import { useEffect, useMemo } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { NodeResizer } from '@reactflow/node-resizer';
 import '@reactflow/node-resizer/dist/style.css';
+import { supportsInteractions } from '../../domain/rules';
 
 import type { NodeData, DataItem, VisualVariable } from '../../domain/types';
 import { VISUAL_VAR_ICONS } from '../../domain/icons';
@@ -132,6 +133,14 @@ export default function BaseNodeShell({
     const t = setTimeout(() => updateNodeInternals(id), 0);
     return () => clearTimeout(t);
   }, [id, updateNodeInternals, pillHandleIds.join('|')]);
+
+  const canInteract = supportsInteractions(data.kind);
+
+  // ensure node anchors refresh when this changes
+  useEffect(() => {
+    const t = setTimeout(() => updateNodeInternals(id), 0);
+    return () => clearTimeout(t);
+  }, [id, updateNodeInternals, canInteract]);
 
   const hasFooter = Array.isArray(footerItems) && footerItems.length > 0;
 
@@ -432,7 +441,7 @@ export default function BaseNodeShell({
       </div>
 
       {leftHandle && <Handle type="target" position={Position.Left} />}
-      {rightHandle && (
+      {rightHandle && canInteract && (
         <ClickHoverPorts position={Position.Right} idPrefix="act" />
       )}
     </div>
