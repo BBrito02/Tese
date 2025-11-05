@@ -12,6 +12,8 @@ import '@reactflow/node-resizer/dist/style.css';
 import type { NodeData, DataItem, VisualVariable } from '../../domain/types';
 import { VISUAL_VAR_ICONS } from '../../domain/icons';
 
+import ClickHoverPorts from '../nodes/ClickHoverPorts'; // adjust the path if needed
+
 // Per-kind minimums (match your previous sizes)
 const MIN_SIZE: Record<string, { w: number; h: number }> = {
   Dashboard: { w: 260, h: 200 },
@@ -204,14 +206,31 @@ export default function BaseNodeShell({
                 {label}
               </button>
 
+              {/* two action-specific handles under the pill */}
               <Handle
-                id={handleId}
+                id={`${handleId}:click`}
                 type="source"
                 position={Position.Bottom}
                 className="nodrag nopan"
                 style={{
                   position: 'absolute',
-                  left: '50%',
+                  left: '30%',
+                  bottom: -3,
+                  transform: 'translateX(-50%)',
+                  borderWidth: 1,
+                  borderStyle: 'solid',
+                  borderColor: '#222',
+                  background: '#111',
+                }}
+              />
+              <Handle
+                id={`${handleId}:hover`}
+                type="source"
+                position={Position.Bottom}
+                className="nodrag nopan"
+                style={{
+                  position: 'absolute',
+                  left: '70%',
                   bottom: -3,
                   transform: 'translateX(-50%)',
                   borderWidth: 1,
@@ -413,7 +432,9 @@ export default function BaseNodeShell({
       </div>
 
       {leftHandle && <Handle type="target" position={Position.Left} />}
-      {rightHandle && <Handle type="source" position={Position.Right} />}
+      {rightHandle && (
+        <ClickHoverPorts position={Position.Right} idPrefix="act" />
+      )}
     </div>
   );
 }

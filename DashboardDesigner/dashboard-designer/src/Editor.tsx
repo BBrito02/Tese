@@ -300,14 +300,42 @@ export default function Editor() {
   // Adds an edge if the connection is allowed by domain rules.
   const onConnect = useCallback(
     (c: Connection) => {
-      const sourceKind = nodes.find((n) => n.id === c.source)?.data.kind as
-        | NodeKind
-        | undefined;
-      const targetKind = nodes.find((n) => n.id === c.target)?.data.kind as
-        | NodeKind
-        | undefined;
+      const source = nodes.find((n) => n.id === c.source);
+      const target = nodes.find((n) => n.id === c.target);
+      const sourceKind = source?.data?.kind as NodeKind | undefined;
+      const targetKind = target?.data?.kind as NodeKind | undefined;
+
       if (!canConnect(sourceKind, targetKind)) return;
-      setEdges((eds) => addEdge({ ...c, animated: false }, eds));
+
+      const sh = c.sourceHandle ?? '';
+      const trigger = sh.endsWith(':hover') ? 'hover' : 'click';
+      const isTooltip = targetKind === 'Tooltip';
+
+      if (isTooltip) {
+        setEdges((eds) =>
+          addEdge(
+            {
+              ...c,
+              animated: false,
+              type: 'tooltip',
+              data: { activation: trigger }, // click | hover
+            } as any,
+            eds
+          )
+        );
+      } else {
+        setEdges((eds) =>
+          addEdge(
+            {
+              ...c,
+              animated: false,
+              type: 'interaction',
+              data: { trigger }, // click | hover
+            } as any,
+            eds
+          )
+        );
+      }
     },
     [nodes, setEdges]
   );
@@ -1662,16 +1690,20 @@ export default function Editor() {
                     } as AppEdge) as any
                 );
               } else {
-                // attach to a data pill source handle
-                const sourceHandle = `data:${attachRef}`;
+                // attach to a data pill *action-specific* source handle
+                const pillId = `data:${slug(attachRef)}`; // base pill id
+                const sourceHandle = `${pillId}:${activation}`; // add :click | :hover
 
                 const hasHandleNow = () => {
                   const viz = nodes.find((nn) => nn.id === vizId);
                   const items = (viz?.data as any)?.data ?? [];
+                  // as soon as the pill exists, BOTH :click and :hover handles exist
+                  // so we only need to check the pill itself, but let’s match exactly:
                   return items.some(
                     (it: any) =>
-                      `data:${slug(typeof it === 'string' ? it : it.name)}` ===
-                      sourceHandle
+                      `data:${slug(
+                        typeof it === 'string' ? it : it.name
+                      )}:${activation}` === sourceHandle
                   );
                 };
 
@@ -1684,8 +1716,9 @@ export default function Editor() {
                           e.target === tipId &&
                           e.sourceHandle === sourceHandle
                       )
-                    )
+                    ) {
                       return eds;
+                    }
 
                     return (eds as AppEdge[]).concat({
                       id: `e-viz-${vizId}-${sourceHandle}-tip-${tipId}`,
