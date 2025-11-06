@@ -290,6 +290,88 @@ export function ListSection(props: {
   );
 }
 
+// sections.tsx
+export function ListAttributesSection(props: {
+  title: string;
+  items: (string | DataItem)[];
+  onAdd?: () => void;
+  addTooltip?: string;
+  disabled?: boolean;
+  onRemove?: (index: number) => void;
+}) {
+  const { title, items, onAdd, addTooltip, disabled, onRemove } = props;
+  return (
+    <div>
+      <div style={headerRow}>
+        <label style={{ fontSize: 12, opacity: 0.8 }}>{title}</label>
+        {onAdd && (
+          <button
+            type="button"
+            title={addTooltip ?? 'Add'}
+            disabled={disabled}
+            style={{ ...roundIconBtn, opacity: disabled ? 0.6 : 1 }}
+            onClick={onAdd}
+          >
+            <LuPlus size={16} />
+          </button>
+        )}
+      </div>
+
+      {/* Show ghost line if empty */}
+      {!items?.length ? (
+        <div style={{ marginTop: 8 }}>
+          <div style={GhostLine} />
+        </div>
+      ) : (
+        <div
+          style={{ marginTop: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}
+        >
+          {items.map((it, i) => {
+            const label = typeof it === 'string' ? it : it?.name;
+
+            return (
+              <span
+                key={`${label}-${i}`}
+                style={{
+                  fontSize: 12,
+                  padding: '4px 8px',
+                  borderRadius: 999,
+                  background: '#eef2ff',
+                  border: '1px solid #c7d2fe',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+                title={label}
+              >
+                {label}
+                {onRemove && (
+                  <button
+                    type="button"
+                    onClick={() => onRemove(i)}
+                    disabled={disabled}
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      cursor: disabled ? 'not-allowed' : 'pointer',
+                      padding: 0,
+                      lineHeight: 1,
+                      fontSize: 14,
+                    }}
+                    title="Remove"
+                  >
+                    ×
+                  </button>
+                )}
+              </span>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // sections.tsx (unchanged)
 export function DescriptionSection({
   label = 'Description',
@@ -464,6 +546,124 @@ export function AddComponentSection({
         >
           <LuPlus size={16} />
         </button>
+      </div>
+    </div>
+  );
+}
+
+// --- NEW: FieldPickerSection (click-to-select chips) ---
+export function FieldPickerSection({
+  title,
+  available,
+  selected,
+  onChange,
+  disabled,
+}: {
+  title: string;
+  available: string[]; // fields you can pick from (e.g., from parent viz)
+  selected: string[]; // current chosen fields
+  onChange: (next: string[]) => void;
+  disabled?: boolean;
+}) {
+  const add = (v: string) => {
+    if (disabled) return;
+    if (!selected.includes(v)) onChange([...selected, v]);
+  };
+
+  const remove = (v: string) => {
+    if (disabled) return;
+    onChange(selected.filter((s) => s !== v));
+  };
+
+  return (
+    <div>
+      <label
+        style={{
+          display: 'block',
+          fontSize: 12,
+          opacity: 0.8,
+          marginBottom: 6,
+        }}
+      >
+        {title}
+      </label>
+
+      {/* Available chips */}
+      <div style={{ marginTop: 4 }}>
+        {available.length === 0 ? (
+          <div style={GhostLine} />
+        ) : (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {available.map((name) => {
+              const isPicked = selected.includes(name);
+              return (
+                <button
+                  key={`avail-${name}`}
+                  type="button"
+                  disabled={disabled || isPicked}
+                  onClick={() => add(name)}
+                  title={isPicked ? 'Already selected' : `Add "${name}"`}
+                  style={{
+                    fontSize: 12,
+                    padding: '4px 8px',
+                    borderRadius: 999,
+                    border: '1px solid #c7d2fe',
+                    background: isPicked ? '#e2e8f0' : '#eef2ff',
+                    color: '#0f172a',
+                    cursor: disabled || isPicked ? 'not-allowed' : 'pointer',
+                    opacity: disabled || isPicked ? 0.6 : 1,
+                  }}
+                >
+                  {name}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Selected chips */}
+      <div style={{ marginTop: 8 }}>
+        {selected.length === 0 ? (
+          <div style={GhostLine} />
+        ) : (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {selected.map((name) => (
+              <span
+                key={`sel-${name}`}
+                style={{
+                  fontSize: 12,
+                  padding: '4px 8px',
+                  borderRadius: 999,
+                  background: '#eef2ff',
+                  border: '1px solid #c7d2fe',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+                title={name}
+              >
+                {name}
+                <button
+                  type="button"
+                  onClick={() => remove(name)}
+                  disabled={disabled}
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: disabled ? 'not-allowed' : 'pointer',
+                    padding: 0,
+                    fontSize: 14,
+                    lineHeight: 1,
+                  }}
+                  title="Remove"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

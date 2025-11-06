@@ -223,7 +223,7 @@ export default function BaseNodeShell({
                 className="nodrag nopan"
                 style={{
                   position: 'absolute',
-                  left: '30%',
+                  left: '70%',
                   bottom: -3,
                   transform: 'translateX(-50%)',
                   borderWidth: 1,
@@ -239,7 +239,7 @@ export default function BaseNodeShell({
                 className="nodrag nopan"
                 style={{
                   position: 'absolute',
-                  left: '70%',
+                  left: '30%',
                   bottom: -3,
                   transform: 'translateX(-50%)',
                   borderWidth: 1,

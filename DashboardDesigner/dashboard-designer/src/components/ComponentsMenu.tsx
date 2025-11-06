@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import type { Node as RFNode } from 'reactflow';
-import type { NodeData, NodeKind } from '../domain/types';
+import type { DataItem, NodeData, NodeKind } from '../domain/types';
 import { MENUS } from './menus';
 import { BaseMenu } from './menus/common';
 import { LuPanelRightClose, LuPanelLeftClose } from 'react-icons/lu';
@@ -12,6 +12,7 @@ type Props = {
   onOpen?: (
     type: 'data' | 'interactions' | 'tooltips' | 'add-component'
   ) => void;
+  parentData?: (string | DataItem)[];
 };
 
 const PANEL_W = 280;
@@ -24,6 +25,7 @@ export default function ComponentsMenu({
   onChange,
   onDelete,
   onOpen,
+  parentData,
 }: Props) {
   // ---- All hooks live up here. No early returns below this line. ----
 
@@ -172,6 +174,7 @@ export default function ComponentsMenu({
             onChange={onChange}
             disabled={disabled}
             onOpen={onOpen}
+            parentData={parentData}
           />
         ) : (
           <BaseMenu node={panelNode} onChange={onChange} disabled={disabled} />

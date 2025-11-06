@@ -25,19 +25,19 @@ export default function ClickHoverPorts({
 
   return (
     <>
-      {/* Click (top dot) */}
-      <Handle
-        id={`${idPrefix}:click`}
-        {...common}
-        style={{ ...common.style, top: `calc(${50}% - 12px)` }}
-        title="Click"
-      />
       {/* Hover (bottom dot) */}
       <Handle
         id={`${idPrefix}:hover`}
         {...common}
-        style={{ ...common.style, top: `calc(${50}% + 12px)` }}
+        style={{ ...common.style, top: `calc(${50}% - 12px)` }}
         title="Hover"
+      />
+      {/* Click (top dot) */}
+      <Handle
+        id={`${idPrefix}:click`}
+        {...common}
+        style={{ ...common.style, top: `calc(${50}% + 12px)` }}
+        title="Click"
       />
     </>
   );

@@ -1,5 +1,5 @@
 import type { Node as RFNode } from 'reactflow';
-import type { NodeData } from '../../domain/types';
+import type { NodeData, DataItem } from '../../domain/types';
 
 export type KindProps = {
   node: RFNode<NodeData>;
@@ -8,6 +8,7 @@ export type KindProps = {
   onOpen?: (
     type: 'data' | 'interactions' | 'tooltips' | 'add-component'
   ) => void;
+  parentData?: (string | DataItem)[];
 };
 
 export const WhiteField: React.CSSProperties = {

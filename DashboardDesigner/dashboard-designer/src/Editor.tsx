@@ -22,6 +22,7 @@ import type {
   NodeKind,
   VisualVariable,
   Interaction,
+  DataItem,
 } from './domain/types';
 import { canConnect } from './domain/rules';
 import SideMenu from './components/SideMenu';
@@ -159,6 +160,21 @@ export default function Editor() {
     () => nodes.find((n) => n.id === selectedId),
     [nodes, selectedId]
   );
+
+  // NEW: data attributes from the parent visualization (if selected node is a Graph)
+  const parentDataForSelected = useMemo<
+    (string | DataItem)[] | undefined
+  >(() => {
+    if (!selectedNode) return undefined;
+    if ((selectedNode.data as any)?.kind !== 'Graph') return undefined;
+
+    const parentId = selectedNode.parentNode;
+    if (!parentId) return [];
+
+    const parent = nodes.find((n) => n.id === parentId);
+    const dataList = (parent?.data as any)?.data;
+    return Array.isArray(dataList) ? (dataList as (string | DataItem)[]) : [];
+  }, [selectedNode, nodes]);
 
   const lastSelectedIdRef = useRef<string | null>(null);
   const [menuExiting, setMenuExiting] = useState(false);
@@ -1976,6 +1992,7 @@ export default function Editor() {
             onOpen={(t) =>
               selectedNode && setModal({ type: t, nodeId: selectedNode.id })
             }
+            parentData={parentDataForSelected}
           />
         )}
 
