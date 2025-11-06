@@ -6,6 +6,7 @@ import {
   ListSection,
   AddComponentSection,
   DescriptionSection,
+  SectionTitle,
 } from './sections';
 import { useModal } from '../ui/ModalHost';
 import { allowedChildKinds } from '../../domain/rules';
@@ -71,6 +72,8 @@ export default function TooltipMenu(p: KindProps) {
       {/* Header */}
       <div style={{ fontWeight: 700, textAlign: 'center' }}>MENU</div>
 
+      <SectionTitle>Properties</SectionTitle>
+
       {/*  Name Section */}
       <NameField
         value={d.title ?? ''}
@@ -80,6 +83,8 @@ export default function TooltipMenu(p: KindProps) {
 
       {/* Type Section */}
       <TypeField value="Tooltip" />
+
+      <SectionTitle>Actions</SectionTitle>
 
       <AddComponentSection
         title="Add component"

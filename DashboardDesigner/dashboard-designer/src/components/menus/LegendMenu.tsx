@@ -4,6 +4,7 @@ import {
   TypeField,
   ListSection,
   AddComponentSection,
+  SectionTitle,
 } from './sections';
 import type {
   DataItem,
@@ -73,6 +74,8 @@ export default function LegendMenu(p: KindProps) {
       {/* Header */}
       <div style={{ fontWeight: 700, textAlign: 'center' }}>MENU</div>
 
+      <SectionTitle>Properties</SectionTitle>
+
       {/* Component name */}
       <NameField
         value={d.title ?? ''}
@@ -82,6 +85,8 @@ export default function LegendMenu(p: KindProps) {
 
       {/* Component type */}
       <TypeField value="Legend" />
+
+      <SectionTitle>Actions</SectionTitle>
 
       <AddComponentSection
         title="Add component"

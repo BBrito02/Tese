@@ -1,5 +1,5 @@
 import type { KindProps } from './common';
-import { NameField, TypeField, ListSection } from './sections';
+import { NameField, TypeField, ListSection, SectionTitle } from './sections';
 import type { DataItem, Interaction } from '../../domain/types';
 
 import { useModal } from '../ui/ModalHost';
@@ -10,7 +10,7 @@ export default function FilterMenu(p: KindProps) {
 
   const dataList: (string | DataItem)[] = d.data ?? [];
 
-    // store is Interaction[], ListSection wants strings -> format them
+  // store is Interaction[], ListSection wants strings -> format them
   const interactions: Interaction[] = Array.isArray(d.interactions)
     ? (d.interactions as Interaction[])
     : [];
@@ -28,6 +28,8 @@ export default function FilterMenu(p: KindProps) {
       {/* Header */}
       <div style={{ fontWeight: 700, textAlign: 'center' }}>MENU</div>
 
+      <SectionTitle>Properties</SectionTitle>
+
       {/* Component name */}
       <NameField
         value={d.title ?? ''}
@@ -37,6 +39,8 @@ export default function FilterMenu(p: KindProps) {
 
       {/* Component type */}
       <TypeField value="Filter" />
+
+      <SectionTitle>Actions</SectionTitle>
 
       {/* Data list */}
       <ListSection

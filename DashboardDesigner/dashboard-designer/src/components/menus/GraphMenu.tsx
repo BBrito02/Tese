@@ -1,7 +1,7 @@
 // src/components/menus/GraphMenu.tsx
 import { useState } from 'react';
 import { WhiteField, type KindProps } from './common';
-import { TypeField, ListAttributesSection } from './sections';
+import { TypeField, ListAttributesSection, SectionTitle } from './sections';
 import type { DataItem, GraphType } from '../../domain/types';
 import { GRAPH_TYPE_ICONS } from '../../domain/icons';
 
@@ -21,6 +21,7 @@ const selectCss: React.CSSProperties = {
   background: '#fff',
   fontSize: 13,
   outline: 'none',
+  cursor: 'pointer',
 };
 
 const addBtn: React.CSSProperties = {
@@ -68,6 +69,8 @@ export default function GraphMenu(p: KindProps) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ fontWeight: 700, textAlign: 'center' }}>MENU</div>
 
+      <SectionTitle>Properties</SectionTitle>
+
       <TypeField value="Graph" />
       {/* Graph type title */}
       <div>
@@ -77,6 +80,7 @@ export default function GraphMenu(p: KindProps) {
             fontSize: 12,
             opacity: 0.8,
             marginBottom: 6,
+            paddingLeft: 6,
           }}
         >
           Graph type
@@ -121,6 +125,8 @@ export default function GraphMenu(p: KindProps) {
           )}
         </div>
       </div>
+
+      <SectionTitle>Actions</SectionTitle>
 
       {/* Columns list (consistent look via ListSection) */}
       <ListAttributesSection

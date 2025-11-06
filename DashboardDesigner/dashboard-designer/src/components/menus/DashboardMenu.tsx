@@ -4,6 +4,7 @@ import {
   TypeField,
   ListSection,
   AddComponentSection,
+  SectionTitle,
 } from './sections';
 import { useModal } from '../ui/ModalHost';
 import { allowedChildKinds } from '../../domain/rules';
@@ -42,12 +43,16 @@ export default function DashboardMenu(p: KindProps) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ fontWeight: 700, textAlign: 'center' }}>MENU</div>
 
+      <SectionTitle>Properties</SectionTitle>
+
       <NameField
         value={d.title ?? ''}
         onChange={(val) => p.onChange({ title: val })}
         disabled={disabled}
       />
       <TypeField value="Dashboard" />
+
+      <SectionTitle>Actions</SectionTitle>
 
       <AddComponentSection
         title="Add component"

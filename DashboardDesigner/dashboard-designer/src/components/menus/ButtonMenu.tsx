@@ -1,6 +1,6 @@
 import type { Interaction } from '../../domain/types';
 import type { KindProps } from './common';
-import { NameField, TypeField, ListSection } from './sections';
+import { NameField, TypeField, ListSection, SectionTitle } from './sections';
 
 export default function ButtonMenu(p: KindProps) {
   const d: any = p.node.data;
@@ -22,6 +22,8 @@ export default function ButtonMenu(p: KindProps) {
       {/* Header */}
       <div style={{ fontWeight: 700, textAlign: 'center' }}>MENU</div>
 
+      <SectionTitle>Properties</SectionTitle>
+
       {/* Component name */}
       <NameField
         value={d.title ?? ''}
@@ -31,6 +33,8 @@ export default function ButtonMenu(p: KindProps) {
 
       {/* Component type */}
       <TypeField value="Button" />
+
+      <SectionTitle>Actions</SectionTitle>
 
       {/* Interaction list */}
       <ListSection

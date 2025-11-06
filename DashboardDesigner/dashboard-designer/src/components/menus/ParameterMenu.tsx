@@ -1,5 +1,11 @@
 import type { KindProps } from './common';
-import { NameField, TypeField, ListSection, OptionsSection } from './sections';
+import {
+  NameField,
+  TypeField,
+  ListSection,
+  OptionsSection,
+  SectionTitle,
+} from './sections';
 import type { Interaction } from '../../domain/types';
 
 export default function ParameterMenu(p: KindProps) {
@@ -24,6 +30,8 @@ export default function ParameterMenu(p: KindProps) {
       {/* Header */}
       <div style={{ fontWeight: 700, textAlign: 'center' }}>MENU</div>
 
+      <SectionTitle>Properties</SectionTitle>
+
       {/* Component name */}
       <NameField
         value={d.title ?? ''}
@@ -33,6 +41,8 @@ export default function ParameterMenu(p: KindProps) {
 
       {/* Component type */}
       <TypeField value="Parameter" />
+
+      <SectionTitle>Actions</SectionTitle>
 
       {/* Options (reusable section) */}
       <OptionsSection

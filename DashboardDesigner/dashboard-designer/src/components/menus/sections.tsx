@@ -83,6 +83,24 @@ const parseTooltip = (s: string) => {
   return { badge: m[1], title: m[2] };
 };
 
+export function SectionTitle({ children }: { children: string }) {
+  return (
+    <div
+      style={{
+        marginTop: 18,
+        marginBottom: 6,
+        fontSize: 14,
+        fontWeight: 600, // ← bold
+        color: '#0f172a', // slate-900 (strong, readable)
+        borderBottom: '1px solid #e5e7eb', // subtle divider
+        paddingBottom: 3,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 // function that prints the data attributes + tooltips
 export function Chips({ items }: { items: ListItem[] }) {
   if (!items?.length) {
@@ -176,6 +194,7 @@ export function NameField(props: {
           fontSize: 12,
           opacity: 0.8,
           marginBottom: 6,
+          paddingLeft: 6,
         }}
       >
         Component name
@@ -204,6 +223,7 @@ export function TypeField(props: { value: string }) {
           fontSize: 12,
           opacity: 0.8,
           marginBottom: 6,
+          paddingLeft: 6,
         }}
       >
         Component type
@@ -272,7 +292,9 @@ export function ListSection(props: {
   return (
     <div>
       <div style={headerRow}>
-        <label style={{ fontSize: 12, opacity: 0.8 }}>{title}</label>
+        <label style={{ fontSize: 12, opacity: 0.8, paddingLeft: 6 }}>
+          {title}
+        </label>
         {onAdd && (
           <button
             type="button"
@@ -303,7 +325,9 @@ export function ListAttributesSection(props: {
   return (
     <div>
       <div style={headerRow}>
-        <label style={{ fontSize: 12, opacity: 0.8 }}>{title}</label>
+        <label style={{ fontSize: 12, opacity: 0.8, paddingLeft: 6 }}>
+          {title}
+        </label>
         {onAdd && (
           <button
             type="button"
@@ -396,6 +420,7 @@ export function DescriptionSection({
           fontSize: 12,
           opacity: 0.8,
           marginBottom: 6,
+          paddingLeft: 6,
         }}
       >
         {label}
@@ -450,6 +475,7 @@ export function OptionsSection({
           fontSize: 12,
           opacity: 0.8,
           marginBottom: 6,
+          paddingLeft: 6,
         }}
       >
         {title}
@@ -536,7 +562,9 @@ export function AddComponentSection({
   return (
     <div>
       <div style={headerRow}>
-        <label style={{ fontSize: 12, opacity: 0.8 }}>{title}</label>
+        <label style={{ fontSize: 12, opacity: 0.8, paddingLeft: 6 }}>
+          {title}
+        </label>
         <button
           type="button"
           title="Create a new component"
@@ -583,6 +611,7 @@ export function FieldPickerSection({
           fontSize: 12,
           opacity: 0.8,
           marginBottom: 6,
+          paddingLeft: 6,
         }}
       >
         {title}
