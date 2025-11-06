@@ -16,6 +16,7 @@ import type {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { nanoid } from 'nanoid';
+
 import type {
   GraphType,
   NodeData,
@@ -24,10 +25,11 @@ import type {
   Interaction,
   DataItem,
 } from './domain/types';
-import { canConnect } from './domain/rules';
-import SideMenu from './components/SideMenu';
-import type { DragData } from './components/SideMenu';
+import { canConnect, allowedChildKinds } from './domain/rules';
+
+import SideMenu, { type DragData } from './components/SideMenu';
 import ComponentsMenu from './components/ComponentsMenu';
+
 import {
   DndContext,
   PointerSensor,
@@ -50,27 +52,12 @@ import { SAVE_VERSION } from './domain/saveFormat';
 
 import TooltipPopup from './components/popups/TooltipPopup';
 import InteractionPopup from './components/popups/InteractionPopup';
-
-import {
-  FaCloudDownloadAlt,
-  FaCloudUploadAlt,
-  FaRegSquare,
-} from 'react-icons/fa';
-
-import { FaHand } from 'react-icons/fa6';
-import { useModal } from './components/ui/ModalHost';
-
+import VisualVariablePopup from './components/popups/VisualVariablePopup';
 import SavePopup from './components/popups/SavePopup';
-
-import { allowedChildKinds } from './domain/rules';
 import AddComponentPopup from './components/popups/ComponentPopup';
 
 import TooltipEdge from './canvas/edges/TooltipEdge';
 import InteractionEdge from './canvas/edges/InteractionEdge';
-
-import { activationIcons, type ActivationKey } from './domain/icons';
-
-import VisualVariablePopup from './components/popups/VisualVariablePopup';
 
 import DashboardNode from './canvas/nodes/DashboardNode';
 import VisualizationNode from './canvas/nodes/VisualizationNode';
@@ -82,6 +69,20 @@ import ParameterNode from './canvas/nodes/ParameterNode';
 import DataActionNode from './canvas/nodes/DataActionNode';
 import PlaceholderNode from './canvas/nodes/PlaceholderNode';
 import GraphNode from './canvas/nodes/GraphNode';
+
+import { activationIcons, type ActivationKey } from './domain/icons';
+import { useModal } from './components/ui/ModalHost';
+
+import {
+  FaCloudDownloadAlt,
+  FaCloudUploadAlt,
+  FaRegSquare,
+} from 'react-icons/fa';
+import { FaHand } from 'react-icons/fa6';
+
+/* =========================
+ *  Node/Edge component maps
+ * ========================= */
 
 const NODE_TYPES = {
   dashboard: DashboardNode,
@@ -96,7 +97,7 @@ const NODE_TYPES = {
   graph: GraphNode,
 };
 
-// Helper to choose the type based on domain kind
+/** Map domain kind -> React Flow node type key. */
 function nodeTypeFor(kind: NodeKind): keyof typeof NODE_TYPES {
   switch (kind) {
     case 'Dashboard':
@@ -126,42 +127,133 @@ function nodeTypeFor(kind: NodeKind): keyof typeof NODE_TYPES {
 
 const EDGE_TYPES = { tooltip: TooltipEdge, interaction: InteractionEdge };
 
+/* =========================
+ *     UI layout constants
+ * ========================= */
+
 const PANEL_WIDTH = 280;
 const PANEL_MARGIN = 7;
 const PANEL_GAP = 8;
 const PANEL_ANIM_MS = 200;
 
-// Handy aliases used only for annotations (NOT for generics on useNodesState!)
+const PAD_X = 5;
+const PAD_TOP = 17;
+const PAD_BOTTOM = 28;
+const HEADER_H = 23;
+const GRID_GAP = 16;
+
+const COLLAPSED_W = 28;
+const EXTRA_COLLAPSED_GAP = 18;
+
+/* ================
+ *   Local helpers
+ * ================ */
+
+// Handy aliases for readability (not for hook generics)
 type AppNode = RFNode<NodeData>;
 type AppEdge = RFEdge<any>;
 
+/** Small util: remove file extension. */
+const baseFrom = (name: string) => name.replace(/\.[^.]+$/, '');
+
+/** Minimum container base sizes (keeps dashboards a bit larger than visualizations). */
+function baseMinFor(kind: NodeKind | undefined) {
+  return {
+    w: kind === 'Dashboard' ? 320 : 240,
+    h: kind === 'Dashboard' ? 180 : 140,
+  };
+}
+
+/** Read the current rendered size from node.style (falls back to sensible defaults). */
+function getNodeSize(n: AppNode) {
+  const w = (n as any).width ?? (n.style as any)?.width ?? 180;
+  const h = (n as any).height ?? (n.style as any)?.height ?? 100;
+  return { w: Number(w) || 0, h: Number(h) || 0 };
+}
+
+/** Absolute (canvas) position by accumulating parent offsets. */
+function getAbsolutePosition(n: AppNode, all: AppNode[]) {
+  let x = n.position.x;
+  let y = n.position.y;
+  let cur: AppNode | undefined = n;
+  while (cur.parentNode) {
+    const p = all.find((nn) => nn.id === cur!.parentNode);
+    if (!p) break;
+    x += p.position.x;
+    y += p.position.y;
+    cur = p as AppNode;
+  }
+  return { x, y };
+}
+
+/** Depth (nesting level) of a node in the hierarchy. */
+function depthOf(n: AppNode, all: AppNode[]) {
+  let d = 0;
+  let cur: AppNode | undefined = n;
+  while (cur?.parentNode) {
+    const p = all.find((nn) => nn.id === cur!.parentNode);
+    if (!p) break;
+    d++;
+    cur = p as AppNode;
+  }
+  return d;
+}
+
+/** Whether a node kind can contain children. */
+function isContainerKind(k: NodeKind | undefined) {
+  return k === 'Dashboard' || k === 'Visualization' || k === 'Tooltip';
+}
+
+/** Convert a flow-space point to screen-space using current viewport. */
+function flowToScreen(
+  rf: ReactFlowInstance | null,
+  pt: { x: number; y: number }
+) {
+  const vp = (rf && (rf as any).getViewport?.()) || { x: 0, y: 0, zoom: 1 };
+  return { x: vp.x + pt.x * vp.zoom, y: vp.y + pt.y * vp.zoom };
+}
+
+/* =====================================================
+ *                  Main Editor component
+ * ===================================================== */
+
 export default function Editor() {
-  // IMPORTANT: the generic for useNodesState is the **data** type (NodeData)
+  // React Flow
   const [nodes, setNodes, onNodesChange] = useNodesState<NodeData>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<AppEdge>([]);
   const [rf, setRf] = useState<ReactFlowInstance | null>(null);
+
+  // UI state
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [menuExiting, setMenuExiting] = useState(false);
+  const [menuWidth, setMenuWidth] = useState<number>(PANEL_WIDTH);
+  const [lassoMode, setLassoMode] = useState(false);
 
-  // Keep interaction edges always visible (no hidden, no dimming)
-  const visibleEdges = useMemo(() => {
-    return edges.map((e) =>
-      e.type === 'interaction'
-        ? {
-            ...e,
-            hidden: false,
-            style: { ...e.style, opacity: 1 }, // ensure solid visibility
-          }
-        : e
-    );
-  }, [edges]);
+  // File save name
+  const [saveNameBase, setSaveNameBase] = useState('dashboard-designer');
 
+  // Modal host
+  const { openModal, closeModal } = useModal();
+
+  // Keep interaction edges fully visible (no dimming)
+  const visibleEdges = useMemo(
+    () =>
+      edges.map((e) =>
+        e.type === 'interaction'
+          ? { ...e, hidden: false, style: { ...e.style, opacity: 1 } }
+          : e
+      ),
+    [edges]
+  );
+
+  // Currently selected node object
   const selectedNode = useMemo(
     () => nodes.find((n) => n.id === selectedId),
     [nodes, selectedId]
   );
 
-  // NEW: data attributes from the parent visualization (if selected node is a Graph)
+  // Expose data attributes from parent Visualization when a Graph is selected
   const parentDataForSelected = useMemo<
     (string | DataItem)[] | undefined
   >(() => {
@@ -176,21 +268,10 @@ export default function Editor() {
     return Array.isArray(dataList) ? (dataList as (string | DataItem)[]) : [];
   }, [selectedNode, nodes]);
 
-  const lastSelectedIdRef = useRef<string | null>(null);
-  const [menuExiting, setMenuExiting] = useState(false);
+  /* ---------- Menu animation width sync ---------- */
 
-  const [lassoMode, setLassoMode] = useState(false);
-
-  const { openModal, closeModal } = useModal();
-
-  const [menuWidth, setMenuWidth] = useState<number>(PANEL_WIDTH);
-
-  const [saveNameBase, setSaveNameBase] = useState('dashboard-designer');
-  // Returns a filename without its extension.
-  const baseFrom = (name: string) => name.replace(/\.[^.]+$/, '');
-
-  // Subscribes to menu width changes to keep the top-right buttons positioned.
   useEffect(() => {
+    /** Listen to menu width broadcasts (so top-right buttons can slide with it). */
     const onWidth = (e: Event) => {
       const { width } = (e as CustomEvent<{ width: number }>).detail || {
         width: PANEL_WIDTH,
@@ -205,7 +286,29 @@ export default function Editor() {
       );
   }, []);
 
+  // Track last selected to drive exit animation
+  const lastSelectedIdRef = useRef<string | null>(null);
   useEffect(() => {
+    let t: number | undefined;
+    if (!selectedId && lastSelectedIdRef.current) {
+      setMenuExiting(true);
+      t = window.setTimeout(() => setMenuExiting(false), PANEL_ANIM_MS);
+    }
+    lastSelectedIdRef.current = selectedId;
+    return () => {
+      if (t !== undefined) window.clearTimeout(t);
+    };
+  }, [selectedId]);
+
+  /** When entering lasso mode, clear selection. */
+  useEffect(() => {
+    if (lassoMode) setSelectedId(null);
+  }, [lassoMode]);
+
+  /* ---------- Visual Variables popup wiring ---------- */
+
+  useEffect(() => {
+    /** Opens visual variables modal for a node id. */
     function onOpenVisualVars(e: Event) {
       const { nodeId } = (e as CustomEvent<{ nodeId: string }>).detail || {};
       if (!nodeId) return;
@@ -222,7 +325,6 @@ export default function Editor() {
             initial={current}
             onCancel={closeModal}
             onSave={(vars) => {
-              // patch the node data
               window.dispatchEvent(
                 new CustomEvent('designer:patch-node-data', {
                   detail: { nodeId, patch: { visualVars: vars } },
@@ -241,12 +343,11 @@ export default function Editor() {
       window.removeEventListener('designer:open-visualvars', handler);
   }, [nodes, openModal, closeModal]);
 
-  // Clears the selection when entering lasso mode.
-  useEffect(() => {
-    if (lassoMode) setSelectedId(null);
-  }, [lassoMode]);
+  /* =====================================================
+   *             Graph canvas helpers & behaviors
+   * ===================================================== */
 
-  // Applies a partial patch to the node's data by id.
+  /** Patch a node's data by id. */
   const updateNodeById = useCallback(
     (id: string, patch: Partial<NodeData>) => {
       setNodes(
@@ -255,7 +356,6 @@ export default function Editor() {
             n.id === id
               ? ({
                   ...n,
-                  // cast after merge so TS doesn't try to validate per-variant unions
                   data: { ...(n.data as any), ...(patch as any) } as NodeData,
                 } as RFNode<NodeData>)
               : (n as RFNode<NodeData>)
@@ -265,43 +365,7 @@ export default function Editor() {
     [setNodes]
   );
 
-  type ModalSpec =
-    | { type: 'data'; nodeId: string }
-    | { type: 'interactions'; nodeId: string }
-    | { type: 'tooltips'; nodeId: string }
-    | { type: 'add-component'; nodeId: string; presetKind?: NodeKind };
-
-  const [modal, setModal] = useState<ModalSpec | null>(null);
-
-  // Drives the “menu exit” animation when deselecting the last node.
-  useEffect(() => {
-    let t: number | undefined;
-
-    if (!selectedId && lastSelectedIdRef.current) {
-      setMenuExiting(true);
-      t = window.setTimeout(() => setMenuExiting(false), PANEL_ANIM_MS);
-    }
-    lastSelectedIdRef.current = selectedId;
-
-    return () => {
-      if (t !== undefined) window.clearTimeout(t);
-    };
-  }, [selectedId]);
-
-  const COLLAPSED_W = 28;
-  const EXTRA_COLLAPSED_GAP = 18;
-
-  const menuActive = Boolean(selectedId) || menuExiting;
-  const buttonsOffset = menuActive
-    ? -(
-        menuWidth +
-        PANEL_MARGIN +
-        PANEL_GAP +
-        (menuWidth <= COLLAPSED_W ? EXTRA_COLLAPSED_GAP : 0)
-      )
-    : 0;
-
-  // Keeps a single node selected (or clears selection) based on current RF selection.
+  /** Keep a single node selected, or clear when multi/none. */
   const handleSelectionChange = useCallback(
     ({ nodes: sel }: { nodes: RFNode<NodeData>[]; edges: any[] }) => {
       if (lassoMode || sel.length !== 1) {
@@ -313,7 +377,7 @@ export default function Editor() {
     [lassoMode]
   );
 
-  // Adds an edge if the connection is allowed by domain rules.
+  /** Add an edge only if allowed by domain rules; annotate with trigger/edge type. */
   const onConnect = useCallback(
     (c: Connection) => {
       const source = nodes.find((n) => n.id === c.source);
@@ -327,36 +391,22 @@ export default function Editor() {
       const trigger = sh.endsWith(':hover') ? 'hover' : 'click';
       const isTooltip = targetKind === 'Tooltip';
 
-      if (isTooltip) {
-        setEdges((eds) =>
-          addEdge(
-            {
-              ...c,
-              animated: false,
-              type: 'tooltip',
-              data: { activation: trigger }, // click | hover
-            } as any,
-            eds
-          )
-        );
-      } else {
-        setEdges((eds) =>
-          addEdge(
-            {
-              ...c,
-              animated: false,
-              type: 'interaction',
-              data: { trigger }, // click | hover
-            } as any,
-            eds
-          )
-        );
-      }
+      setEdges((eds) =>
+        addEdge(
+          {
+            ...c,
+            animated: false,
+            type: isTooltip ? 'tooltip' : 'interaction',
+            data: isTooltip ? { activation: trigger } : { trigger },
+          } as any,
+          eds
+        )
+      );
     },
     [nodes, setEdges]
   );
 
-  // Patches the currently selected node (optionally reflowing constraints).
+  /** Update currently selected node's data, optionally reflowing constraints afterwards. */
   const updateSelectedNode = useCallback(
     (patch: Partial<NodeData>, opts?: { reflow?: boolean }) => {
       if (!selectedId) return;
@@ -371,7 +421,6 @@ export default function Editor() {
               } as RFNode<NodeData>)
             : (n as RFNode<NodeData>)
         );
-
         return (
           reflow ? (applyConstraints(next as any) as any) : next
         ) as typeof nds;
@@ -380,18 +429,19 @@ export default function Editor() {
     [selectedId, setNodes]
   );
 
-  // Removes the currently selected node (plus dependent nodes/edges).
+  /** Delete the currently selected node (and any dependent nodes/edges). */
   const deleteSelectedNode = useCallback(() => {
     if (!selectedId) return;
     pruneAfterRemoval([selectedId]);
   }, [selectedId]);
+
+  /* ---------- palette drag & drop (dnd-kit) ---------- */
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } })
   );
   const [isDraggingFromPalette, setIsDraggingFromPalette] = useState(false);
   const [dragPreview, setDragPreview] = useState<DragData | null>(null);
-
   const [dragStartPoint, setDragStartPoint] = useState<{
     x: number;
     y: number;
@@ -400,8 +450,12 @@ export default function Editor() {
     x: number;
     y: number;
   } | null>(null);
+  const [dragTargetParentId, setDragTargetParentId] = useState<string | null>(
+    null
+  );
+  const [dragAllowed, setDragAllowed] = useState(false);
 
-  // Extracts a screen point (x,y) from mouse/touch events.
+  /** Extract a screen-space point from pointer/touch events. */
   function getPointFromEvent(ev: Event): { x: number; y: number } | null {
     if ('clientX' in ev && 'clientY' in ev) {
       const e = ev as unknown as { clientX: number; clientY: number };
@@ -414,7 +468,7 @@ export default function Editor() {
     return null;
   }
 
-  // Computes the visual center of the dragged item at drop time.
+  /** Compute the visual center of the dragged element at drop-time. */
   function getDragCenter(e: DragEndEvent): { x: number; y: number } | null {
     const { current } = e.active.rect;
     if (current.translated) {
@@ -431,70 +485,7 @@ export default function Editor() {
     return null;
   }
 
-  type ActivationMarker = {
-    id: string;
-    src: string;
-    screenX: number;
-    screenY: number;
-    isSelected: boolean;
-  };
-
-  const [markers, setMarkers] = useState<ActivationMarker[]>([]);
-
-  // Converts a flow-space point to screen-space using the current viewport.
-  function flowToScreen(pt: { x: number; y: number }) {
-    const vp = (rf && (rf as any).getViewport?.()) || { x: 0, y: 0, zoom: 1 };
-    return { x: vp.x + pt.x * vp.zoom, y: vp.y + pt.y * vp.zoom };
-  }
-
-  // Rebuilds the tooltip activation icons overlay according to edges and selection.
-  const recomputeMarkers = useCallback(() => {
-    if (!rf) return;
-    const result: ActivationMarker[] = [];
-
-    const tooltipEdges = edges.filter(
-      (e: any) => (e.data && e.data.kind) === 'tooltip-link'
-    );
-
-    for (const e of tooltipEdges as any[]) {
-      const viz = nodes.find((n) => n.id === e.source);
-      if (!viz) continue;
-
-      const { x: absX, y: absY } = getAbsolutePosition(viz, nodes);
-      const { w, h } = getNodeSize(viz);
-
-      const anchorFlow = { x: absX + w, y: absY + h / 2 };
-      const s = flowToScreen(anchorFlow);
-
-      const screenX = s.x - 9;
-      const screenY = s.y;
-
-      const activation: ActivationKey =
-        (e.data?.activation as ActivationKey) || 'hover';
-
-      result.push({
-        id: `marker-${e.id}`,
-        src: activationIcons[activation],
-        screenX,
-        screenY,
-        isSelected: selectedId === e.source,
-      });
-    }
-
-    setMarkers(result);
-  }, [rf, nodes, edges, selectedId]);
-
-  // Recomputes overlay markers after any pan/zoom/move event.
-  const handleMove = useCallback(() => {
-    recomputeMarkers();
-  }, [recomputeMarkers]);
-
-  const [dragTargetParentId, setDragTargetParentId] = useState<string | null>(
-    null
-  );
-  const [dragAllowed, setDragAllowed] = useState(false);
-
-  // Checks if a point falls inside a container node’s content area.
+  /** True if a flow-space point lies in the *content* area of a container node. */
   function pointInsideContentAbs(
     p: { x: number; y: number },
     n: AppNode,
@@ -511,26 +502,23 @@ export default function Editor() {
     return p.x >= left && p.x <= right && p.y >= top && p.y <= bottom;
   }
 
-  // Begins palette drag, capturing the initial pointer position and preview.
+  /** Start palette drag: capture preview & origin. */
   const handleDragStart = (e: DragStartEvent) => {
     setIsDraggingFromPalette(true);
     setDragPreview((e.active.data.current as DragData) ?? null);
-
     const p = getPointFromEvent(e.activatorEvent);
     setDragStartPoint(p);
     setCursorPoint(p);
   };
 
-  // Tracks palette drag, finding the deepest valid parent and setting cursor feedback.
+  /** Track drag over canvas and compute deepest valid parent under cursor. */
   const handleDragMove = (e: DragMoveEvent) => {
     if (!dragStartPoint) return;
-
     const nextCursor = {
       x: dragStartPoint.x + e.delta.x,
       y: dragStartPoint.y + e.delta.y,
     };
     setCursorPoint(nextCursor);
-
     if (!rf || !wrapperRef.current) return;
 
     const flowPt = rf.screenToFlowPosition({
@@ -539,15 +527,12 @@ export default function Editor() {
     });
 
     let best: { id: string; kind: NodeKind; depth: number } | null = null;
-
     for (const n of nodes) {
       const k = n.data?.kind as NodeKind | undefined;
       if (!isContainerKind(k)) continue;
-      if (pointInsideContentAbs(flowPt, n, nodes)) {
-        const d = depthOf(n, nodes);
-        if (!best || d > best.depth) {
-          best = { id: n.id, kind: k!, depth: d };
-        }
+      if (pointInsideContentAbs(flowPt, n as AppNode, nodes as AppNode[])) {
+        const d = depthOf(n as AppNode, nodes as AppNode[]);
+        if (!best || d > best.depth) best = { id: n.id, kind: k!, depth: d };
       }
     }
 
@@ -571,7 +556,7 @@ export default function Editor() {
     }
   };
 
-  // Cancels palette drag and resets all transient UI state.
+  /** Cancel palette drag and clear feedback. */
   const handleDragCancel = (_e: DragCancelEvent) => {
     setIsDraggingFromPalette(false);
     setDragPreview(null);
@@ -582,7 +567,7 @@ export default function Editor() {
     document.body.style.cursor = '';
   };
 
-  // Finalizes a palette drop by adding a node or opening the add-component modal.
+  /** Finalize drop: open "add component" when dropped inside container, otherwise create free node. */
   const handleDragEnd = (e: DragEndEvent) => {
     setIsDraggingFromPalette(false);
     const payload = e.active.data.current as DragData | undefined;
@@ -596,6 +581,7 @@ export default function Editor() {
 
     if (!payload || !rf || !wrapperRef.current) return;
 
+    // dropped inside a container → open AddComponent flow
     if (allowed && parentId) {
       setModal({
         type: 'add-component',
@@ -605,6 +591,7 @@ export default function Editor() {
       return;
     }
 
+    // otherwise create a free node centered at drop point
     const viewportPt = cursorPoint ?? getDragCenter(e);
     setDragStartPoint(null);
     setCursorPoint(null);
@@ -629,6 +616,7 @@ export default function Editor() {
       } as NodeData;
     }
 
+    // Default sizes for *free* (not nested) nodes
     const defaultSizeFor = (kind: NodeKind) => {
       if (kind === 'Dashboard') return { width: 700, height: 380 };
       if (kind === 'Visualization') return { width: 320, height: 200 };
@@ -644,7 +632,7 @@ export default function Editor() {
     setNodes((nds) =>
       nds.concat({
         id: nanoid(),
-        type: nodeTypeFor(data.kind), // <-- IMPORTANT
+        type: nodeTypeFor(data.kind),
         position,
         data: { ...data, badge: nextBadgeFor(data.kind, nds as AppNode[]) },
         style: size,
@@ -652,18 +640,18 @@ export default function Editor() {
     );
   };
 
-  // Builds a serializable savefile including viewport, nodes and edges.
+  /* ---------- Save/Load ---------- */
+
+  /** Build a serializable project (viewport + nodes + edges). */
   const buildSave = useCallback((): SaveFile => {
     const vp = (rf && (rf as any).getViewport?.()) || { x: 0, y: 0, zoom: 1 };
 
     const exNodes: ExportNode[] = nodes.map((n) => {
-      // If type is missing (legacy), infer from data.kind
       const kind = (n.data as any)?.kind as NodeKind | undefined;
       const inferred = kind ? nodeTypeFor(kind) : 'visualization';
-
       return {
         id: n.id,
-        type: (n.type as any) ?? inferred, // <-- no "class" fallback anymore
+        type: (n.type as any) ?? inferred,
         position: n.position,
         data: n.data,
         style: {
@@ -684,12 +672,11 @@ export default function Editor() {
     };
   }, [rf, nodes, edges]);
 
-  // Restores a previously saved graph (nodes, edges, viewport).
+  /** Load a project from a previously saved JSON payload. */
   const loadSave = useCallback(
     (save: SaveFile) => {
-      const restoredNodes: AppNode[] = save.nodes.map((n) => {
+      const restored: AppNode[] = save.nodes.map((n) => {
         const kind = (n.data as any)?.kind as NodeKind | undefined;
-        // If the saved type is missing/legacy, derive from kind
         const fallbackType = kind ? nodeTypeFor(kind) : 'visualization';
         const finalType = (n.type as keyof typeof NODE_TYPES) ?? fallbackType;
 
@@ -704,17 +691,16 @@ export default function Editor() {
         };
       });
 
-      setNodes(restoredNodes as unknown as RFNode<NodeData>[]);
+      setNodes(restored as unknown as RFNode<NodeData>[]);
       setEdges(save.edges as AppEdge[]);
-      if (rf && save.viewport) {
+      if (rf && save.viewport)
         (rf as any).setViewport?.(save.viewport, { duration: 0 });
-      }
       setSelectedId(null);
     },
     [rf, setNodes, setEdges]
   );
 
-  // Triggers a browser download for an object as a .json file.
+  /** Trigger a browser download of the current project as JSON. */
   const downloadJSON = useCallback((obj: unknown, filename: string) => {
     const blob = new Blob([JSON.stringify(obj, null, 2)], {
       type: 'application/json',
@@ -729,7 +715,7 @@ export default function Editor() {
     URL.revokeObjectURL(url);
   }, []);
 
-  // Opens and parses a saved JSON file, then loads it into the editor.
+  /** Open a .json file and load it as a project. */
   const openJSONFile: React.ChangeEventHandler<HTMLInputElement> = async (
     e
   ) => {
@@ -748,7 +734,7 @@ export default function Editor() {
     loadSave(data);
   };
 
-  // Opens the Save modal and downloads the current project when confirmed.
+  /** Show Save modal and download project on confirm. */
   const openSaveModal = useCallback(() => {
     openModal({
       title: 'Save',
@@ -766,65 +752,9 @@ export default function Editor() {
     });
   }, [buildSave, downloadJSON, openModal, closeModal, saveNameBase]);
 
-  const PAD_X = 5;
-  const PAD_TOP = 17;
-  const PAD_BOTTOM = 28;
-  const HEADER_H = 23;
-  const GRID_GAP = 16;
+  /* ---------- Layout/constraints ---------- */
 
-  // Returns the minimum base size for a given container kind.
-  function baseMinFor(kind: NodeKind | undefined) {
-    return {
-      w: kind === 'Dashboard' ? 320 : 240,
-      h: kind === 'Dashboard' ? 180 : 140,
-    };
-  }
-
-  type Size = { w: number; h: number };
-  // Reads the current width/height for a node (style or measured).
-  function getNodeSize(n: AppNode): Size {
-    const w = (n as any).width ?? (n.style as any)?.width ?? 180;
-    const h = (n as any).height ?? (n.style as any)?.height ?? 100;
-    return { w: Number(w) || 0, h: Number(h) || 0 };
-  }
-
-  // Computes the absolute canvas position of a node (accumulating parents).
-  function getAbsolutePosition(n: AppNode, all: AppNode[]) {
-    let x = n.position.x;
-    let y = n.position.y;
-    let cur: AppNode | undefined = n;
-    while (cur.parentNode) {
-      const p = all.find((nn) => nn.id === cur!.parentNode);
-      if (!p) break;
-      x += p.position.x;
-      y += p.position.y;
-      cur = p as AppNode;
-    }
-    return { x, y };
-  }
-
-  // Returns the depth (nesting level) of a node within the hierarchy.
-  function depthOf(n: AppNode, all: AppNode[]) {
-    let d = 0;
-    let cur: AppNode | undefined = n;
-    while (cur?.parentNode) {
-      const p = all.find((nn) => nn.id === cur!.parentNode);
-      if (!p) break;
-      d++;
-      cur = p as AppNode;
-    }
-    return d;
-  }
-
-  // Tells whether a kind can contain children (i.e., is a container).
-  function isContainerKind(k: NodeKind | undefined) {
-    return (
-      k === 'Dashboard' || k === 'Visualization' || k === 'Tooltip' //||
-      //k === 'Parameter'
-    );
-  }
-
-  // Expands parents to fit children and reclamps children to the new bounds.
+  /** Expand parents to fit children, clamp children within parents, iterate until stable. */
   function applyConstraints(initial: AppNode[]): AppNode[] {
     let local = initial.map((n) => ({ ...n }));
 
@@ -844,7 +774,6 @@ export default function Editor() {
         if (!isContainerKind(parent.data?.kind as NodeKind)) continue;
 
         const { w: pW, h: pH } = getNodeSize(parent);
-
         const innerLeft = PAD_X;
         const innerTop = HEADER_H + PAD_TOP;
         const innerRight = pW - PAD_X;
@@ -857,7 +786,6 @@ export default function Editor() {
           if (child.parentNode !== parent.id) continue;
 
           const { w: cW, h: cH } = getNodeSize(child);
-
           const minX = innerLeft;
           const minY = innerTop;
           let maxX = innerRight - cW;
@@ -867,16 +795,12 @@ export default function Editor() {
 
           const cx = Math.min(Math.max(child.position.x, minX), maxX);
           const cy = Math.min(Math.max(child.position.y, minY), maxY);
-
           if (cx !== child.position.x || cy !== child.position.y) {
             patch(child.id, { position: { x: cx, y: cy } } as Partial<AppNode>);
           }
 
-          requiredRight = Math.max(requiredRight, cx + cW);
-          requiredBottom = Math.max(requiredBottom, cy + cH);
-
-          requiredRight = Math.max(requiredRight, innerLeft + cW);
-          requiredBottom = Math.max(requiredBottom, innerTop + cH);
+          requiredRight = Math.max(requiredRight, cx + cW, innerLeft + cW);
+          requiredBottom = Math.max(requiredBottom, cy + cH, innerTop + cH);
         }
 
         const base = baseMinFor(parent.data?.kind as NodeKind | undefined);
@@ -888,7 +812,7 @@ export default function Editor() {
         if (targetW !== pW || targetH !== pH) {
           patch(parent.id, {
             style: { ...(parent.style || {}), width: targetW, height: targetH },
-          } as Partial<AppNode>);
+          });
         }
       }
 
@@ -899,18 +823,23 @@ export default function Editor() {
     return local;
   }
 
-  type ChildPayload =
-    | { kind: Exclude<NodeKind, 'Graph'>; title: string; description?: string }
-    | {
-        kind: 'Graph';
-        title: string;
-        description?: string;
-        graphType: GraphType;
-      };
-
-  // Creates a child node inside a given parent and reflows constraints.
+  /** Create a child node inside a parent (grid placement), then reflow. */
   const createChildInParent = useCallback(
-    (parentId: string, payload: ChildPayload) => {
+    (
+      parentId: string,
+      payload:
+        | {
+            kind: Exclude<NodeKind, 'Graph'>;
+            title: string;
+            description?: string;
+          }
+        | {
+            kind: 'Graph';
+            title: string;
+            description?: string;
+            graphType: GraphType;
+          }
+    ) => {
       setNodes((nds) => {
         const all = nds as AppNode[];
         const parent = all.find((n) => n.id === parentId);
@@ -922,6 +851,7 @@ export default function Editor() {
         const innerRight = pW - PAD_X;
         const innerWidth = Math.max(0, innerRight - innerLeft);
 
+        // Default sizes for children (smaller graphs by default here)
         const defaultSizeFor = (kind: NodeKind) => {
           if (kind === 'Visualization') return { width: 320, height: 200 };
           if (
@@ -933,7 +863,7 @@ export default function Editor() {
             return { width: 220, height: 120 };
           if (kind === 'Button') return { width: 160, height: 90 };
           if (kind === 'Placeholder') return { width: 180, height: 100 };
-          if (kind === 'Graph') return { width: 200, height: 140 };
+          if (kind === 'Graph') return { width: 120, height: 70 };
           return { width: 180, height: 100 };
         };
         const size = defaultSizeFor(payload.kind);
@@ -970,7 +900,7 @@ export default function Editor() {
 
         return all.concat({
           id: nanoid(),
-          type: nodeTypeFor(data.kind), // <-- IMPORTANT
+          type: nodeTypeFor(data.kind),
           position: { x, y },
           parentNode: parentId,
           extent: 'parent',
@@ -979,6 +909,7 @@ export default function Editor() {
         } as AppNode) as unknown as RFNode<NodeData>[];
       });
 
+      // Reflow once after adding
       setNodes(
         (nds) =>
           applyConstraints(nds as AppNode[]) as unknown as RFNode<NodeData>[]
@@ -987,31 +918,24 @@ export default function Editor() {
     [setNodes]
   );
 
-  function graphTypesByParent(nodes: AppNode[]): Map<string, GraphType[]> {
+  /** Compute a map parentId -> list of graph types present under it. */
+  function graphTypesByParent(nodes: AppNode[]) {
     const map = new Map<string, GraphType[]>();
     for (const n of nodes) {
       if (n.data?.kind === 'Graph') {
         const gt = (n.data as any).graphType as GraphType | undefined;
         const pid = n.parentNode;
-        if (pid && gt) {
-          const arr = map.get(pid) ?? [];
-          arr.push(gt);
-          map.set(pid, arr);
-        }
+        if (pid && gt) (map.get(pid) ?? map.set(pid, []).get(pid)!).push(gt);
       }
     }
     return map;
   }
 
-  /**
-   * Returns a new array with each container's data.graphTypes
-   * synchronized to the current set of Graph children.
-   */
+  /** Synchronize each container node's `data.graphTypes` to reflect its Graph children. */
   function syncParentGraphTypes(nodes: AppNode[]): AppNode[] {
     const byParent = graphTypesByParent(nodes);
     return nodes.map((n) => {
       const k = n.data?.kind as NodeKind | undefined;
-      // only the kinds that can host Graph children need the field
       if (!k || (k !== 'Visualization' && k !== 'Tooltip')) return n;
 
       const wanted = byParent.get(n.id) ?? [];
@@ -1019,11 +943,10 @@ export default function Editor() {
         ? ((n.data as any).graphTypes as GraphType[])
         : [];
 
-      // if already equal, keep as is to avoid unnecessary renders
       const same =
-        cur.length === wanted.length && cur.every((x, i) => x === wanted[i]); // order is stable enough for us
-
+        cur.length === wanted.length && cur.every((x, i) => x === wanted[i]);
       if (same) return n;
+
       return {
         ...n,
         data: { ...(n.data as any), graphTypes: wanted } as NodeData,
@@ -1031,10 +954,485 @@ export default function Editor() {
     });
   }
 
-  // Listens for “add component” events and inserts the requested child into its parent.
+  /** Centralized cleanup: delete nodes (plus descendants), clean edges and related labels. */
+  function pruneAfterRemoval(initialIds: string[]) {
+    setNodes((nds) => {
+      const all = nds as AppNode[];
+      const base = new Set<string>(initialIds);
+
+      // If a Visualization is deleted, also delete its Tooltip nodes attached to it
+      for (const id of Array.from(base)) {
+        const n = all.find((x) => x.id === id);
+        if (n?.data?.kind === 'Visualization') {
+          all.forEach((t) => {
+            if (
+              t.data?.kind === 'Tooltip' &&
+              (t.data as any)?.attachedTo === id
+            ) {
+              base.add(t.id);
+            }
+          });
+        }
+      }
+
+      // Collect descendants of all roots to delete
+      const toDelete = collectDescendants(all, base);
+
+      // Gather tooltip labels to remove from visualizations
+      const labelsByViz = new Map<string, Set<string>>();
+      for (const tip of all) {
+        if (!toDelete.has(tip.id)) continue;
+        if (tip.data?.kind !== 'Tooltip') continue;
+
+        const attachedTo = (tip.data as any)?.attachedTo as string | undefined;
+        const badge = (tip.data as any)?.badge as string | undefined;
+        const title = (tip.data as any)?.title as string | undefined;
+        if (!attachedTo || !title) continue;
+
+        const label = `${badge ? badge + ' ' : ''}${title}`;
+        if (!labelsByViz.has(attachedTo))
+          labelsByViz.set(attachedTo, new Set());
+        labelsByViz.get(attachedTo)!.add(label);
+      }
+
+      // Keep nodes not deleted
+      let kept = all.filter((n) => !toDelete.has(n.id));
+
+      // Remove tooltip labels from affected visualizations
+      kept = kept.map((n) => {
+        if (n.data?.kind !== 'Visualization') return n;
+        const toPrune = labelsByViz.get(n.id);
+        if (!toPrune?.size) return n;
+
+        const current = Array.isArray((n.data as any)?.tooltips)
+          ? ([...(n.data as any).tooltips] as string[])
+          : [];
+        const pruned = current.filter((lbl) => !toPrune.has(lbl));
+        if (pruned.length === current.length) return n;
+
+        return {
+          ...n,
+          data: { ...(n.data as any), tooltips: pruned },
+        } as AppNode;
+      });
+
+      // Remove edges touching deleted nodes
+      setEdges((eds) =>
+        (eds as AppEdge[]).filter(
+          (e) => !toDelete.has(e.source) && !toDelete.has(e.target)
+        )
+      );
+
+      // Clear selection if it was deleted
+      if (selectedId && toDelete.has(selectedId)) setSelectedId(null);
+
+      // Keep parent graphTypes in sync
+      return syncParentGraphTypes(
+        kept as AppNode[]
+      ) as unknown as RFNode<NodeData>[];
+    });
+  }
+
+  /** Collect all descendants (recursive) of a set of root ids. */
+  function collectDescendants(all: AppNode[], roots: Set<string>) {
+    const toDelete = new Set(roots);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const n of all) {
+        if (n.parentNode && toDelete.has(n.parentNode) && !toDelete.has(n.id)) {
+          toDelete.add(n.id);
+          changed = true;
+        }
+      }
+    }
+    return toDelete;
+  }
+
+  /** Whether `node` lies under the given `ancestorId`. */
+  function isDescendant(node: AppNode, ancestorId: string, all: AppNode[]) {
+    let cur: AppNode | undefined = all.find((n) => n.id === node.id);
+    while (cur?.parentNode) {
+      if (cur.parentNode === ancestorId) return true;
+      cur = all.find((n) => n.id === cur!.parentNode);
+    }
+    return false;
+  }
+
+  /* ---------- Interaction / Tooltips / Graph type modals & events ---------- */
+
+  /** Open Interaction popup and persist edges + interaction list. */
+  useEffect(() => {
+    function onOpenInteractions(e: Event) {
+      const ce = e as CustomEvent<{ nodeId: string }>;
+      const sourceId = ce.detail?.nodeId;
+      if (!sourceId) return;
+
+      const source = nodes.find((n) => n.id === sourceId);
+      if (!source) return;
+
+      const targets = (nodes as AppNode[])
+        .filter((n) => n.id !== sourceId)
+        .map((n) => ({
+          id: n.id,
+          title: (n.data as any)?.title || n.id,
+          kind: (n.data as any)?.kind || 'Node',
+        }));
+
+      openModal({
+        title: 'Add interaction',
+        node: (
+          <InteractionPopup
+            availableTargets={targets}
+            onCancel={closeModal}
+            onSave={({ name, trigger, result, targets }) => {
+              // Persist on source node
+              setNodes((nds) => {
+                const next = (nds as AppNode[]).map((n) => ({ ...n }));
+                const i = next.findIndex((n) => n.id === sourceId);
+                if (i >= 0) {
+                  const cur: Interaction[] = Array.isArray(
+                    (next[i].data as any).interactions
+                  )
+                    ? ([...(next[i].data as any).interactions] as Interaction[])
+                    : [];
+                  cur.push({ id: nanoid(), name, trigger, result, targets });
+                  next[i] = {
+                    ...next[i],
+                    data: {
+                      ...(next[i].data as any),
+                      interactions: cur,
+                    } as any,
+                  };
+                }
+                return next as unknown as RFNode<NodeData>[];
+              });
+
+              // Draw edges
+              setEdges((eds) => {
+                const add = targets
+                  .filter(
+                    (tid) =>
+                      !(eds as AppEdge[]).some(
+                        (e) =>
+                          e.type === 'interaction' &&
+                          e.source === sourceId &&
+                          e.target === tid
+                      )
+                  )
+                  .map(
+                    (tid) =>
+                      ({
+                        id: `ix-${sourceId}-${tid}-${nanoid(4)}`,
+                        source: sourceId,
+                        target: tid,
+                        type: 'interaction',
+                        data: { label: name },
+                      } as AppEdge)
+                  );
+                return (eds as AppEdge[]).concat(add) as any;
+              });
+
+              closeModal();
+            }}
+          />
+        ),
+      });
+    }
+
+    const handler = onOpenInteractions as EventListener;
+    window.addEventListener('designer:open-interactions', handler);
+    return () =>
+      window.removeEventListener('designer:open-interactions', handler);
+  }, [nodes, openModal, closeModal, setNodes, setEdges]);
+
+  /** Open Tooltips popup; create tooltip node + edge and update viz labels on save. */
+  useEffect(() => {
+    function onOpenTooltips(e: Event) {
+      const ce = e as CustomEvent<{ nodeId: string }>;
+      const vizId = ce.detail?.nodeId;
+      if (!vizId) return;
+
+      const n = nodes.find((x) => x.id === vizId);
+      const availableData = ((n?.data as any)?.data ?? []).map((v: any) =>
+        typeof v === 'string' ? { name: v, dtype: 'Other' } : v
+      );
+
+      const getAbs = (id: string) => {
+        const nn = nodes.find((a) => a.id === id) as AppNode | undefined;
+        if (!nn) return { x: 0, y: 0, w: 0, h: 0 };
+        const w = (nn as any).width ?? (nn.style as any)?.width ?? 180;
+        const h = (nn as any).height ?? (nn.style as any)?.height ?? 100;
+        const { x, y } = getAbsolutePosition(nn, nodes as AppNode[]);
+        return { x, y, w: Number(w) || 0, h: Number(h) || 0 };
+      };
+
+      openModal({
+        title: 'Tooltip menu',
+        node: (
+          <TooltipPopup
+            availableData={availableData}
+            onCancel={closeModal}
+            onSave={(spec) => {
+              const { attachRef, activation, newTooltip } = spec;
+              const vizId = ce.detail?.nodeId;
+              if (!vizId) return;
+
+              // Place tooltip to the left
+              const abs = getAbs(vizId);
+              const tW = 250,
+                tH = 180;
+              const pos = { x: abs.x - tW - 24, y: abs.y + 8 };
+              const tipId = nanoid();
+
+              setNodes((nds) => {
+                let next = (nds as AppNode[]).map((x) => ({ ...x }));
+
+                const tipBadge = nextBadgeFor('Tooltip', next) ?? '';
+                const tipTitle = newTooltip?.title?.trim() || 'Tooltip';
+
+                const data: NodeData = {
+                  kind: 'Tooltip',
+                  title: tipTitle,
+                  attachedTo: vizId,
+                  attachTarget:
+                    attachRef === 'viz'
+                      ? { type: 'viz' }
+                      : { type: 'data', ref: attachRef },
+                  activation,
+                  badge: tipBadge,
+                } as any;
+
+                // Create tooltip node (hidden unless its viz/it/children selected)
+                next = next.concat({
+                  id: tipId,
+                  type: nodeTypeFor('Tooltip'),
+                  position: pos,
+                  data,
+                  style: { width: tW, height: tH },
+                  hidden: selectedId !== vizId,
+                } as AppNode);
+
+                // Add label to viz node header counter
+                const label = `${tipBadge ? tipBadge + ' ' : ''}${tipTitle}`;
+                next = next.map((nn) => {
+                  if (nn.id !== vizId) return nn;
+                  const existing = Array.isArray((nn.data as any)?.tooltips)
+                    ? ([...(nn.data as any).tooltips] as string[])
+                    : [];
+                  if (existing.includes(label)) return nn;
+                  return {
+                    ...nn,
+                    data: { ...nn.data, tooltips: [...existing, label] },
+                  };
+                });
+
+                return next as unknown as RFNode<NodeData>[];
+              });
+
+              // Build tooltip edge
+              const slug = (s: string) =>
+                s
+                  .toLowerCase()
+                  .trim()
+                  .replace(/\s+/g, '-')
+                  .replace(/[^a-z0-9_-]/g, '');
+
+              if (attachRef === 'viz') {
+                setEdges(
+                  (eds) =>
+                    (eds as AppEdge[]).concat({
+                      id: `e-viz-${vizId}-tip-${tipId}`,
+                      source: vizId,
+                      target: tipId,
+                      type: 'tooltip',
+                      data: { activation, targetH: 180 },
+                    } as AppEdge) as any
+                );
+              } else {
+                const sourceHandle = `data:${slug(attachRef)}:${activation}`;
+
+                const addEdgeOnce = () => {
+                  setEdges((eds) => {
+                    if (
+                      (eds as AppEdge[]).some(
+                        (e) =>
+                          e.source === vizId &&
+                          e.target === tipId &&
+                          e.sourceHandle === sourceHandle
+                      )
+                    )
+                      return eds;
+
+                    return (eds as AppEdge[]).concat({
+                      id: `e-viz-${vizId}-${sourceHandle}-tip-${tipId}`,
+                      source: vizId,
+                      sourceHandle,
+                      target: tipId,
+                      type: 'tooltip',
+                      data: { activation, attachRef, targetH: 180 },
+                    } as AppEdge) as any;
+                  });
+                };
+
+                // Wait a few frames for the data pill handles to be present
+                let tries = 0;
+                const tryAdd = () => {
+                  if (tries++ < 8) requestAnimationFrame(tryAdd);
+                  addEdgeOnce();
+                };
+                tryAdd();
+              }
+
+              closeModal();
+            }}
+          />
+        ),
+      });
+    }
+
+    const handler = onOpenTooltips as EventListener;
+    window.addEventListener('designer:open-tooltips', handler);
+    return () => window.removeEventListener('designer:open-tooltips', handler);
+  }, [nodes, selectedId, openModal, closeModal, setNodes, setEdges]);
+
+  /** Set of helpers to show overlay activation icons near tooltipped visualizations. */
+  const [markers, setMarkers] = useState<
+    {
+      id: string;
+      src: string;
+      screenX: number;
+      screenY: number;
+      isSelected: boolean;
+    }[]
+  >([]);
+
+  /** Recompute overlay icon positions (called on viewport move). */
+  const recomputeMarkers = useCallback(() => {
+    if (!rf) return;
+    const result: typeof markers = [];
+
+    const tooltipEdges = edges.filter(
+      (e: any) => (e.data && e.data.kind) === 'tooltip-link'
+    );
+    for (const e of tooltipEdges as any[]) {
+      const viz = nodes.find((n) => n.id === e.source);
+      if (!viz) continue;
+
+      const { x: absX, y: absY } = getAbsolutePosition(
+        viz as AppNode,
+        nodes as AppNode[]
+      );
+      const { w, h } = getNodeSize(viz as AppNode);
+
+      const anchorFlow = { x: absX + w, y: absY + h / 2 };
+      const s = flowToScreen(rf, anchorFlow);
+
+      const screenX = s.x - 9;
+      const screenY = s.y;
+      const activation: ActivationKey =
+        (e.data?.activation as ActivationKey) || 'hover';
+
+      result.push({
+        id: `marker-${e.id}`,
+        src: activationIcons[activation],
+        screenX,
+        screenY,
+        isSelected: selectedId === e.source,
+      });
+    }
+
+    setMarkers(result);
+  }, [rf, nodes, edges, selectedId]);
+
+  /** Trigger recompute on any pan/zoom/move. */
+  const handleMove = useCallback(() => {
+    recomputeMarkers();
+  }, [recomputeMarkers]);
+
+  /** Modal state for "add component" / "data" / "interactions" / "tooltips". */
+  type ModalSpec =
+    | { type: 'data'; nodeId: string }
+    | { type: 'interactions'; nodeId: string }
+    | { type: 'tooltips'; nodeId: string }
+    | { type: 'add-component'; nodeId: string; presetKind?: NodeKind };
+  const [modal, setModal] = useState<ModalSpec | null>(null);
+
+  /** Cleanup helper to clear modal state when inner node unmounts. */
+  function ModalCleanup({
+    onCleanup,
+    children,
+  }: {
+    onCleanup: () => void;
+    children: React.ReactNode;
+  }) {
+    useEffect(() => () => onCleanup(), [onCleanup]);
+    return <>{children}</>;
+  }
+
+  /** Wire "add component" modal with validation against allowed child kinds. */
+  useEffect(() => {
+    if (modal?.type !== 'add-component') return;
+
+    const { nodeId, presetKind } = modal;
+    if (!nodeId || !presetKind) {
+      setModal(null);
+      return;
+    }
+
+    const parent = nodes.find((n) => n.id === nodeId);
+    const parentKind = parent?.data?.kind as NodeKind | undefined;
+    if (!parentKind) {
+      setModal(null);
+      return;
+    }
+
+    const allowed = allowedChildKinds(parentKind);
+    if (!allowed.includes(presetKind)) {
+      setModal(null);
+      return;
+    }
+
+    const closeAndClear = () => {
+      closeModal();
+      setModal(null);
+    };
+    setSelectedId(nodeId);
+
+    openModal({
+      title: 'Component Menu',
+      node: (
+        <ModalCleanup onCleanup={() => setModal(null)}>
+          <AddComponentPopup
+            kinds={[presetKind] as any}
+            onCancel={closeAndClear}
+            onSave={(payload: any) => {
+              if (
+                !payload ||
+                typeof payload.kind !== 'string' ||
+                'graphType' in payload ||
+                'variables' in payload
+              ) {
+                closeAndClear();
+                return;
+              }
+              window.dispatchEvent(
+                new CustomEvent('designer:add-component', {
+                  detail: { parentId: nodeId, payload },
+                })
+              );
+              closeAndClear();
+            }}
+          />
+        </ModalCleanup>
+      ),
+    });
+  }, [modal]);
+
+  /** Listen for programmatic "add component" events (used by popup). */
   useEffect(() => {
     function onAddComponent(
-      e: CustomEvent<{ parentId: string; payload: ChildPayload }>
+      e: CustomEvent<{ parentId: string; payload: any }>
     ) {
       const { parentId, payload } = e.detail || ({} as any);
       if (!parentId || !payload) return;
@@ -1045,34 +1443,7 @@ export default function Editor() {
     return () => window.removeEventListener('designer:add-component', handler);
   }, [createChildInParent]);
 
-  // Listens for visualization prop updates and patches the target node.data.
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const { nodeId, patch } =
-        (e as CustomEvent<{ nodeId: string; patch: Partial<NodeData> }>)
-          .detail || {};
-      if (!nodeId || !patch) return;
-
-      setNodes(
-        (nds) =>
-          (nds as AppNode[]).map((n) =>
-            n.id === nodeId ? { ...n, data: { ...n.data, ...patch } } : n
-          ) as unknown as RFNode<NodeData>[]
-      );
-    };
-
-    window.addEventListener(
-      'designer:update-visualization-props',
-      handler as EventListener
-    );
-    return () =>
-      window.removeEventListener(
-        'designer:update-visualization-props',
-        handler as EventListener
-      );
-  }, [setNodes]);
-
-  // Listens for generic “patch node data” events and applies them by id.
+  /** Support patching any node's data by id (used across menus/popups). */
   useEffect(() => {
     function onPatchNodeData(
       e: CustomEvent<{ nodeId: string; patch: Partial<NodeData> }>
@@ -1087,6 +1458,7 @@ export default function Editor() {
       window.removeEventListener('designer:patch-node-data', handler);
   }, [updateNodeById]);
 
+  /** Batch add graphs under a parent according to chosen graph types. */
   useEffect(() => {
     function onAddGraphs(e: Event) {
       const { parentId, graphTypes } =
@@ -1100,26 +1472,24 @@ export default function Editor() {
         const parent = all.find((n) => n.id === parentId);
         if (!parent) return nds;
 
-        // existing Graph children under this parent
-        const existing = all.filter(
-          (n) => n.parentNode === parentId && (n.data as any)?.kind === 'Graph'
-        );
-
-        // layout helpers
         const { w: pW } = getNodeSize(parent);
         const innerLeft = PAD_X;
         const innerTop = HEADER_H + PAD_TOP;
         const innerRight = pW - PAD_X;
         const innerWidth = Math.max(0, innerRight - innerLeft);
+
         const gSize = { width: 200, height: 140 };
         const cols = Math.max(
           1,
           Math.floor((innerWidth + GRID_GAP) / (gSize.width + GRID_GAP))
         );
 
-        // ensure we have one Graph node per requested type
+        const existing = all.filter(
+          (n) => n.parentNode === parentId && (n.data as any)?.kind === 'Graph'
+        );
+
         graphTypes.forEach((gt, idx) => {
-          const reuse = existing[idx]; // reuse slot if present
+          const reuse = existing[idx];
           if (reuse) {
             const i = all.findIndex((n) => n.id === reuse.id);
             all[i] = {
@@ -1148,9 +1518,7 @@ export default function Editor() {
           }
         });
 
-        // optional: keep any extra existing graphs beyond the selection
-        const reflowed = applyConstraints(all as any) as AppNode[];
-        return reflowed as unknown as RFNode<NodeData>[];
+        return applyConstraints(all as any) as unknown as RFNode<NodeData>[];
       });
     }
 
@@ -1159,6 +1527,7 @@ export default function Editor() {
     return () => window.removeEventListener('designer:add-graphs', handler);
   }, [setNodes]);
 
+  /** Edit (replace) the set of graphs under a parent to match chosen graph types. */
   useEffect(() => {
     function onEditGraphs(e: Event) {
       const { parentId, graphTypes } =
@@ -1179,13 +1548,13 @@ export default function Editor() {
 
         const wanted = new Set(graphTypes);
 
-        // remove those not wanted anymore
+        // Remove graphs no longer wanted
         const toRemoveIds = existing
           .filter((n) => !wanted.has((n.data as any).graphType))
           .map((n) => n.id);
         all = all.filter((n) => !toRemoveIds.includes(n.id));
 
-        // layout helpers
+        // Layout helpers
         const { w: pW } = getNodeSize(parent);
         const innerLeft = PAD_X;
         const innerTop = HEADER_H + PAD_TOP;
@@ -1197,12 +1566,10 @@ export default function Editor() {
           Math.floor((innerWidth + GRID_GAP) / (gSize.width + GRID_GAP))
         );
 
-        // keep the remaining graphs first
+        // Keep remaining graphs, then add missing ones
         const kept = all.filter(
           (n) => n.parentNode === parentId && (n.data as any)?.kind === 'Graph'
         );
-
-        // add the missing ones
         const needToAdd = graphTypes.filter((gt) => !existingMap.has(gt));
         needToAdd.forEach((gt, i) => {
           const idx = kept.length + i;
@@ -1227,7 +1594,7 @@ export default function Editor() {
           } as AppNode);
         });
 
-        // store selection on parent so popup can preselect next time
+        // Store selection on parent so popup can preselect
         all = all.map((n) =>
           n.id === parentId
             ? ({
@@ -1246,7 +1613,7 @@ export default function Editor() {
     return () => window.removeEventListener('designer:edit-graphs', handler);
   }, [setNodes]);
 
-  // Handles “set graph type” events by creating/updating a child Graph under a parent.
+  /** Set a graph type for a new/first Graph child under a parent node. */
   useEffect(() => {
     function onSetGraphType(e: Event) {
       const { nodeId, graphType } =
@@ -1297,480 +1664,9 @@ export default function Editor() {
     return () => window.removeEventListener('designer:set-graph-type', handler);
   }, [setNodes]);
 
-  // Ensures modal state is cleared when the modal component unmounts.
-  function ModalCleanup({
-    onCleanup,
-    children,
-  }: {
-    onCleanup: () => void;
-    children: React.ReactNode;
-  }) {
-    useEffect(() => {
-      return () => {
-        onCleanup();
-      };
-    }, [onCleanup]);
-    return <>{children}</>;
-  }
+  /* ---------- Tooltip visibility (contextual rendering) ---------- */
 
-  // When opening the “add-component” modal, validates context and wires its actions.
-  useEffect(() => {
-    if (modal?.type !== 'add-component') return;
-
-    const { nodeId, presetKind } = modal;
-    if (!nodeId || !presetKind) {
-      setModal(null);
-      return;
-    }
-
-    const parent = nodes.find((n) => n.id === nodeId);
-    const parentKind = parent?.data?.kind as NodeKind | undefined;
-    if (!parentKind) {
-      setModal(null);
-      return;
-    }
-
-    const allowed = allowedChildKinds(parentKind);
-    if (!allowed.includes(presetKind)) {
-      setModal(null);
-      return;
-    }
-
-    const closeAndClear = () => {
-      closeModal();
-      setModal(null);
-    };
-
-    setSelectedId(nodeId);
-
-    openModal({
-      title: 'Component Menu',
-      node: (
-        <ModalCleanup onCleanup={() => setModal(null)}>
-          <AddComponentPopup
-            kinds={[presetKind] as any}
-            onCancel={closeAndClear}
-            onSave={(payload: any) => {
-              if (
-                !payload ||
-                typeof payload.kind !== 'string' ||
-                'graphType' in payload ||
-                'variables' in payload
-              ) {
-                closeAndClear();
-                return;
-              }
-
-              window.dispatchEvent(
-                new CustomEvent('designer:add-component', {
-                  detail: { parentId: nodeId, payload },
-                })
-              );
-              closeAndClear();
-            }}
-          />
-        </ModalCleanup>
-      ),
-    });
-  }, [modal]);
-
-  // Gathers all descendant node ids for a given set of root ids.
-  function collectDescendants(all: AppNode[], roots: Set<string>) {
-    const toDelete = new Set(roots);
-    let changed = true;
-    while (changed) {
-      changed = false;
-      for (const n of all) {
-        if (n.parentNode && toDelete.has(n.parentNode) && !toDelete.has(n.id)) {
-          toDelete.add(n.id);
-          changed = true;
-        }
-      }
-    }
-    return toDelete;
-  }
-
-  // Removes nodes/edges after deletions, including attached tooltips and descendants.
-  function pruneAfterRemoval(initialIds: string[]) {
-    setNodes((nds) => {
-      const all = nds as AppNode[];
-      const base = new Set<string>(initialIds);
-
-      // If a Visualization is deleted, also delete its attached Tooltips
-      for (const id of Array.from(base)) {
-        const n = all.find((x) => x.id === id);
-        if (n?.data?.kind === 'Visualization') {
-          all.forEach((t) => {
-            if (
-              t.data?.kind === 'Tooltip' &&
-              (t.data as any)?.attachedTo === id
-            ) {
-              base.add(t.id);
-            }
-          });
-        }
-      }
-
-      // All nodes that will be deleted (including descendants)
-      const toDelete = collectDescendants(all, base);
-
-      // --- Gather tooltip labels we are deleting, grouped by visualization id
-      //     (Labels are formatted the same way you add them: `${badge ? badge + ' ' : ''}${title}`)
-      const labelsByViz = new Map<string, Set<string>>();
-      for (const tip of all) {
-        if (!toDelete.has(tip.id)) continue;
-        if (tip.data?.kind !== 'Tooltip') continue;
-
-        const attachedTo = (tip.data as any)?.attachedTo as string | undefined;
-        const badge = (tip.data as any)?.badge as string | undefined;
-        const title = (tip.data as any)?.title as string | undefined;
-        if (!attachedTo || !title) continue;
-
-        const label = `${badge ? badge + ' ' : ''}${title}`;
-        if (!labelsByViz.has(attachedTo))
-          labelsByViz.set(attachedTo, new Set());
-        labelsByViz.get(attachedTo)!.add(label);
-      }
-
-      // Keep nodes that are not being deleted
-      let kept = all.filter((n) => !toDelete.has(n.id));
-
-      // --- Purge deleted tooltip labels from each affected Visualization
-      kept = kept.map((n) => {
-        if (n.data?.kind !== 'Visualization') return n;
-
-        const toPrune = labelsByViz.get(n.id);
-        if (!toPrune || toPrune.size === 0) return n;
-
-        const current = Array.isArray((n.data as any)?.tooltips)
-          ? ([...(n.data as any).tooltips] as string[])
-          : [];
-
-        const pruned = current.filter((lbl) => !toPrune.has(lbl));
-        if (pruned.length === current.length) return n;
-
-        return {
-          ...n,
-          data: { ...(n.data as any), tooltips: pruned },
-        } as AppNode;
-      });
-
-      // --- Also purge interactions that point to deleted nodes (robustness)
-      kept = kept.map((n) => {
-        const interactions = Array.isArray((n.data as any)?.interactions)
-          ? ([...(n.data as any).interactions] as Interaction[])
-          : null;
-
-        if (!interactions || interactions.length === 0) return n;
-
-        const cleaned = interactions
-          .map((ix) => {
-            const nextTargets = ix.targets.filter((tid) => !toDelete.has(tid));
-            return nextTargets.length ? { ...ix, targets: nextTargets } : null;
-          })
-          .filter(Boolean) as Interaction[];
-
-        if (cleaned.length === interactions.length) return n;
-
-        return {
-          ...n,
-          data: { ...(n.data as any), interactions: cleaned },
-        } as AppNode;
-      });
-
-      // Remove edges touching deleted nodes
-      setEdges((eds) =>
-        (eds as AppEdge[]).filter(
-          (e) => !toDelete.has(e.source) && !toDelete.has(e.target)
-        )
-      );
-
-      // Clear selection if it was deleted
-      if (selectedId && toDelete.has(selectedId)) {
-        setSelectedId(null);
-      }
-
-      // Keep parent graphTypes in sync (your helper)
-      return syncParentGraphTypes(
-        kept as AppNode[]
-      ) as unknown as RFNode<NodeData>[];
-    });
-  }
-
-  // Returns true if a given node lies under the specified ancestor.
-  function isDescendant(node: AppNode, ancestorId: string, all: AppNode[]) {
-    let cur: AppNode | undefined = all.find((n) => n.id === node.id);
-    while (cur?.parentNode) {
-      if (cur.parentNode === ancestorId) return true;
-      cur = all.find((n) => n.id === cur!.parentNode);
-    }
-    return false;
-  }
-
-  useEffect(() => {
-    function onOpenInteractions(e: Event) {
-      const ce = e as CustomEvent<{ nodeId: string }>;
-      const sourceId = ce.detail?.nodeId;
-      if (!sourceId) return;
-
-      const source = nodes.find((n) => n.id === sourceId);
-      if (!source) return;
-
-      // Build selectable targets (all nodes except the source)
-      const targets = (nodes as AppNode[])
-        .filter((n) => n.id !== sourceId)
-        .map((n) => ({
-          id: n.id,
-          title: (n.data as any)?.title || n.id,
-          kind: (n.data as any)?.kind || 'Node',
-        }));
-
-      openModal({
-        title: 'Add interaction',
-        node: (
-          <InteractionPopup
-            availableTargets={targets}
-            onCancel={closeModal}
-            onSave={({ name, trigger, result, targets }) => {
-              // 1) persist interaction on the source node
-              setNodes((nds) => {
-                const next = (nds as AppNode[]).map((n) => ({ ...n }));
-                const i = next.findIndex((n) => n.id === sourceId);
-                if (i >= 0) {
-                  const cur: Interaction[] = Array.isArray(
-                    (next[i].data as any).interactions
-                  )
-                    ? ([...(next[i].data as any).interactions] as Interaction[])
-                    : [];
-                  cur.push({
-                    id: nanoid(),
-                    name,
-                    trigger,
-                    result,
-                    targets,
-                  });
-                  next[i] = {
-                    ...next[i],
-                    data: {
-                      ...(next[i].data as any),
-                      interactions: cur,
-                    } as any,
-                  };
-                }
-                return next as unknown as RFNode<NodeData>[];
-              });
-
-              // 2) draw edges to all selected targets
-              setEdges((eds) => {
-                const add = targets
-                  .filter(
-                    (tid) =>
-                      !(eds as AppEdge[]).some(
-                        (e) =>
-                          e.type === 'interaction' &&
-                          e.source === sourceId &&
-                          e.target === tid
-                      )
-                  )
-                  .map(
-                    (tid) =>
-                      ({
-                        id: `ix-${sourceId}-${tid}-${nanoid(4)}`,
-                        source: sourceId,
-                        target: tid,
-                        type: 'interaction',
-                        data: { label: name },
-                      } as AppEdge)
-                  );
-                return (eds as AppEdge[]).concat(add) as any;
-              });
-
-              closeModal();
-            }}
-          />
-        ),
-      });
-    }
-
-    const handler = onOpenInteractions as EventListener;
-    window.addEventListener('designer:open-interactions', handler);
-    return () =>
-      window.removeEventListener('designer:open-interactions', handler);
-  }, [nodes, openModal, closeModal, setNodes, setEdges]);
-
-  // Opens the Tooltips modal and wires saving to create/link tooltip nodes.
-  useEffect(() => {
-    function onOpenTooltips(e: Event) {
-      const ce = e as CustomEvent<{ nodeId: string }>;
-      const vizId = ce.detail?.nodeId;
-      if (!vizId) return;
-
-      const n = nodes.find((x) => x.id === vizId);
-      const availableData = ((n?.data as any)?.data ?? []).map((v: any) =>
-        typeof v === 'string' ? { name: v, dtype: 'Other' } : v
-      );
-
-      const getAbs = (id: string) => {
-        const nn = nodes.find((a) => a.id === id) as AppNode | undefined;
-        if (!nn) return { x: 0, y: 0, w: 0, h: 0 };
-        const w = (nn as any).width ?? (nn.style as any)?.width ?? 180;
-        const h = (nn as any).height ?? (nn.style as any)?.height ?? 100;
-        const { x, y } = getAbsolutePosition(nn, nodes as AppNode[]);
-        return { x, y, w: Number(w) || 0, h: Number(h) || 0 };
-      };
-
-      openModal({
-        title: 'Tooltip menu',
-        node: (
-          <TooltipPopup
-            availableData={availableData}
-            onCancel={closeModal}
-            onSave={(spec) => {
-              const { attachRef, activation, newTooltip } = spec;
-              const vizId = ce.detail?.nodeId;
-              if (!vizId) return;
-
-              // Position near the viz (left side)
-              const abs = getAbs(vizId);
-              const tW = 250,
-                tH = 180;
-              const pos = { x: abs.x - tW - 24, y: abs.y + 8 };
-
-              const tipId = nanoid();
-
-              setNodes((nds) => {
-                let next = (nds as AppNode[]).map((x) => ({ ...x }));
-
-                const tipBadge = nextBadgeFor('Tooltip', next) ?? '';
-                const tipTitle = newTooltip?.title?.trim() || 'Tooltip';
-
-                const data: NodeData = {
-                  kind: 'Tooltip',
-                  title: tipTitle,
-                  attachedTo: vizId,
-                  attachTarget:
-                    attachRef === 'viz'
-                      ? { type: 'viz' }
-                      : { type: 'data', ref: attachRef },
-                  activation,
-                  badge: tipBadge,
-                } as any;
-
-                next = next.concat({
-                  id: tipId,
-                  type: nodeTypeFor('Tooltip'), // ✅ use your helper to map NodeKind -> RF node type
-                  position: pos,
-                  data,
-                  style: { width: tW, height: tH },
-                  hidden: selectedId !== vizId,
-                } as AppNode);
-
-                // Add label to viz's header counter
-                const label = `${tipBadge ? tipBadge + ' ' : ''}${tipTitle}`;
-                next = next.map((nn) => {
-                  if (nn.id !== vizId) return nn;
-                  const existingList = Array.isArray((nn.data as any)?.tooltips)
-                    ? ([...(nn.data as any).tooltips] as string[])
-                    : [];
-                  if (existingList.includes(label)) return nn;
-                  return {
-                    ...nn,
-                    data: {
-                      ...nn.data,
-                      tooltips: [...existingList, label],
-                    },
-                  };
-                });
-
-                return next as unknown as RFNode<NodeData>[];
-              });
-
-              // Build edge
-              const slug = (s: string) =>
-                s
-                  .toLowerCase()
-                  .trim()
-                  .replace(/\s+/g, '-')
-                  .replace(/[^a-z0-9_-]/g, '');
-
-              if (attachRef === 'viz') {
-                // direct edge without sourceHandle
-                setEdges(
-                  (eds) =>
-                    (eds as AppEdge[]).concat({
-                      id: `e-viz-${vizId}-tip-${tipId}`,
-                      source: vizId,
-                      target: tipId,
-                      type: 'tooltip',
-                      data: { activation, targetH: 180 },
-                    } as AppEdge) as any
-                );
-              } else {
-                // attach to a data pill *action-specific* source handle
-                const pillId = `data:${slug(attachRef)}`; // base pill id
-                const sourceHandle = `${pillId}:${activation}`; // add :click | :hover
-
-                const hasHandleNow = () => {
-                  const viz = nodes.find((nn) => nn.id === vizId);
-                  const items = (viz?.data as any)?.data ?? [];
-                  // as soon as the pill exists, BOTH :click and :hover handles exist
-                  // so we only need to check the pill itself, but let’s match exactly:
-                  return items.some(
-                    (it: any) =>
-                      `data:${slug(
-                        typeof it === 'string' ? it : it.name
-                      )}:${activation}` === sourceHandle
-                  );
-                };
-
-                const addEdgeOnce = () => {
-                  setEdges((eds) => {
-                    if (
-                      (eds as AppEdge[]).some(
-                        (e) =>
-                          e.source === vizId &&
-                          e.target === tipId &&
-                          e.sourceHandle === sourceHandle
-                      )
-                    ) {
-                      return eds;
-                    }
-
-                    return (eds as AppEdge[]).concat({
-                      id: `e-viz-${vizId}-${sourceHandle}-tip-${tipId}`,
-                      source: vizId,
-                      sourceHandle,
-                      target: tipId,
-                      type: 'tooltip',
-                      data: { activation, attachRef, targetH: 180 },
-                    } as AppEdge) as any;
-                  });
-                };
-
-                let tries = 0;
-                const tryAdd = () => {
-                  if (hasHandleNow()) {
-                    addEdgeOnce();
-                  } else if (tries++ < 8) {
-                    requestAnimationFrame(tryAdd);
-                  }
-                };
-                tryAdd();
-              }
-
-              closeModal();
-            }}
-          />
-        ),
-      });
-    }
-
-    const handler = onOpenTooltips as EventListener;
-    window.addEventListener('designer:open-tooltips', handler);
-    return () => window.removeEventListener('designer:open-tooltips', handler);
-  }, [nodes, selectedId, openModal, closeModal, setNodes, setEdges]);
-
-  // Shows tooltips (and their descendants) only when the viz/tooltip/child is selected.
+  /** Show tooltips only when viz/tooltip/child is selected; hide otherwise. */
   useEffect(() => {
     setNodes((nds) => {
       const next = (nds as AppNode[]).map((n) => ({ ...n }));
@@ -1789,7 +1685,6 @@ export default function Editor() {
         const tipChildSelected = selected
           ? isDescendant(selected, tip.id, next)
           : false;
-
         const vizChildSelected =
           selected && attachedTo
             ? isDescendant(selected, attachedTo, next)
@@ -1797,15 +1692,14 @@ export default function Editor() {
 
         const visible =
           vizSelected || tipSelected || tipChildSelected || vizChildSelected;
-
         (tip as any).hidden = !visible;
 
+        // propagate hide/show to tooltip descendants
         for (let i = 0; i < next.length; i++) {
           const child = next[i];
           if (isDescendant(child, tip.id, next)) {
-            if ((child as any).hidden !== !visible) {
+            if ((child as any).hidden !== !visible)
               next[i] = { ...child, hidden: !visible } as any;
-            }
           }
         }
       }
@@ -1813,6 +1707,22 @@ export default function Editor() {
       return next as unknown as RFNode<NodeData>[];
     });
   }, [selectedId, setNodes]);
+
+  /* ---------- top-right buttons offset when menu opens/closes ---------- */
+
+  const menuActive = Boolean(selectedId) || menuExiting;
+  const buttonsOffset = menuActive
+    ? -(
+        menuWidth +
+        PANEL_MARGIN +
+        PANEL_GAP +
+        (menuWidth <= COLLAPSED_W ? EXTRA_COLLAPSED_GAP : 0)
+      )
+    : 0;
+
+  /* =====================================================
+   *                       Render
+   * ===================================================== */
 
   return (
     <div
@@ -1833,6 +1743,7 @@ export default function Editor() {
       >
         <SideMenu />
 
+        {/* Top-right Save/Load */}
         <div
           style={{
             position: 'absolute',
@@ -1888,6 +1799,7 @@ export default function Editor() {
           </label>
         </div>
 
+        {/* Canvas */}
         <div
           className="canvas"
           ref={wrapperRef}
@@ -1908,7 +1820,6 @@ export default function Editor() {
               const removedIds = chs
                 .filter((c) => c.type === 'remove')
                 .map((c: any) => c.id as string);
-
               if (removedIds.length) {
                 pruneAfterRemoval(removedIds);
               } else {
@@ -1921,9 +1832,8 @@ export default function Editor() {
                 });
               }
 
-              if (selectedId && !nodes.find((n) => n.id === selectedId)) {
+              if (selectedId && !nodes.find((n) => n.id === selectedId))
                 setSelectedId(null);
-              }
             }}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
@@ -1931,10 +1841,10 @@ export default function Editor() {
             nodeTypes={NODE_TYPES}
             edgeTypes={EDGE_TYPES}
             onSelectionChange={handleSelectionChange}
-            onMove={handleMove}
-            onPaneClick={() => {
-              setSelectedId(null);
+            onMove={() => {
+              handleMove();
             }}
+            onPaneClick={() => setSelectedId(null)}
             fitView
           >
             <Background />
@@ -1952,6 +1862,7 @@ export default function Editor() {
             </Controls>
           </ReactFlow>
 
+          {/* Overlay: activation icons (tooltips) */}
           <div
             style={{
               position: 'absolute',
@@ -1983,6 +1894,7 @@ export default function Editor() {
             ))}
           </div>
         </div>
+
         {(selectedNode || menuExiting) && (
           <ComponentsMenu
             key={selectedNode?.id ?? 'components-menu'}
