@@ -4,6 +4,7 @@ import { WhiteField, type KindProps } from './common';
 import { TypeField, ListAttributesSection, SectionTitle } from './sections';
 import type { DataItem, GraphType } from '../../domain/types';
 import { GRAPH_TYPE_ICONS } from '../../domain/icons';
+import { GrBladesHorizontal, GrBladesVertical } from 'react-icons/gr';
 
 // extract names from (string | DataItem)[]
 function namesFromParent(data?: (string | DataItem)[]): string[] {
@@ -137,6 +138,8 @@ export default function GraphMenu(p: KindProps) {
           const next = columns.filter((_, i) => i !== idx);
           p.onChange({ columns: next } as any);
         }}
+        //icon={<LuLayoutPanelLeft size={16} />}
+        icon={<GrBladesHorizontal size={16} />}
       />
       <div style={{ display: 'flex', gap: 8 }}>
         <select
@@ -171,6 +174,7 @@ export default function GraphMenu(p: KindProps) {
           const next = rows.filter((_, i) => i !== idx);
           p.onChange({ rows: next } as any);
         }}
+        icon={<GrBladesVertical size={16} />}
       />
       <div style={{ display: 'flex', gap: 8 }}>
         <select

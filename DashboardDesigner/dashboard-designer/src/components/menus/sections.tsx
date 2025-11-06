@@ -313,6 +313,7 @@ export function ListSection(props: {
 }
 
 // sections.tsx
+// ⬇ change the props to include `icon?: React.ReactNode`
 export function ListAttributesSection(props: {
   title: string;
   items: (string | DataItem)[];
@@ -320,14 +321,34 @@ export function ListAttributesSection(props: {
   addTooltip?: string;
   disabled?: boolean;
   onRemove?: (index: number) => void;
+  icon?: React.ReactNode; // <-- NEW
 }) {
-  const { title, items, onAdd, addTooltip, disabled, onRemove } = props;
+  const { title, items, onAdd, addTooltip, disabled, onRemove, icon } = props;
+
   return (
     <div>
       <div style={headerRow}>
-        <label style={{ fontSize: 12, opacity: 0.8, paddingLeft: 6 }}>
-          {title}
-        </label>
+        {/* title with optional icon on the left */}
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          {icon ? (
+            <span
+              style={{
+                display: 'inline-flex',
+                width: 16,
+                height: 16,
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#475569', // slate-600-ish
+              }}
+            >
+              {icon}
+            </span>
+          ) : null}
+          <label style={{ fontSize: 12, opacity: 0.8, paddingLeft: 6 }}>
+            {title}
+          </label>
+        </div>
+
         {onAdd && (
           <button
             type="button"
