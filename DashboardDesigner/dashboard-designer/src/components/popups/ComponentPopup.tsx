@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import type { NodeKind, GraphType, VisualVariable } from '../../domain/types';
-import { GRAPH_TYPE_ICONS } from '../../domain/icons';
 import VisualVariablePopup from '../popups/VisualVariablePopup';
 import GraphTypePopup from './GraphTypePopup';
 

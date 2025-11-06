@@ -1,3 +1,4 @@
+// src/components/menus/DashboardMenu.tsx
 import type { KindProps } from './common';
 import {
   NameField,
@@ -9,11 +10,12 @@ import {
 import { useModal } from '../ui/ModalHost';
 import { allowedChildKinds } from '../../domain/rules';
 import type { Interaction, NodeKind } from '../../domain/types';
+import AddComponentPopup from '../popups/ComponentPopup'; // ← add this import
 
 export default function DashboardMenu(p: KindProps) {
   const d: any = p.node.data;
   const disabled = p.disabled;
-  const { openAddComponentModal } = useModal();
+  const { openModal, closeModal } = useModal(); // ← use generic modal API
 
   // store is Interaction[], ListSection wants strings -> format them
   const interactions: Interaction[] = Array.isArray(d.interactions)
@@ -29,13 +31,24 @@ export default function DashboardMenu(p: KindProps) {
   const handleAddComponent = () => {
     const parentKind = (p.node.data?.kind ?? 'Dashboard') as NodeKind;
     const kinds = allowedChildKinds(parentKind);
-    openAddComponentModal(kinds, (payload) => {
-      // Let Editor create the child (keeps graph logic centralized)
-      window.dispatchEvent(
-        new CustomEvent('designer:add-component', {
-          detail: { parentId: p.node.id, payload },
-        })
-      );
+
+    openModal({
+      title: 'Component Menu',
+      node: (
+        <AddComponentPopup
+          kinds={kinds as any}
+          onCancel={closeModal}
+          onSave={(payload: any) => {
+            // ← annotate to avoid TS7006
+            window.dispatchEvent(
+              new CustomEvent('designer:add-component', {
+                detail: { parentId: p.node.id, payload },
+              })
+            );
+            closeModal();
+          }}
+        />
+      ),
     });
   };
 
@@ -44,7 +57,6 @@ export default function DashboardMenu(p: KindProps) {
       <div style={{ fontWeight: 700, textAlign: 'center' }}>MENU</div>
 
       <SectionTitle>Properties</SectionTitle>
-
       <NameField
         value={d.title ?? ''}
         onChange={(val) => p.onChange({ title: val })}
@@ -53,7 +65,6 @@ export default function DashboardMenu(p: KindProps) {
       <TypeField value="Dashboard" />
 
       <SectionTitle>Actions</SectionTitle>
-
       <AddComponentSection
         title="Add component"
         disabled={disabled}

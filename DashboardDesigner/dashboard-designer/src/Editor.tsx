@@ -863,7 +863,7 @@ export default function Editor() {
             return { width: 220, height: 120 };
           if (kind === 'Button') return { width: 160, height: 90 };
           if (kind === 'Placeholder') return { width: 180, height: 100 };
-          if (kind === 'Graph') return { width: 120, height: 70 };
+          if (kind === 'Graph') return { width: 120, height: 70 }; // compact graphs by default
           return { width: 180, height: 100 };
         };
         const size = defaultSizeFor(payload.kind);
