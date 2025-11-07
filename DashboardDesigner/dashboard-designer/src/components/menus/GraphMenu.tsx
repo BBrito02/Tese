@@ -1,11 +1,12 @@
 import { WhiteField, type KindProps } from './common';
 import { TypeField, ListAttributesSection, SectionTitle } from './sections';
 import type { DataItem, GraphType } from '../../domain/types';
-import { GRAPH_TYPE_ICONS } from '../../domain/icons';
+import { GRAPH_TYPE_ICONS, VISUAL_VAR_ICONS } from '../../domain/icons';
 import { useModal } from '../ui/ModalHost';
 import GraphFieldsPopup from '../popups/GraphFieldsPopup';
 import GraphMarkPopup from '../popups/GraphMarkPopup';
 import { LuPlus } from 'react-icons/lu';
+import { GrBladesHorizontal, GrBladesVertical } from 'react-icons/gr';
 
 function namesFromParent(data?: (string | DataItem)[]): string[] {
   if (!Array.isArray(data)) return [];
@@ -13,6 +14,14 @@ function namesFromParent(data?: (string | DataItem)[]): string[] {
     .map((it) => (typeof it === 'string' ? it : it?.name))
     .filter(Boolean) as string[];
 }
+
+const vvIcon = (k: 'Color' | 'Size' | 'Shape') => (
+  <img
+    src={VISUAL_VAR_ICONS[k]}
+    alt={k}
+    style={{ width: 16, height: 16, objectFit: 'contain', opacity: 0.9 }}
+  />
+);
 
 // local header row & round icon (mirrors sections.tsx)
 const headerRow: React.CSSProperties = {
@@ -35,13 +44,6 @@ const roundIconBtn: React.CSSProperties = {
   cursor: 'pointer',
   color: '#fff',
   background: '#38bdf8',
-};
-
-const marksHeaderRow: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  marginTop: 12,
 };
 
 export default function GraphMenu(p: KindProps) {
@@ -104,24 +106,6 @@ export default function GraphMenu(p: KindProps) {
         />
       ),
     });
-  };
-
-  // chips summary + delete handlers
-  const markChips: string[] = [
-    marks.color ? `Color: ${marks.color}` : '',
-    marks.size ? `Size: ${marks.size}` : '',
-    marks.shape ? `Shape: ${marks.shape}` : '',
-  ].filter(Boolean);
-
-  const removeMarkByIndex = (idx: number) => {
-    const label = markChips[idx];
-    if (!label) return;
-    if (label.startsWith('Color:'))
-      p.onChange({ marks: { ...marks, color: null } } as any);
-    if (label.startsWith('Size:'))
-      p.onChange({ marks: { ...marks, size: null } } as any);
-    if (label.startsWith('Shape:'))
-      p.onChange({ marks: { ...marks, shape: null } } as any);
   };
 
   return (
@@ -218,6 +202,7 @@ export default function GraphMenu(p: KindProps) {
           const next = columns.filter((_, i) => i !== idx);
           p.onChange({ columns: next } as any);
         }}
+        icon={<GrBladesHorizontal size={16} />}
       />
 
       {/* Current Rows */}
@@ -229,6 +214,7 @@ export default function GraphMenu(p: KindProps) {
           const next = rows.filter((_, i) => i !== idx);
           p.onChange({ rows: next } as any);
         }}
+        icon={<GrBladesVertical size={16} />}
       />
 
       {/* ---- NEW: Marks section with + button opening the popup ---- */}
@@ -262,6 +248,7 @@ export default function GraphMenu(p: KindProps) {
         items={marks.color ? [marks.color] : []}
         disabled={disabled}
         onRemove={() => p.onChange({ marks: { ...marks, color: null } } as any)}
+        icon={vvIcon('Color')}
       />
 
       {/* Size */}
@@ -270,6 +257,7 @@ export default function GraphMenu(p: KindProps) {
         items={marks.size ? [marks.size] : []}
         disabled={disabled}
         onRemove={() => p.onChange({ marks: { ...marks, size: null } } as any)}
+        icon={vvIcon('Size')}
       />
 
       {/* Shape */}
@@ -278,6 +266,7 @@ export default function GraphMenu(p: KindProps) {
         items={marks.shape ? [marks.shape] : []}
         disabled={disabled}
         onRemove={() => p.onChange({ marks: { ...marks, shape: null } } as any)}
+        icon={vvIcon('Shape')}
       />
     </div>
   );

@@ -1,6 +1,8 @@
+// src/components/popups/GraphTypePopup.tsx
 import { useState, useMemo } from 'react';
 import type { GraphType } from '../../domain/types';
 import { GRAPH_TYPE_ICONS } from '../../domain/icons';
+import { ShowMeHint } from './ShowMeHint';
 
 export type Props = {
   initialGraphTypes: GraphType[];
@@ -13,9 +15,14 @@ export default function GraphTypePopup({
   onCancel,
   onConfirm,
 }: Props) {
-  // keep a toggleable Set like in VisualVariablePopup
+  // Selected types (unchanged behavior)
   const [selected, setSelected] = useState<Set<GraphType>>(
     new Set(initialGraphTypes)
+  );
+
+  // Track the currently "active" type to show requirements for
+  const [active, setActive] = useState<GraphType | undefined>(
+    initialGraphTypes[0]
   );
 
   const ALL: GraphType[] = Object.keys(GRAPH_TYPE_ICONS) as GraphType[];
@@ -26,6 +33,7 @@ export default function GraphTypePopup({
       next.has(gt) ? next.delete(gt) : next.add(gt);
       return next;
     });
+    setActive(gt); // show hint for the last interacted type
   }
 
   // build a stable list for chips & save
@@ -33,13 +41,13 @@ export default function GraphTypePopup({
   const canSave = selected.size > 0;
 
   return (
-    <div style={{ display: 'grid', gap: 16 }}>
+    <div style={{ display: 'grid', gap: 16, minWidth: 560 }}>
       {/* Title */}
       <div style={{ fontWeight: 700, fontSize: 12, opacity: 0.85 }}>
         Graph type selection
       </div>
 
-      {/* Selection grid (same feel as VV popup) */}
+      {/* Selection grid */}
       <div
         style={{
           display: 'grid',
@@ -49,11 +57,16 @@ export default function GraphTypePopup({
       >
         {ALL.map((gt) => {
           const isChecked = selected.has(gt);
+          const isActive = active === gt;
+
           return (
             <button
               key={gt}
               type="button"
-              onClick={() => toggle(gt)}
+              onClick={() => {
+                toggle(gt); // still toggles selection
+                setActive(gt); // ← only trigger active on click
+              }}
               aria-pressed={isChecked}
               title={gt}
               style={{
@@ -65,6 +78,8 @@ export default function GraphTypePopup({
                 padding: '6px 8px',
                 background: isChecked ? '#eef2ff' : '#fff',
                 cursor: 'pointer',
+                // highlight the active graph type
+                boxShadow: isActive ? '0 0 0 2px #38bdf8' : 'none',
               }}
             >
               <input type="checkbox" readOnly checked={isChecked} />
@@ -79,7 +94,7 @@ export default function GraphTypePopup({
         })}
       </div>
 
-      {/* Current list with delete buttons — mirrors VisualVariablePopup */}
+      {/* Current list with remove chips (unchanged) */}
       {list.length > 0 && (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {list.map((gt) => (
@@ -110,7 +125,30 @@ export default function GraphTypePopup({
         </div>
       )}
 
-      {/* Buttons */}
+      {/* --- Show Me panel (new) --- */}
+      <div
+        style={{
+          marginTop: 4,
+          padding: 12,
+          border: '1px solid #e5e7eb',
+          borderRadius: 10,
+          background: '#f8fafc',
+        }}
+      >
+        <div
+          style={{
+            fontWeight: 700,
+            fontSize: 13,
+            color: '#0f172a',
+            marginBottom: 6,
+          }}
+        >
+          Show me{active ? ` — ${active}` : ''}
+        </div>
+        <ShowMeHint type={active} />
+      </div>
+
+      {/* Footer */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
         <button
           onClick={onCancel}
