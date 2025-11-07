@@ -4,6 +4,7 @@ import type { DataItem, GraphType } from '../../domain/types';
 import { GRAPH_TYPE_ICONS } from '../../domain/icons';
 import { useModal } from '../ui/ModalHost';
 import GraphFieldsPopup from '../popups/GraphFieldsPopup';
+import GraphMarkPopup from '../popups/GraphMarkPopup';
 import { LuPlus } from 'react-icons/lu';
 
 function namesFromParent(data?: (string | DataItem)[]): string[] {
@@ -36,6 +37,13 @@ const roundIconBtn: React.CSSProperties = {
   background: '#38bdf8',
 };
 
+const marksHeaderRow: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  marginTop: 12,
+};
+
 export default function GraphMenu(p: KindProps) {
   const d: any = p.node.data;
   const disabled = p.disabled;
@@ -46,6 +54,10 @@ export default function GraphMenu(p: KindProps) {
   const available = namesFromParent((p as any).parentData ?? d?.data);
   const columns: string[] = Array.isArray(d.columns) ? d.columns : [];
   const rows: string[] = Array.isArray(d.rows) ? d.rows : [];
+  const availableRaw = ((p as any).parentData ?? d?.data ?? []) as (
+    | string
+    | DataItem
+  )[];
 
   const constrain = (vals: string[]) =>
     available.length ? vals.filter((v) => available.includes(v)) : vals;
@@ -66,6 +78,50 @@ export default function GraphMenu(p: KindProps) {
         />
       ),
     });
+  };
+
+  // ---------- MARKS ----------
+  // keep it untyped on NodeData; same approach as your GraphFields
+  const marks = (d.marks ?? {}) as {
+    color?: string | null;
+    size?: string | null;
+    shape?: string | null;
+  };
+
+  // open GraphMarksPopup with current values
+  const openMarksPopup = () => {
+    openModal({
+      title: 'Graph Marks',
+      node: (
+        <GraphMarkPopup
+          available={availableRaw}
+          initial={marks}
+          onCancel={closeModal}
+          onSave={(next) => {
+            p.onChange({ marks: next } as any);
+            closeModal();
+          }}
+        />
+      ),
+    });
+  };
+
+  // chips summary + delete handlers
+  const markChips: string[] = [
+    marks.color ? `Color: ${marks.color}` : '',
+    marks.size ? `Size: ${marks.size}` : '',
+    marks.shape ? `Shape: ${marks.shape}` : '',
+  ].filter(Boolean);
+
+  const removeMarkByIndex = (idx: number) => {
+    const label = markChips[idx];
+    if (!label) return;
+    if (label.startsWith('Color:'))
+      p.onChange({ marks: { ...marks, color: null } } as any);
+    if (label.startsWith('Size:'))
+      p.onChange({ marks: { ...marks, size: null } } as any);
+    if (label.startsWith('Shape:'))
+      p.onChange({ marks: { ...marks, shape: null } } as any);
   };
 
   return (
@@ -173,6 +229,55 @@ export default function GraphMenu(p: KindProps) {
           const next = rows.filter((_, i) => i !== idx);
           p.onChange({ rows: next } as any);
         }}
+      />
+
+      {/* ---- NEW: Marks section with + button opening the popup ---- */}
+      <div style={headerRow}>
+        <div
+          style={{
+            marginTop: 18,
+            marginBottom: 6,
+            fontSize: 14,
+            fontWeight: 600,
+            color: '#0f172a',
+            paddingBottom: 3,
+          }}
+        >
+          Graph Marks
+        </div>
+        <button
+          type="button"
+          title="Edit marks"
+          onClick={openMarksPopup} // <-- no args
+          disabled={disabled}
+          style={{ ...roundIconBtn, opacity: disabled ? 0.6 : 1 }}
+        >
+          <LuPlus size={16} />
+        </button>
+      </div>
+
+      {/* Color */}
+      <ListAttributesSection
+        title="Color"
+        items={marks.color ? [marks.color] : []}
+        disabled={disabled}
+        onRemove={() => p.onChange({ marks: { ...marks, color: null } } as any)}
+      />
+
+      {/* Size */}
+      <ListAttributesSection
+        title="Size"
+        items={marks.size ? [marks.size] : []}
+        disabled={disabled}
+        onRemove={() => p.onChange({ marks: { ...marks, size: null } } as any)}
+      />
+
+      {/* Shape */}
+      <ListAttributesSection
+        title="Shape"
+        items={marks.shape ? [marks.shape] : []}
+        disabled={disabled}
+        onRemove={() => p.onChange({ marks: { ...marks, shape: null } } as any)}
       />
     </div>
   );
