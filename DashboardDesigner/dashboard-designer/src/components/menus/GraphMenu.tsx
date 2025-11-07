@@ -1,12 +1,11 @@
-// src/components/menus/GraphMenu.tsx
-import { useState } from 'react';
 import { WhiteField, type KindProps } from './common';
 import { TypeField, ListAttributesSection, SectionTitle } from './sections';
 import type { DataItem, GraphType } from '../../domain/types';
 import { GRAPH_TYPE_ICONS } from '../../domain/icons';
-import { GrBladesHorizontal, GrBladesVertical } from 'react-icons/gr';
+import { useModal } from '../ui/ModalHost';
+import GraphFieldsPopup from '../popups/GraphFieldsPopup';
+import { LuPlus } from 'react-icons/lu';
 
-// extract names from (string | DataItem)[]
 function namesFromParent(data?: (string | DataItem)[]): string[] {
   if (!Array.isArray(data)) return [];
   return data
@@ -14,66 +13,69 @@ function namesFromParent(data?: (string | DataItem)[]): string[] {
     .filter(Boolean) as string[];
 }
 
-const selectCss: React.CSSProperties = {
-  width: '100%',
-  padding: '8px 10px',
-  borderRadius: 8,
-  border: '1px solid #d1d5db',
-  background: '#fff',
-  fontSize: 13,
-  outline: 'none',
-  cursor: 'pointer',
+// local header row & round icon (mirrors sections.tsx)
+const headerRow: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  marginTop: 12,
+  paddingBottom: 3,
+  borderBottom: '1px solid #e5e7eb',
 };
 
-const addBtn: React.CSSProperties = {
-  padding: '6px 10px',
-  borderRadius: 6,
-  border: '1px solid #38bdf8',
-  background: '#38bdf8',
-  color: '#fff',
+const roundIconBtn: React.CSSProperties = {
+  width: 28,
+  height: 28,
+  borderRadius: 999,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  border: 'none',
   cursor: 'pointer',
-  whiteSpace: 'nowrap',
+  color: '#fff',
+  background: '#38bdf8',
 };
 
 export default function GraphMenu(p: KindProps) {
   const d: any = p.node.data;
   const disabled = p.disabled;
   const gt = (p.node.data as any)?.graphType as GraphType | undefined;
+  const { openModal, closeModal } = useModal();
 
   // Prefer parent visualization data; fallback to local data
   const available = namesFromParent((p as any).parentData ?? d?.data);
   const columns: string[] = Array.isArray(d.columns) ? d.columns : [];
   const rows: string[] = Array.isArray(d.rows) ? d.rows : [];
 
-  const [colPick, setColPick] = useState<string>('');
-  const [rowPick, setRowPick] = useState<string>('');
-
   const constrain = (vals: string[]) =>
     available.length ? vals.filter((v) => available.includes(v)) : vals;
 
-  const addToColumns = () => {
-    if (!colPick || columns.includes(colPick)) return;
-    p.onChange({ columns: constrain([...columns, colPick]) } as any);
-    setColPick('');
+  const openFieldsPopup = () => {
+    openModal({
+      title: 'Graph fields',
+      node: (
+        <GraphFieldsPopup
+          available={available}
+          initialColumns={columns}
+          initialRows={rows}
+          onCancel={closeModal}
+          onSave={({ columns: c, rows: r }) => {
+            p.onChange({ columns: constrain(c), rows: constrain(r) } as any);
+            closeModal();
+          }}
+        />
+      ),
+    });
   };
-
-  const addToRows = () => {
-    if (!rowPick || rows.includes(rowPick)) return;
-    p.onChange({ rows: constrain([...rows, rowPick]) } as any);
-    setRowPick('');
-  };
-
-  const columnOptions = available.filter((n) => !columns.includes(n));
-  const rowOptions = available.filter((n) => !rows.includes(n));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ fontWeight: 700, textAlign: 'center' }}>MENU</div>
 
       <SectionTitle>Properties</SectionTitle>
-
       <TypeField value="Graph" />
-      {/* Graph type title */}
+
+      {/* Graph type (read-only, with icon) */}
       <div>
         <label
           style={{
@@ -86,7 +88,6 @@ export default function GraphMenu(p: KindProps) {
         >
           Graph type
         </label>
-        {/* Read-only field with inline icon */}
         <div
           style={{
             position: 'relative',
@@ -127,9 +128,32 @@ export default function GraphMenu(p: KindProps) {
         </div>
       </div>
 
-      <SectionTitle>Actions</SectionTitle>
+      {/* Graph Fields header with + button */}
+      <div style={headerRow}>
+        <div
+          style={{
+            marginTop: 18,
+            marginBottom: 6,
+            fontSize: 14,
+            fontWeight: 600, // ← bold
+            color: '#0f172a', // slate-900 (strong, readable)
+            paddingBottom: 3,
+          }}
+        >
+          Graph Fields
+        </div>
+        <button
+          type="button"
+          title="Edit fields"
+          onClick={openFieldsPopup}
+          disabled={disabled}
+          style={{ ...roundIconBtn, opacity: disabled ? 0.6 : 1 }}
+        >
+          <LuPlus size={16} />
+        </button>
+      </div>
 
-      {/* Columns list (consistent look via ListSection) */}
+      {/* Current Columns */}
       <ListAttributesSection
         title="Columns"
         items={columns}
@@ -138,34 +162,9 @@ export default function GraphMenu(p: KindProps) {
           const next = columns.filter((_, i) => i !== idx);
           p.onChange({ columns: next } as any);
         }}
-        //icon={<LuLayoutPanelLeft size={16} />}
-        icon={<GrBladesHorizontal size={16} />}
       />
-      <div style={{ display: 'flex', gap: 8 }}>
-        <select
-          value={colPick}
-          onChange={(e) => setColPick(e.target.value)}
-          disabled={disabled}
-          style={selectCss}
-        >
-          <option value="">Select a field…</option>
-          {columnOptions.map((name) => (
-            <option key={`col-${name}`} value={name}>
-              {name}
-            </option>
-          ))}
-        </select>
-        <button
-          type="button"
-          onClick={addToColumns}
-          disabled={disabled || !colPick}
-          style={{ ...addBtn, opacity: disabled || !colPick ? 0.6 : 1 }}
-        >
-          Add
-        </button>
-      </div>
 
-      {/* Rows list (consistent look via ListSection) */}
+      {/* Current Rows */}
       <ListAttributesSection
         title="Rows"
         items={rows}
@@ -174,31 +173,7 @@ export default function GraphMenu(p: KindProps) {
           const next = rows.filter((_, i) => i !== idx);
           p.onChange({ rows: next } as any);
         }}
-        icon={<GrBladesVertical size={16} />}
       />
-      <div style={{ display: 'flex', gap: 8 }}>
-        <select
-          value={rowPick}
-          onChange={(e) => setRowPick(e.target.value)}
-          disabled={disabled}
-          style={selectCss}
-        >
-          <option value="">Select a field…</option>
-          {rowOptions.map((name) => (
-            <option key={`row-${name}`} value={name}>
-              {name}
-            </option>
-          ))}
-        </select>
-        <button
-          type="button"
-          onClick={addToRows}
-          disabled={disabled || !rowPick}
-          style={{ ...addBtn, opacity: disabled || !rowPick ? 0.6 : 1 }}
-        >
-          Add
-        </button>
-      </div>
     </div>
   );
 }
