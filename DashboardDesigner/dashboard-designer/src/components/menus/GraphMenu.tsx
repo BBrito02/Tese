@@ -72,6 +72,7 @@ export default function GraphMenu(p: KindProps) {
           available={available}
           initialColumns={columns}
           initialRows={rows}
+          graphType={gt}
           onCancel={closeModal}
           onSave={({ columns: c, rows: r }) => {
             p.onChange({ columns: constrain(c), rows: constrain(r) } as any);
@@ -98,6 +99,7 @@ export default function GraphMenu(p: KindProps) {
         <GraphMarkPopup
           available={availableRaw}
           initial={marks}
+          graphType={gt}
           onCancel={closeModal}
           onSave={(next) => {
             p.onChange({ marks: next } as any);

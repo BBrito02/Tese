@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import type { DataItem } from '../../domain/types';
+import type { DataItem, GraphType } from '../../domain/types';
+import { ShowMeHint } from './ShowMeHint';
 
 type Marks = {
   color?: string | null;
@@ -12,6 +13,7 @@ type Props = {
   initial: Marks;
   onCancel: () => void;
   onSave: (next: Marks) => void;
+  graphType?: GraphType;
 };
 
 // --- shared styles (mirrors GraphFieldsPopup) ---
@@ -63,6 +65,7 @@ export default function GraphMarkPopup({
   initial,
   onCancel,
   onSave,
+  graphType,
 }: Props) {
   // current assignments (single value each)
   const [color, setColor] = useState<string | null>(initial?.color ?? null);
@@ -272,6 +275,29 @@ export default function GraphMarkPopup({
         ) : (
           <div style={{ fontSize: 12, opacity: 0.6 }}>(no shape yet)</div>
         )}
+      </div>
+
+      {/* --- Show Me (requirements) --- */}
+      <div
+        style={{
+          marginTop: 4,
+          padding: 10,
+          border: '1px solid #e5e7eb',
+          borderRadius: 10,
+          background: '#f8fafc',
+        }}
+      >
+        <div
+          style={{
+            fontWeight: 700,
+            fontSize: 13,
+            color: '#0f172a',
+            marginBottom: 6,
+          }}
+        >
+          Show me{graphType ? ` — ${graphType}` : ''}
+        </div>
+        <ShowMeHint type={graphType} />
       </div>
 
       {/* Footer */}

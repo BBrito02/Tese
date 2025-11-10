@@ -46,3 +46,23 @@ body,
 #editor-root .react-flow__edge-interaction {
   pointer-events: none;
 }
+
+/* Hide all handles by default */
+.canvas .react-flow__handle {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+/* Show handles when the node is hovered OR selected */
+.canvas .react-flow__node:hover .react-flow__handle,
+.canvas .react-flow__node.selected .react-flow__handle {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* While a connection is being dragged, show all handles (so you can drop anywhere) */
+.canvas.rf-connecting .react-flow__handle {
+  opacity: 1;
+  pointer-events: all;
+}

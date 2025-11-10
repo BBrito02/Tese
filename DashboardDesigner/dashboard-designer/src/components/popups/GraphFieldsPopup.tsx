@@ -1,4 +1,6 @@
 import React, { useMemo, useState } from 'react';
+import type { GraphType } from '../../domain/types';
+import { ShowMeHint } from './ShowMeHint';
 
 type Props = {
   available: string[]; // fields coming from parent viz
@@ -6,6 +8,7 @@ type Props = {
   initialRows: string[];
   onCancel: () => void;
   onSave: (next: { columns: string[]; rows: string[] }) => void;
+  graphType?: GraphType;
 };
 
 const field: React.CSSProperties = {
@@ -48,6 +51,7 @@ export default function GraphFieldsPopup({
   initialRows,
   onCancel,
   onSave,
+  graphType,
 }: Props) {
   const [columns, setColumns] = useState<string[]>(initialColumns ?? []);
   const [rows, setRows] = useState<string[]>(initialRows ?? []);
@@ -194,6 +198,29 @@ export default function GraphFieldsPopup({
             </span>
           ))
         )}
+      </div>
+
+      {/* --- Show Me (requirements) --- */}
+      <div
+        style={{
+          marginTop: 4,
+          padding: 10,
+          border: '1px solid #e5e7eb',
+          borderRadius: 10,
+          background: '#f8fafc',
+        }}
+      >
+        <div
+          style={{
+            fontWeight: 700,
+            fontSize: 13,
+            color: '#0f172a',
+            marginBottom: 6,
+          }}
+        >
+          Show me{graphType ? ` — ${graphType}` : ''}
+        </div>
+        <ShowMeHint type={graphType} />
       </div>
 
       {/* Footer */}

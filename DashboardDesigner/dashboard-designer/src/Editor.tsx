@@ -236,6 +236,8 @@ export default function Editor() {
   // Modal host
   const { openModal, closeModal } = useModal();
 
+  const [isConnecting, setIsConnecting] = useState(false);
+
   // Keep interaction edges fully visible (no dimming)
   const visibleEdges = useMemo(
     () =>
@@ -380,6 +382,8 @@ export default function Editor() {
   /** Add an edge only if allowed by domain rules; annotate with trigger/edge type. */
   const onConnect = useCallback(
     (c: Connection) => {
+      setIsConnecting(false);
+
       const source = nodes.find((n) => n.id === c.source);
       const target = nodes.find((n) => n.id === c.target);
       const sourceKind = source?.data?.kind as NodeKind | undefined;
@@ -1801,7 +1805,7 @@ export default function Editor() {
 
         {/* Canvas */}
         <div
-          className="canvas"
+          className={`canvas ${isConnecting ? 'rf-connecting' : ''}`}
           ref={wrapperRef}
           style={{ flex: 1, minWidth: 0, position: 'relative' }}
         >
@@ -1836,6 +1840,8 @@ export default function Editor() {
                 setSelectedId(null);
             }}
             onEdgesChange={onEdgesChange}
+            onConnectStart={() => setIsConnecting(true)}
+            onConnectEnd={() => setIsConnecting(false)}
             onConnect={onConnect}
             onInit={setRf}
             nodeTypes={NODE_TYPES}
