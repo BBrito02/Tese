@@ -13,6 +13,7 @@ body,
 *::after {
   box-sizing: border-box;
 }
+
 /* index.css (or a global stylesheet) */
 .no-scrollbar {
   /* Firefox */
@@ -47,22 +48,36 @@ body,
   pointer-events: none;
 }
 
-/* Hide all handles by default */
+/* -----------------------------------------
+   HANDLE VISIBILITY — ALWAYS HIDDEN
+----------------------------------------- */
+
 .canvas .react-flow__handle {
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 120ms ease;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  pointer-events: none !important;
 }
 
-/* Show handles when the node is hovered OR selected */
+/* Remove connection preview UI as well */
+.canvas .react-flow__connection,
+.canvas .react-flow__connectionline,
+.canvas .react-flow__edgeupdater {
+  display: none !important;
+}
+
+/* REMOVE old hover logic (now gone)
 .canvas .react-flow__node:hover .react-flow__handle,
 .canvas .react-flow__node.selected .react-flow__handle {
   opacity: 1;
   pointer-events: all;
 }
 
-/* While a connection is being dragged, show all handles (so you can drop anywhere) */
 .canvas.rf-connecting .react-flow__handle {
   opacity: 1;
   pointer-events: all;
 }
+*/
