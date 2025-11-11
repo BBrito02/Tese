@@ -21,13 +21,14 @@ export type GraphType =
   | 'Pilled100'
   | 'Gantt'
   | 'Dots'
-  | 'Map'
-  | 'ColorMap'
+  | 'Map' //nao fiz
+  | 'ColorMap' //nao fiz 
   | 'Hexabin'
   | 'Text'
-  | 'Table'
-  | 'HeatMap'
+  | 'Table' //done
+  | 'HeatMap' //done 
   | 'Clock';
+  // highlighted table? | nao tenho piechart // 
 
 export type DataType = 'Binary' | 'Continuous' | 'Discrete' | 'Other';
 

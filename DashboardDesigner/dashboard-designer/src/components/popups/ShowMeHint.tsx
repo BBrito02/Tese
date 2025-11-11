@@ -16,13 +16,13 @@ type ShowSpec = {
     color?: Pill[];
     size?: Pill[];
     shape?: Pill[];
+    text?: Pill[];
   };
 };
 
-/* ------------ Recommendations (same as you had, trimmed for brevity here) ------------ */
+/* ------------ Recommendations ------------ */
 
 const REQ: Partial<Record<GraphType, ShowSpec>> = {
-  /* Scatter plot */
   Dispersion: {
     columns: [{ label: 'Measure (X)', kind: 'Measure' }],
     rows: [{ label: 'Measure (Y)', kind: 'Measure' }],
@@ -34,10 +34,10 @@ const REQ: Partial<Record<GraphType, ShowSpec>> = {
       shape: [
         { label: 'Dimension (shape)', kind: 'Dimension', optional: true },
       ],
+      text: [{ label: 'Dimension (label)', kind: 'Dimension', optional: true }], // optional labels
     },
   },
 
-  /* Single line (time or discrete dimension on X) */
   Line: {
     columns: [{ label: 'Date or Dimension (X)', kind: 'Any' }],
     rows: [{ label: 'Measure', kind: 'Measure' }],
@@ -45,17 +45,23 @@ const REQ: Partial<Record<GraphType, ShowSpec>> = {
       color: [
         { label: 'Dimension (series)', kind: 'Dimension', optional: true },
       ],
+      text: [
+        { label: 'Dimension/Measure (label)', kind: 'Any', optional: true },
+      ],
     },
   },
 
-  /* Multiple lines = line + a series dimension */
   MultipleLines: {
     columns: [{ label: 'Date or Dimension (X)', kind: 'Any' }],
     rows: [{ label: 'Measure', kind: 'Measure' }],
-    marks: { color: [{ label: 'Dimension (series)', kind: 'Dimension' }] },
+    marks: {
+      color: [{ label: 'Dimension (series)', kind: 'Dimension' }],
+      text: [
+        { label: 'Dimension/Measure (label)', kind: 'Any', optional: true },
+      ],
+    },
   },
 
-  /* Area (same inputs as line; series optional) */
   Area: {
     columns: [{ label: 'Date or Dimension (X)', kind: 'Any' }],
     rows: [{ label: 'Measure', kind: 'Measure' }],
@@ -63,35 +69,37 @@ const REQ: Partial<Record<GraphType, ShowSpec>> = {
       color: [
         { label: 'Dimension (series)', kind: 'Dimension', optional: true },
       ],
-    },
-  },
-
-  /* Simple bars (discrete category vs measure) */
-  Bars: {
-    columns: [{ label: 'Dimension (category)', kind: 'Dimension' }],
-    rows: [{ label: 'Measure', kind: 'Measure' }],
-    marks: {
-      color: [
-        { label: 'Dimension (group)', kind: 'Dimension', optional: true },
+      text: [
+        { label: 'Dimension/Measure (label)', kind: 'Any', optional: true },
       ],
     },
   },
 
-  /* Stacked bars (requires a stack/group dimension) */
-  PilledBars: {
-    columns: [{ label: 'Dimension (category)', kind: 'Dimension' }],
-    rows: [{ label: 'Measure', kind: 'Measure' }],
-    marks: { color: [{ label: 'Dimension (stack)', kind: 'Dimension' }] },
+  Bars: {
+    rows: [{ label: 'Dimension (category)', kind: 'Dimension' }],
+    columns: [{ label: 'Measure', kind: 'Measure' }],
+    marks: {},
   },
 
-  /* 100% stacked bars (same as stacked; % is a calc) */
+  PilledBars: {
+    rows: [],
+    columns: [{ label: 'Measure', kind: 'Measure' }],
+    marks: {
+      color: [{ label: 'Dimension (stack)', kind: 'Dimension' }],
+    },
+  },
+
   Pilled100: {
     columns: [{ label: 'Dimension (category)', kind: 'Dimension' }],
     rows: [{ label: 'Measure', kind: 'Measure' }],
-    marks: { color: [{ label: 'Dimension (stack)', kind: 'Dimension' }] },
+    marks: {
+      color: [{ label: 'Dimension (stack)', kind: 'Dimension' }],
+      text: [
+        { label: 'Measure (percent label)', kind: 'Measure', optional: true },
+      ],
+    },
   },
 
-  /* Gantt (task by time; duration on size) */
   Gantt: {
     columns: [{ label: 'Start date/time', kind: 'Date' }],
     rows: [{ label: 'Task', kind: 'Dimension' }],
@@ -100,10 +108,10 @@ const REQ: Partial<Record<GraphType, ShowSpec>> = {
       color: [
         { label: 'Status / Category', kind: 'Dimension', optional: true },
       ],
+      text: [{ label: 'Task name', kind: 'Dimension', optional: true }],
     },
   },
 
-  /* Dot plot (dimension vs measure; optional color/size) */
   Dots: {
     columns: [{ label: 'Dimension (category)', kind: 'Dimension' }],
     rows: [{ label: 'Measure', kind: 'Measure' }],
@@ -112,62 +120,66 @@ const REQ: Partial<Record<GraphType, ShowSpec>> = {
         { label: 'Dimension (group)', kind: 'Dimension', optional: true },
       ],
       size: [{ label: 'Measure (size)', kind: 'Measure', optional: true }],
+      text: [{ label: 'Dimension (label)', kind: 'Dimension', optional: true }],
     },
   },
 
-  /* Symbol map (needs geographic field) */
   Map: {
     columns: [{ label: 'Geography', kind: 'Dimension' }],
     rows: [],
     marks: {
       color: [{ label: 'Measure or Dimension', kind: 'Any', optional: true }],
       size: [{ label: 'Measure (size)', kind: 'Measure', optional: true }],
+      text: [
+        { label: 'Label (e.g., name)', kind: 'Dimension', optional: true },
+      ],
     },
   },
 
-  /* Filled map (choropleth) */
   ColorMap: {
     columns: [{ label: 'Geography', kind: 'Dimension' }],
     rows: [],
-    marks: { color: [{ label: 'Measure (color scale)', kind: 'Measure' }] },
+    marks: {
+      color: [{ label: 'Measure (color scale)', kind: 'Measure' }],
+      text: [{ label: 'Label (optional)', kind: 'Any', optional: true }],
+    },
   },
 
-  /* Hexbin/density map (lat/lon + intensity) */
   Hexabin: {
     columns: [{ label: 'Longitude', kind: 'Measure' }],
     rows: [{ label: 'Latitude', kind: 'Measure' }],
     marks: {
       color: [{ label: 'Measure (intensity)', kind: 'Measure' }],
       size: [{ label: 'Count / Measure', kind: 'Measure', optional: true }],
+      text: [{ label: 'Label (optional)', kind: 'Any', optional: true }],
     },
   },
 
-  /* Text (label table) */
+  // As a chart: keys by Dimension, values via Measure on text mark
   Text: {
     columns: [{ label: 'Dimension (label key)', kind: 'Dimension' }],
-    rows: [{ label: 'Measure (value)', kind: 'Measure', optional: true }],
+    rows: [{ label: 'Measure (value)', kind: 'Measure' }],
     marks: {
-      color: [{ label: 'Measure/Dimension', kind: 'Any', optional: true }],
+      text: [{ label: 'Measure (cell text)', kind: 'Measure' }], // <-- key requirement
+      color: [
+        { label: 'Measure/Dimension (optional)', kind: 'Any', optional: true },
+      ],
       size: [{ label: 'Measure (font size)', kind: 'Measure', optional: true }],
     },
   },
 
-  /* Crosstab table */
+  // Crosstab: [T] Measure + [list] Dimension (your screenshot)
   Table: {
     columns: [
       { label: 'Column Dimension(s)', kind: 'Dimension', optional: true },
     ],
     rows: [{ label: 'Row Dimension(s)', kind: 'Dimension' }],
     marks: {
-      color: [
-        { label: 'Measure (cell text/heat)', kind: 'Measure', optional: true },
-      ],
+      text: [{ label: 'Measure (cell text)', kind: 'Measure' }], // <-- key requirement
     },
   },
 
-  /* Heat map (dim × dim with measure on color; size optional) */
   HeatMap: {
-    columns: [{ label: 'Dimension (X)', kind: 'Dimension' }],
     rows: [{ label: 'Dimension (Y)', kind: 'Dimension' }],
     marks: {
       color: [{ label: 'Measure (color)', kind: 'Measure' }],
@@ -175,7 +187,6 @@ const REQ: Partial<Record<GraphType, ShowSpec>> = {
     },
   },
 
-  /* Clock (radial time-of-day; not native in Tableau Show Me — best-effort) */
   Clock: {
     columns: [{ label: 'Time (hour/min)', kind: 'Date' }],
     rows: [{ label: 'Measure (value)', kind: 'Measure', optional: true }],
@@ -187,6 +198,7 @@ const REQ: Partial<Record<GraphType, ShowSpec>> = {
       shape: [
         { label: 'Dimension (shape)', kind: 'Dimension', optional: true },
       ],
+      text: [{ label: 'Label (optional)', kind: 'Any', optional: true }],
     },
   },
 };
@@ -196,7 +208,7 @@ const DEFAULT_SPEC: ShowSpec = {
   rows: [{ label: 'Measure', kind: 'Measure' }],
 };
 
-/* ------------ Styles for the compact look ------------ */
+/* ------------ Styles (compact) ------------ */
 
 const wrap: React.CSSProperties = { display: 'grid', gap: 6 };
 const lead: React.CSSProperties = {
@@ -232,7 +244,6 @@ const pillColors: Record<PillKind, { bg: string; fg: string; br: string }> = {
 
 function kindPill(kind: PillKind) {
   const c = pillColors[kind];
-
   return (
     <span
       style={{
@@ -240,10 +251,9 @@ function kindPill(kind: PillKind) {
         background: c.bg,
         color: c.fg,
         border: `1px solid ${c.br}`,
-        /* REMOVE minWidth */
-        width: 'fit-content', // <-- new
+        width: 'fit-content',
         gap: 6,
-        whiteSpace: 'nowrap', // <-- prevents wrapping
+        whiteSpace: 'nowrap',
       }}
     >
       {kind}
@@ -251,64 +261,74 @@ function kindPill(kind: PillKind) {
   );
 }
 
-const VVIcon = (k: 'Color' | 'Size' | 'Shape') => (
-  <img
-    src={VISUAL_VAR_ICONS[k]}
-    alt={k}
-    style={{ width: 18, height: 18, objectFit: 'contain', opacity: 0.95 }}
-  />
-);
+const vvImg = (key: 'Color' | 'Size' | 'Shape' | 'Text') => {
+  const src = (VISUAL_VAR_ICONS as any)?.[key];
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt={key}
+        style={{ width: 18, height: 18, objectFit: 'contain', opacity: 0.95 }}
+      />
+    );
+  }
+  // Fallback tiny "T" for Text if missing
+  if (key === 'Text') {
+    return (
+      <span
+        style={{
+          width: 18,
+          height: 18,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 12,
+          fontWeight: 900,
+          border: '1px solid #e5e7eb',
+          borderRadius: 3,
+          background: '#fff',
+          lineHeight: 1,
+        }}
+      >
+        T
+      </span>
+    );
+  }
+  return null;
+};
 
-/**
- * Build a short, flat list like Tableau's:
- *  - Prefer one Size (if exists), one Color (if exists),
- *  - then one Dimension hint (from rows/columns),
- *  - then optionally Date or Measure if that's the primary axis.
- */
+/** Build compact “Show me” line items */
 function buildCompact(
   spec: ShowSpec
 ): Array<{ left: React.ReactNode; kind: PillKind }> {
   const out: Array<{ left: React.ReactNode; kind: PillKind }> = [];
-
   const first = (xs?: Pill[]) => (xs && xs.length ? xs[0] : undefined);
 
-  // marks first (Size, Color)
+  // 1) Marks (priority: Size, Color, Text)
   const sizeP = first(spec.marks?.size);
-  if (sizeP) out.push({ left: VVIcon('Size'), kind: sizeP.kind });
+  if (sizeP) out.push({ left: vvImg('Size'), kind: sizeP.kind });
 
   const colorP = first(spec.marks?.color);
-  if (colorP) out.push({ left: VVIcon('Color'), kind: colorP.kind });
+  if (colorP) out.push({ left: vvImg('Color'), kind: colorP.kind });
 
-  // try to show one Dimension (rows preferred, else columns)
+  const textP = first(spec.marks?.text);
+  if (textP) out.push({ left: vvImg('Text'), kind: textP.kind });
+
+  // 2) Always add one axis pill (rows preferred, else columns)
   const rowP = first(spec.rows);
   const colP = first(spec.columns);
 
-  const preferDim =
-    rowP?.kind === 'Dimension'
-      ? { left: <GrBladesVertical size={18} />, kind: 'Dimension' as PillKind }
-      : colP?.kind === 'Dimension'
-      ? {
-          left: <GrBladesHorizontal size={18} />,
-          kind: 'Dimension' as PillKind,
-        }
-      : null;
+  let axis: { left: React.ReactNode; kind: PillKind } | null = null;
 
-  if (preferDim) out.push(preferDim);
-
-  // if nothing yet, fall back to whichever primary axis exists
-  if (out.length === 0 && (rowP || colP)) {
-    const p = rowP ?? colP!;
-    out.push({
-      left: rowP ? (
-        <GrBladesVertical size={18} />
-      ) : (
-        <GrBladesHorizontal size={18} />
-      ),
-      kind: p.kind,
-    });
+  if (rowP) {
+    axis = { left: <GrBladesVertical size={18} />, kind: rowP.kind };
+  } else if (colP) {
+    axis = { left: <GrBladesHorizontal size={18} />, kind: colP.kind };
   }
 
-  // still nothing? add a generic Measure as last resort
+  if (axis) out.push(axis);
+
+  // 3) Still nothing? fall back
   if (out.length === 0) {
     out.push({ left: <GrBladesVertical size={18} />, kind: 'Measure' });
   }
@@ -325,10 +345,8 @@ export function ShowMeHint({ type }: { type: GraphType | undefined }) {
   return (
     <div style={wrap}>
       <div style={lead}>
-        {/* lowercase like Tableau */}
         for {String(type ?? 'this chart').toLowerCase()} use:
       </div>
-
       {compact.map((rowItem, i) => (
         <div key={i} style={line}>
           <div
