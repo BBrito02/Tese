@@ -155,19 +155,6 @@ const REQ: Partial<Record<GraphType, ShowSpec>> = {
     },
   },
 
-  // As a chart: keys by Dimension, values via Measure on text mark
-  Text: {
-    columns: [{ label: 'Dimension (label key)', kind: 'Dimension' }],
-    rows: [{ label: 'Measure (value)', kind: 'Measure' }],
-    marks: {
-      text: [{ label: 'Measure (cell text)', kind: 'Measure' }], // <-- key requirement
-      color: [
-        { label: 'Measure/Dimension (optional)', kind: 'Any', optional: true },
-      ],
-      size: [{ label: 'Measure (font size)', kind: 'Measure', optional: true }],
-    },
-  },
-
   // Crosstab: [T] Measure + [list] Dimension (your screenshot)
   Table: {
     columns: [

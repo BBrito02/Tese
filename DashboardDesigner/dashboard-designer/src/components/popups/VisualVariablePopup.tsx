@@ -8,7 +8,7 @@ type Props = {
   onSave: (vars: VisualVariable[]) => void;
 };
 
-const ALL_VV: VisualVariable[] = ['Size', 'Shape', 'Color'];
+const ALL_VV: VisualVariable[] = ['Size', 'Shape', 'Color', 'Text'];
 
 export default function VisualVariablePopup({
   initial,

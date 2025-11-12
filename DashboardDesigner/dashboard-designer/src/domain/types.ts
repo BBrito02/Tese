@@ -9,7 +9,7 @@ export type Interaction = {
   targets: string[]; // array of target node ids
 };
 
-export type VisualVariable = 'Size' | 'Shape' | 'Color';
+export type VisualVariable = 'Size' | 'Shape' | 'Color' | 'Text';
 
 export type GraphType =
   | 'Dispersion'
@@ -22,13 +22,12 @@ export type GraphType =
   | 'Gantt'
   | 'Dots'
   | 'Map' //nao fiz
-  | 'ColorMap' //nao fiz 
+  | 'ColorMap' //nao fiz
   | 'Hexabin'
-  | 'Text'
   | 'Table' //done
-  | 'HeatMap' //done 
+  | 'HeatMap' //done
   | 'Clock';
-  // highlighted table? | nao tenho piechart // 
+// highlighted table? | nao tenho piechart //
 
 export type DataType = 'Binary' | 'Continuous' | 'Discrete' | 'Other';
 

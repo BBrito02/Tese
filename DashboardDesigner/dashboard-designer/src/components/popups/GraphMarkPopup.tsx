@@ -6,6 +6,7 @@ type Marks = {
   color?: string | null;
   size?: string | null;
   shape?: string | null;
+  text?: string | null;
 };
 
 type Props = {
@@ -71,11 +72,13 @@ export default function GraphMarkPopup({
   const [color, setColor] = useState<string | null>(initial?.color ?? null);
   const [size, setSize] = useState<string | null>(initial?.size ?? null);
   const [shape, setShape] = useState<string | null>(initial?.shape ?? null);
+  const [text, setText] = useState(initial.text ?? null);
 
   // pickers
   const [colorPick, setColorPick] = useState('');
   const [sizePick, setSizePick] = useState('');
   const [shapePick, setShapePick] = useState('');
+  const [textPick, setTextPick] = useState('');
 
   const names = useMemo(() => namesFrom(available), [available]);
 
@@ -93,6 +96,10 @@ export default function GraphMarkPopup({
     () => names.filter((n) => n !== shape),
     [names, shape]
   );
+  const textOptions = useMemo(
+    () => names.filter((n) => n !== text),
+    [names, text]
+  );
 
   const addColor = () => {
     if (!colorPick) return;
@@ -108,6 +115,11 @@ export default function GraphMarkPopup({
     if (!shapePick) return;
     setShape(shapePick);
     setShapePick('');
+  };
+  const addText = () => {
+    if (!shapePick) return;
+    setText(textPick);
+    setTextPick('');
   };
 
   return (
@@ -277,6 +289,61 @@ export default function GraphMarkPopup({
         )}
       </div>
 
+      {/* TEXT */}
+      <div style={row}>
+        <div style={label}>Text</div>
+        <select
+          value={textPick}
+          onChange={(e) => setTextPick(e.target.value)}
+          style={field}
+        >
+          <option value="">Select a field…</option>
+          {textOptions.map((n) => (
+            <option key={`t-${n}`} value={n}>
+              {n}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={addText}
+          disabled={!textPick}
+          style={{
+            padding: '8px 12px',
+            borderRadius: 8,
+            border: '1px solid #38bdf8',
+            background: textPick ? '#38bdf8' : '#93c5fd',
+            color: '#fff',
+            cursor: textPick ? 'pointer' : 'not-allowed',
+          }}
+        >
+          Add
+        </button>
+      </div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        {text ? (
+          <span style={pill}>
+            {text}
+            <button
+              type="button"
+              onClick={() => setText(null)}
+              title="Remove"
+              style={{
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                fontSize: 14,
+                lineHeight: 1,
+              }}
+            >
+              ×
+            </button>
+          </span>
+        ) : (
+          <div style={{ fontSize: 12, opacity: 0.6 }}>(no text yet)</div>
+        )}
+      </div>
+
       {/* --- Show Me (requirements) --- */}
       <div
         style={{
@@ -315,7 +382,7 @@ export default function GraphMarkPopup({
           Cancel
         </button>
         <button
-          onClick={() => onSave({ color, size, shape })}
+          onClick={() => onSave({ color, size, shape, text })}
           style={{
             padding: '8px 12px',
             borderRadius: 8,

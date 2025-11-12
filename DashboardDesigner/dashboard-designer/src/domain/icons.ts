@@ -4,6 +4,7 @@ export const VISUAL_VAR_ICONS: Record<VisualVariable, string> = {
   Color: '/icons/visvar_color.png',
   Shape: '/icons/visvar_shape.png',
   Size: '/icons/visvar_size.png',
+  Text: '/icons/visvar_text.png',
 };
 
 export const GRAPH_TYPE_ICONS: Record<GraphType, string> = {
@@ -19,7 +20,6 @@ export const GRAPH_TYPE_ICONS: Record<GraphType, string> = {
   Map: '/icons/graphtype_map.png',
   ColorMap: '/icons/graphtype_colormap.png',
   Hexabin: '/icons/graphtype_hexabin.png',
-  Text: '/icons/graphtype_text.png',
   Table: '/icons/graphtype_table.png',
   HeatMap: '/icons/graphtype_heatmap.png',
   Clock: '/icons/graphtype_clock.png',

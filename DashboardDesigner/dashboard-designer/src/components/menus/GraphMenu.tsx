@@ -89,6 +89,7 @@ export default function GraphMenu(p: KindProps) {
     color?: string | null;
     size?: string | null;
     shape?: string | null;
+    text?: string | null;
   };
 
   // open GraphMarksPopup with current values
@@ -269,6 +270,21 @@ export default function GraphMenu(p: KindProps) {
         disabled={disabled}
         onRemove={() => p.onChange({ marks: { ...marks, shape: null } } as any)}
         icon={vvIcon('Shape')}
+      />
+
+      {/* Text */}
+      <ListAttributesSection
+        title="Text"
+        items={marks.text ? [marks.text] : []}
+        disabled={disabled}
+        onRemove={() => p.onChange({ marks: { ...marks, text: null } } as any)}
+        icon={
+          <img
+            src={VISUAL_VAR_ICONS.Text}
+            alt="Text"
+            style={{ width: 16, height: 16 }}
+          />
+        }
       />
     </div>
   );
