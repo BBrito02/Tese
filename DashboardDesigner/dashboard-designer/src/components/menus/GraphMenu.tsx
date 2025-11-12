@@ -1,6 +1,6 @@
 import { WhiteField, type KindProps } from './common';
 import { TypeField, ListAttributesSection, SectionTitle } from './sections';
-import type { DataItem, GraphType } from '../../domain/types';
+import type { DataItem, GraphType, VisualVariable } from '../../domain/types';
 import { GRAPH_TYPE_ICONS, VISUAL_VAR_ICONS } from '../../domain/icons';
 import { useModal } from '../ui/ModalHost';
 import GraphFieldsPopup from '../popups/GraphFieldsPopup';
@@ -103,7 +103,27 @@ export default function GraphMenu(p: KindProps) {
           graphType={gt}
           onCancel={closeModal}
           onSave={(next) => {
+            // 1) persist marks on the graph
             p.onChange({ marks: next } as any);
+
+            // 2) auto-ensure corresponding visual variables on the parent Visualization
+            const need: VisualVariable[] = [];
+            if (next.color) need.push('Color');
+            if (next.size) need.push('Size');
+            if (next.shape) need.push('Shape');
+            if (next.text) need.push('Text');
+
+            if (need.length) {
+              const parentId = (p.node as any)?.parentNode; // React Flow parent
+              if (parentId) {
+                window.dispatchEvent(
+                  new CustomEvent('designer:ensure-visual-vars', {
+                    detail: { parentId, vars: need },
+                  })
+                );
+              }
+            }
+
             closeModal();
           }}
         />
@@ -206,6 +226,12 @@ export default function GraphMenu(p: KindProps) {
           p.onChange({ columns: next } as any);
         }}
         icon={<GrBladesHorizontal size={16} />}
+        resolveMeta={(name) => {
+          const meta = (availableRaw as (string | DataItem)[])
+            .map((v) => (typeof v === 'string' ? { name: v } : v))
+            .find((v) => v?.name === name) as DataItem | undefined;
+          return meta ? { dtype: meta.dtype } : undefined;
+        }}
       />
 
       {/* Current Rows */}

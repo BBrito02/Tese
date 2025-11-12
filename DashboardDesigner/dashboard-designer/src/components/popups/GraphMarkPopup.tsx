@@ -117,7 +117,7 @@ export default function GraphMarkPopup({
     setShapePick('');
   };
   const addText = () => {
-    if (!shapePick) return;
+    if (!textPick) return;
     setText(textPick);
     setTextPick('');
   };

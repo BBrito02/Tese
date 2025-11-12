@@ -270,7 +270,42 @@ export default function Editor() {
     return Array.isArray(dataList) ? (dataList as (string | DataItem)[]) : [];
   }, [selectedNode, nodes]);
 
+  const mergeUnique = <T,>(a: T[] = [], b: T[] = []) =>
+    Array.from(new Set([...(a ?? []), ...(b ?? [])]));
+
   /* ---------- Menu animation width sync ---------- */
+
+  useEffect(() => {
+    function onEnsureVV(e: Event) {
+      const { parentId, vars } = (
+        e as CustomEvent<{ parentId: string; vars: VisualVariable[] }>
+      ).detail;
+
+      setNodes((nodes) =>
+        nodes.map((n) => {
+          if (n.id !== parentId) return n;
+          const cur: VisualVariable[] = Array.isArray(
+            (n.data as any).visualVars
+          )
+            ? (n.data as any).visualVars
+            : [];
+          const next = mergeUnique(cur, vars);
+          if (next === cur) return n;
+          return {
+            ...n,
+            data: { ...(n.data as any), visualVars: next },
+          };
+        })
+      );
+    }
+
+    window.addEventListener('designer:ensure-visual-vars', onEnsureVV as any);
+    return () =>
+      window.removeEventListener(
+        'designer:ensure-visual-vars',
+        onEnsureVV as any
+      );
+  }, [setNodes]);
 
   useEffect(() => {
     /** Listen to menu width broadcasts (so top-right buttons can slide with it). */
