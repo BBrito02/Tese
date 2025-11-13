@@ -226,12 +226,6 @@ export default function GraphMenu(p: KindProps) {
           p.onChange({ columns: next } as any);
         }}
         icon={<GrBladesHorizontal size={16} />}
-        resolveMeta={(name) => {
-          const meta = (availableRaw as (string | DataItem)[])
-            .map((v) => (typeof v === 'string' ? { name: v } : v))
-            .find((v) => v?.name === name) as DataItem | undefined;
-          return meta ? { dtype: meta.dtype } : undefined;
-        }}
       />
 
       {/* Current Rows */}
