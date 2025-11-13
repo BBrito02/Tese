@@ -27,8 +27,8 @@ import type {
 } from './domain/types';
 import { canConnect, allowedChildKinds } from './domain/rules';
 
-import SideMenu, { type DragData } from './components/SideMenu';
-import ComponentsMenu from './components/ComponentsMenu';
+import SideMenu, { type DragData } from './components/menus/SideMenu';
+import ComponentsMenu from './components/menus/ComponentsMenu';
 
 import {
   DndContext,
@@ -44,7 +44,7 @@ import type {
   DragMoveEvent,
 } from '@dnd-kit/core';
 
-import NodeGhost from './components/NodeGhost';
+import NodeGhost from './canvas/nodes/NodeGhost';
 import { nextBadgeFor } from './domain/types';
 
 import type { SaveFile, ExportNode } from './domain/saveFormat';

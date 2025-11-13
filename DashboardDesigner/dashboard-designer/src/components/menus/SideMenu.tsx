@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { NodeKind } from '../domain/types';
+import type { NodeKind } from '../../domain/types';
 import { useDraggable } from '@dnd-kit/core';
 import type { IconType } from 'react-icons';
 import {

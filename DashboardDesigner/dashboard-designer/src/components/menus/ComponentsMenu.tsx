@@ -1,8 +1,8 @@
 import { useEffect, useState, useRef } from 'react';
 import type { Node as RFNode } from 'reactflow';
-import type { DataItem, NodeData, NodeKind } from '../domain/types';
-import { MENUS } from './menus';
-import { BaseMenu } from './menus/common';
+import type { DataItem, NodeData, NodeKind } from '../../domain/types';
+import { MENUS } from '.';
+import { BaseMenu } from './common';
 import { LuPanelRightClose, LuPanelLeftClose } from 'react-icons/lu';
 
 type Props = {
