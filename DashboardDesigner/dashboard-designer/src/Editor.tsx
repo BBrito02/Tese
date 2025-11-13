@@ -427,7 +427,9 @@ export default function Editor() {
       if (!canConnect(sourceKind, targetKind)) return;
 
       const sh = c.sourceHandle ?? '';
-      const trigger = sh.endsWith(':hover') ? 'hover' : 'click';
+      const trigger: 'click' | 'hover' = sh.endsWith(':hover')
+        ? 'hover'
+        : 'click';
       const isTooltip = targetKind === 'Tooltip';
 
       setEdges((eds) =>
@@ -436,7 +438,22 @@ export default function Editor() {
             ...c,
             animated: false,
             type: isTooltip ? 'tooltip' : 'interaction',
-            data: isTooltip ? { activation: trigger } : { trigger },
+            data: isTooltip
+              ? {
+                  kind: 'tooltip-link',
+                  activation: trigger,
+                  sourceHandle: sh,
+                  sourceKind,
+                  targetKind,
+                }
+              : {
+                  kind: 'interaction-link',
+                  trigger,
+                  activation: trigger,
+                  sourceHandle: sh,
+                  sourceKind,
+                  targetKind,
+                },
           } as any,
           eds
         )
@@ -1125,6 +1142,11 @@ export default function Editor() {
             availableTargets={targets}
             onCancel={closeModal}
             onSave={({ name, trigger, result, targets }) => {
+              // normalise trigger to 'click' | 'hover'
+              const triggerKey = (
+                typeof trigger === 'string' ? trigger.toLowerCase() : 'click'
+              ) as 'click' | 'hover';
+
               // Persist on source node
               setNodes((nds) => {
                 const next = (nds as AppNode[]).map((n) => ({ ...n }));
@@ -1135,7 +1157,15 @@ export default function Editor() {
                   )
                     ? ([...(next[i].data as any).interactions] as Interaction[])
                     : [];
-                  cur.push({ id: nanoid(), name, trigger, result, targets });
+
+                  cur.push({
+                    id: nanoid(),
+                    name,
+                    trigger: triggerKey,
+                    result,
+                    targets,
+                  });
+
                   next[i] = {
                     ...next[i],
                     data: {
@@ -1147,8 +1177,10 @@ export default function Editor() {
                 return next as unknown as RFNode<NodeData>[];
               });
 
-              // Draw edges
+              // Draw edges attached to the right interaction handle
               setEdges((eds) => {
+                const sourceHandle = `${sourceId}:act:${triggerKey}`;
+
                 const add = targets
                   .filter(
                     (tid) =>
@@ -1156,7 +1188,8 @@ export default function Editor() {
                         (e) =>
                           e.type === 'interaction' &&
                           e.source === sourceId &&
-                          e.target === tid
+                          e.target === tid &&
+                          e.sourceHandle === sourceHandle
                       )
                   )
                   .map(
@@ -1164,11 +1197,19 @@ export default function Editor() {
                       ({
                         id: `ix-${sourceId}-${tid}-${nanoid(4)}`,
                         source: sourceId,
+                        sourceHandle,
                         target: tid,
                         type: 'interaction',
-                        data: { label: name },
+                        data: {
+                          kind: 'interaction-link',
+                          label: name,
+                          trigger: triggerKey,
+                          activation: triggerKey,
+                          sourceHandle,
+                        },
                       } as AppEdge)
                   );
+
                 return (eds as AppEdge[]).concat(add) as any;
               });
 

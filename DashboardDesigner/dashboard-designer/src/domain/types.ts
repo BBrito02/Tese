@@ -1,4 +1,4 @@
-export type InteractionType = 'Click' | 'Hover';
+export type InteractionType = 'click' | 'hover';
 export type InteractionResult = 'filter' | 'highlight' | 'dashboard' | 'link';
 
 export type Interaction = {

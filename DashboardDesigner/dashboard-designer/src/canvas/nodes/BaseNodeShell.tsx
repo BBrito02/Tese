@@ -442,7 +442,8 @@ export default function BaseNodeShell({
 
       {leftHandle && <Handle type="target" position={Position.Left} />}
       {rightHandle && canInteract && (
-        <ClickHoverPorts position={Position.Right} idPrefix="act" />
+        // two interaction ports on the right: "<id>:act:hover" / "<id>:act:click"
+        <ClickHoverPorts position={Position.Right} idPrefix={`${id}:act`} />
       )}
     </div>
   );
