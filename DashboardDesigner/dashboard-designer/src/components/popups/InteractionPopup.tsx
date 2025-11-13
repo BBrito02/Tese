@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { InteractionType, InteractionResult } from '../../domain/types';
 
-type Target = {
+type TargetOption = {
   id: string;
   title: string;
   kind: string;
+  badge?: string;
 };
 
 type SourceType = 'component' | 'data';
@@ -20,7 +21,7 @@ type Props = {
   initialType?: InteractionType;
   initialResult?: InteractionResult;
   initialTargets?: string[];
-  availableTargets: Target[];
+  availableTargets: TargetOption[];
 
   // NEW: data attributes from the source component
   dataAttributes?: DataAttrOption[];
@@ -130,7 +131,7 @@ export default function InteractionPopup({
   const selectedArray = Array.from(selected);
   const selectedTargets = selectedArray
     .map((id) => sortedTargets.find((t) => t.id === id))
-    .filter(Boolean) as Target[];
+    .filter(Boolean) as TargetOption[];
 
   return (
     <div
@@ -342,6 +343,9 @@ export default function InteractionPopup({
             >
               {sortedTargets.map((t) => {
                 const checked = selected.has(t.id);
+                const displayTitle = `${t.badge ? t.badge + ' ' : ''}${
+                  t.title
+                }`;
                 return (
                   <div
                     key={t.id}
@@ -377,7 +381,7 @@ export default function InteractionPopup({
                       }}
                     />
                     <div style={{ fontSize: 13, color: '#0f172a' }}>
-                      {t.title}{' '}
+                      {displayTitle}{' '}
                       <span style={{ color: '#6b7280' }}>· {t.kind}</span>
                     </div>
                   </div>
@@ -403,27 +407,30 @@ export default function InteractionPopup({
         {/* Selected chips */}
         {selectedTargets.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {selectedTargets.map((t) => (
-              <span key={t.id} style={pill}>
-                {t.title}
-                <button
-                  type="button"
-                  onClick={() => removeTarget(t.id)}
-                  style={{
-                    marginLeft: 8,
-                    border: 'none',
-                    background: 'transparent',
-                    cursor: 'pointer',
-                    fontWeight: 900,
-                    lineHeight: 1,
-                  }}
-                  aria-label={`Remove ${t.title}`}
-                  title="Remove"
-                >
-                  ×
-                </button>
-              </span>
-            ))}
+            {selectedTargets.map((t) => {
+              const displayTitle = `${t.badge ? t.badge + ' ' : ''}${t.title}`;
+              return (
+                <span key={t.id} style={pill}>
+                  {displayTitle}
+                  <button
+                    type="button"
+                    onClick={() => removeTarget(t.id)}
+                    style={{
+                      marginLeft: 8,
+                      border: 'none',
+                      background: 'transparent',
+                      cursor: 'pointer',
+                      fontWeight: 900,
+                      lineHeight: 1,
+                    }}
+                    aria-label={`Remove ${displayTitle}`}
+                    title="Remove"
+                  >
+                    ×
+                  </button>
+                </span>
+              );
+            })}
           </div>
         )}
       </section>

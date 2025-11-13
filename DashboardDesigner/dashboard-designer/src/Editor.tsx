@@ -1135,6 +1135,7 @@ export default function Editor() {
           id: n.id,
           title: (n.data as any)?.title || n.id,
           kind: (n.data as any)?.kind || 'Node',
+          badge: (n.data as any)?.badge as string | undefined,
         }));
 
       // Data attributes available on the source component (if any)
