@@ -102,7 +102,15 @@ export function SectionTitle({ children }: { children: string }) {
 }
 
 // function that prints the data attributes + tooltips
-export function Chips({ items }: { items: ListItem[] }) {
+export function Chips({
+  items,
+  onRemove, // <-- optional remove handler
+  disabled, // <-- optional disabled flag for remove buttons
+}: {
+  items: ListItem[];
+  onRemove?: (index: number) => void;
+  disabled?: boolean;
+}) {
   if (!items?.length) {
     return (
       <div style={{ marginTop: 8 }}>
@@ -114,7 +122,7 @@ export function Chips({ items }: { items: ListItem[] }) {
   return (
     <div style={{ marginTop: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
       {items.map((it, i) => {
-        // --- Data items (keep old blue style) ---
+        // Data items (name + dtype badge)
         if (typeof it !== 'string') {
           const label = it.name;
           const dtype = it.dtype;
@@ -129,16 +137,35 @@ export function Chips({ items }: { items: ListItem[] }) {
                 border: '1px solid #c7d2fe',
                 display: 'inline-flex',
                 alignItems: 'center',
+                gap: 6,
               }}
               title={`${label}${dtype ? ` · ${dtype}` : ''}`}
             >
               {label}
               {dtype && <span style={dtypeBadge}>{dtype}</span>}
+              {onRemove && (
+                <button
+                  type="button"
+                  onClick={() => onRemove(i)}
+                  disabled={disabled}
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: disabled ? 'not-allowed' : 'pointer',
+                    padding: 0,
+                    lineHeight: 1,
+                    fontSize: 14,
+                  }}
+                  title="Remove"
+                >
+                  ×
+                </button>
+              )}
             </span>
           );
         }
 
-        // --- Tooltip entries (new white badge + blue background) ---
+        // Tooltip entries (badge + title)
         const parsed = parseTooltip(it);
         if (parsed) {
           return (
@@ -151,11 +178,30 @@ export function Chips({ items }: { items: ListItem[] }) {
               <span style={{ fontWeight: 600, color: '#000000ff' }}>
                 {parsed.title}
               </span>
+              {onRemove && (
+                <button
+                  type="button"
+                  onClick={() => onRemove(i)}
+                  disabled={disabled}
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: disabled ? 'not-allowed' : 'pointer',
+                    padding: 0,
+                    lineHeight: 1,
+                    fontSize: 14,
+                    marginLeft: 4,
+                  }}
+                  title="Remove"
+                >
+                  ×
+                </button>
+              )}
             </span>
           );
         }
 
-        // --- Fallback: plain string ---
+        // Plain strings
         return (
           <span
             key={`str-${it}-${i}`}
@@ -167,10 +213,29 @@ export function Chips({ items }: { items: ListItem[] }) {
               border: '1px solid #c7d2fe',
               display: 'inline-flex',
               alignItems: 'center',
+              gap: 6,
             }}
             title={it}
           >
             {it}
+            {onRemove && (
+              <button
+                type="button"
+                onClick={() => onRemove(i)}
+                disabled={disabled}
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: disabled ? 'not-allowed' : 'pointer',
+                  padding: 0,
+                  lineHeight: 1,
+                  fontSize: 14,
+                }}
+                title="Remove"
+              >
+                ×
+              </button>
+            )}
           </span>
         );
       })}
@@ -314,21 +379,21 @@ export function ListSection(props: {
 
 // sections.tsx
 // ⬇ change the props to include `icon?: React.ReactNode`
+// ⬇️ Drop-in replacement for ListAttributesSection in sections.tsx
 export function ListAttributesSection(props: {
   title: string;
-  items: (string | DataItem)[];
+  items: ListItem[]; // use the same ListItem type (string | DataItem)
   onAdd?: () => void;
   addTooltip?: string;
   disabled?: boolean;
-  onRemove?: (index: number) => void;
-  icon?: React.ReactNode; // <-- NEW
+  onRemove?: (index: number) => void; // forwarded to Chips
+  icon?: React.ReactNode;
 }) {
   const { title, items, onAdd, addTooltip, disabled, onRemove, icon } = props;
 
   return (
     <div>
       <div style={headerRow}>
-        {/* title with optional icon on the left */}
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
           {icon ? (
             <span
@@ -338,7 +403,7 @@ export function ListAttributesSection(props: {
                 height: 16,
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#475569', // slate-600-ish
+                color: '#475569',
               }}
             >
               {icon}
@@ -362,57 +427,8 @@ export function ListAttributesSection(props: {
         )}
       </div>
 
-      {/* Show ghost line if empty */}
-      {!items?.length ? (
-        <div style={{ marginTop: 8 }}>
-          <div style={GhostLine} />
-        </div>
-      ) : (
-        <div
-          style={{ marginTop: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}
-        >
-          {items.map((it, i) => {
-            const label = typeof it === 'string' ? it : it?.name;
-
-            return (
-              <span
-                key={`${label}-${i}`}
-                style={{
-                  fontSize: 12,
-                  padding: '4px 8px',
-                  borderRadius: 999,
-                  background: '#eef2ff',
-                  border: '1px solid #c7d2fe',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                }}
-                title={label}
-              >
-                {label}
-                {onRemove && (
-                  <button
-                    type="button"
-                    onClick={() => onRemove(i)}
-                    disabled={disabled}
-                    style={{
-                      border: 'none',
-                      background: 'transparent',
-                      cursor: disabled ? 'not-allowed' : 'pointer',
-                      padding: 0,
-                      lineHeight: 1,
-                      fontSize: 14,
-                    }}
-                    title="Remove"
-                  >
-                    ×
-                  </button>
-                )}
-              </span>
-            );
-          })}
-        </div>
-      )}
+      {/* Use Chips for consistent rendering; pass onRemove/disabled */}
+      <Chips items={items} onRemove={onRemove} disabled={disabled} />
     </div>
   );
 }

@@ -7,6 +7,7 @@ import GraphFieldsPopup from '../popups/GraphFieldsPopup';
 import GraphMarkPopup from '../popups/GraphMarkPopup';
 import { LuPlus } from 'react-icons/lu';
 import { GrBladesHorizontal, GrBladesVertical } from 'react-icons/gr';
+import type { ListItem } from './sections';
 
 function namesFromParent(data?: (string | DataItem)[]): string[] {
   if (!Array.isArray(data)) return [];
@@ -15,7 +16,7 @@ function namesFromParent(data?: (string | DataItem)[]): string[] {
     .filter(Boolean) as string[];
 }
 
-const vvIcon = (k: 'Color' | 'Size' | 'Shape') => (
+const vvIcon = (k: 'Color' | 'Size' | 'Shape' | 'Text') => (
   <img
     src={VISUAL_VAR_ICONS[k]}
     alt={k}
@@ -54,12 +55,23 @@ export default function GraphMenu(p: KindProps) {
 
   // Prefer parent visualization data; fallback to local data
   const available = namesFromParent((p as any).parentData ?? d?.data);
-  const columns: string[] = Array.isArray(d.columns) ? d.columns : [];
-  const rows: string[] = Array.isArray(d.rows) ? d.rows : [];
+  const columns = Array.isArray(d.columns) ? (d.columns as string[]) : [];
+  const rows = Array.isArray(d.rows) ? (d.rows as string[]) : [];
   const availableRaw = ((p as any).parentData ?? d?.data ?? []) as (
     | string
     | DataItem
   )[];
+
+  // Build a fast lookup: name -> DataItem (if present)
+  const dataIndex = new Map<string, DataItem>();
+  for (const it of availableRaw) {
+    if (typeof it !== 'string' && it?.name) {
+      dataIndex.set(it.name, it);
+    }
+  }
+
+  const asListItems = (names: string[]): ListItem[] =>
+    names.map((n) => dataIndex.get(n) ?? n);
 
   const constrain = (vals: string[]) =>
     available.length ? vals.filter((v) => available.includes(v)) : vals;
@@ -84,7 +96,6 @@ export default function GraphMenu(p: KindProps) {
   };
 
   // ---------- MARKS ----------
-  // keep it untyped on NodeData; same approach as your GraphFields
   const marks = (d.marks ?? {}) as {
     color?: string | null;
     size?: string | null;
@@ -92,7 +103,6 @@ export default function GraphMenu(p: KindProps) {
     text?: string | null;
   };
 
-  // open GraphMarksPopup with current values
   const openMarksPopup = () => {
     openModal({
       title: 'Graph Marks',
@@ -106,7 +116,7 @@ export default function GraphMenu(p: KindProps) {
             // 1) persist marks on the graph
             p.onChange({ marks: next } as any);
 
-            // 2) auto-ensure corresponding visual variables on the parent Visualization
+            // 2) auto-ensure corresponding visual variables on parent Visualization
             const need: VisualVariable[] = [];
             if (next.color) need.push('Color');
             if (next.size) need.push('Size');
@@ -130,6 +140,23 @@ export default function GraphMenu(p: KindProps) {
       ),
     });
   };
+
+  // Prepare ListItem[] for rows/columns and marks (so dtype badge appears)
+  const columnsItems: ListItem[] = asListItems(columns);
+  const rowsItems: ListItem[] = asListItems(rows);
+
+  const colorItems: ListItem[] = marks.color
+    ? [dataIndex.get(marks.color) ?? marks.color]
+    : [];
+  const sizeItems: ListItem[] = marks.size
+    ? [dataIndex.get(marks.size) ?? marks.size]
+    : [];
+  const shapeItems: ListItem[] = marks.shape
+    ? [dataIndex.get(marks.shape) ?? marks.shape]
+    : [];
+  const textItems: ListItem[] = marks.text
+    ? [dataIndex.get(marks.text) ?? marks.text]
+    : [];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -198,8 +225,8 @@ export default function GraphMenu(p: KindProps) {
             marginTop: 18,
             marginBottom: 6,
             fontSize: 14,
-            fontWeight: 600, // ← bold
-            color: '#0f172a', // slate-900 (strong, readable)
+            fontWeight: 600,
+            color: '#0f172a',
             paddingBottom: 3,
           }}
         >
@@ -216,10 +243,10 @@ export default function GraphMenu(p: KindProps) {
         </button>
       </div>
 
-      {/* Current Columns */}
+      {/* Current Columns (chips with dtype) */}
       <ListAttributesSection
         title="Columns"
-        items={columns}
+        items={columnsItems}
         disabled={disabled}
         onRemove={(idx) => {
           const next = columns.filter((_, i) => i !== idx);
@@ -228,10 +255,10 @@ export default function GraphMenu(p: KindProps) {
         icon={<GrBladesHorizontal size={16} />}
       />
 
-      {/* Current Rows */}
+      {/* Current Rows (chips with dtype) */}
       <ListAttributesSection
         title="Rows"
-        items={rows}
+        items={rowsItems}
         disabled={disabled}
         onRemove={(idx) => {
           const next = rows.filter((_, i) => i !== idx);
@@ -240,7 +267,7 @@ export default function GraphMenu(p: KindProps) {
         icon={<GrBladesVertical size={16} />}
       />
 
-      {/* ---- NEW: Marks section with + button opening the popup ---- */}
+      {/* ---- Marks section + popup ---- */}
       <div style={headerRow}>
         <div
           style={{
@@ -257,7 +284,7 @@ export default function GraphMenu(p: KindProps) {
         <button
           type="button"
           title="Edit marks"
-          onClick={openMarksPopup} // <-- no args
+          onClick={openMarksPopup}
           disabled={disabled}
           style={{ ...roundIconBtn, opacity: disabled ? 0.6 : 1 }}
         >
@@ -268,7 +295,7 @@ export default function GraphMenu(p: KindProps) {
       {/* Color */}
       <ListAttributesSection
         title="Color"
-        items={marks.color ? [marks.color] : []}
+        items={colorItems}
         disabled={disabled}
         onRemove={() => p.onChange({ marks: { ...marks, color: null } } as any)}
         icon={vvIcon('Color')}
@@ -277,7 +304,7 @@ export default function GraphMenu(p: KindProps) {
       {/* Size */}
       <ListAttributesSection
         title="Size"
-        items={marks.size ? [marks.size] : []}
+        items={sizeItems}
         disabled={disabled}
         onRemove={() => p.onChange({ marks: { ...marks, size: null } } as any)}
         icon={vvIcon('Size')}
@@ -286,7 +313,7 @@ export default function GraphMenu(p: KindProps) {
       {/* Shape */}
       <ListAttributesSection
         title="Shape"
-        items={marks.shape ? [marks.shape] : []}
+        items={shapeItems}
         disabled={disabled}
         onRemove={() => p.onChange({ marks: { ...marks, shape: null } } as any)}
         icon={vvIcon('Shape')}
@@ -295,16 +322,10 @@ export default function GraphMenu(p: KindProps) {
       {/* Text */}
       <ListAttributesSection
         title="Text"
-        items={marks.text ? [marks.text] : []}
+        items={textItems}
         disabled={disabled}
         onRemove={() => p.onChange({ marks: { ...marks, text: null } } as any)}
-        icon={
-          <img
-            src={VISUAL_VAR_ICONS.Text}
-            alt="Text"
-            style={{ width: 16, height: 16 }}
-          />
-        }
+        icon={vvIcon('Text')}
       />
     </div>
   );
