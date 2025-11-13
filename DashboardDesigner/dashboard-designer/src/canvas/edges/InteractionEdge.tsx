@@ -96,10 +96,12 @@ export default function InteractionEdge(props: EdgeProps) {
   const path = `${leg1} ${leg2} ${leg3} ${leg4} ${leg5} ${leg6}`;
 
   // source activation icon (unchanged)
+  const activation = (data?.activation ?? data?.trigger) as
+    | ActivationKey
+    | undefined;
+
   const key: ActivationKey =
-    data?.activation === 'click' || data?.activation === 'hover'
-      ? data.activation
-      : 'hover';
+    activation === 'click' || activation === 'hover' ? activation : 'hover';
   const src = activationIcons[key];
 
   const OUTSET = 1;

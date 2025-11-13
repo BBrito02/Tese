@@ -1118,6 +1118,7 @@ export default function Editor() {
   /* ---------- Interaction / Tooltips / Graph type modals & events ---------- */
 
   /** Open Interaction popup and persist edges + interaction list. */
+  /** Open Interaction popup and persist edges + interaction list. */
   useEffect(() => {
     function onOpenInteractions(e: Event) {
       const ce = e as CustomEvent<{ nodeId: string }>;
@@ -1127,6 +1128,7 @@ export default function Editor() {
       const source = nodes.find((n) => n.id === sourceId);
       if (!source) return;
 
+      // All possible *targets* for the interaction (any other node)
       const targets = (nodes as AppNode[])
         .filter((n) => n.id !== sourceId)
         .map((n) => ({
@@ -1135,19 +1137,44 @@ export default function Editor() {
           kind: (n.data as any)?.kind || 'Node',
         }));
 
+      // Data attributes available on the source component (if any)
+      const rawData = (source.data as any)?.data;
+      const dataAttributes = Array.isArray(rawData)
+        ? (rawData as (string | DataItem)[])
+            .map((it) => {
+              const name = typeof it === 'string' ? it : it?.name;
+              if (!name) return null;
+              return {
+                ref: name, // internal ref (we keep the plain name here)
+                label: name, // what the user sees
+              };
+            })
+            .filter((x): x is { ref: string; label: string } => x !== null)
+        : [];
+
+      const slug = (s: string) =>
+        s
+          .toLowerCase()
+          .trim()
+          .replace(/\s+/g, '-')
+          .replace(/[^a-z0-9_-]/g, '');
+
       openModal({
         title: 'Add interaction',
         node: (
           <InteractionPopup
             availableTargets={targets}
+            dataAttributes={dataAttributes}
             onCancel={closeModal}
-            onSave={({ name, trigger, result, targets }) => {
-              // normalise trigger to 'click' | 'hover'
-              const triggerKey = (
-                typeof trigger === 'string' ? trigger.toLowerCase() : 'click'
-              ) as 'click' | 'hover';
-
-              // Persist on source node
+            onSave={({
+              name,
+              trigger,
+              result,
+              targets,
+              sourceType,
+              sourceDataRef,
+            }) => {
+              // 1) Persist on source node (in data.interactions)
               setNodes((nds) => {
                 const next = (nds as AppNode[]).map((n) => ({ ...n }));
                 const i = next.findIndex((n) => n.id === sourceId);
@@ -1157,15 +1184,13 @@ export default function Editor() {
                   )
                     ? ([...(next[i].data as any).interactions] as Interaction[])
                     : [];
-
                   cur.push({
                     id: nanoid(),
                     name,
-                    trigger: triggerKey,
+                    trigger,
                     result,
                     targets,
                   });
-
                   next[i] = {
                     ...next[i],
                     data: {
@@ -1177,10 +1202,14 @@ export default function Editor() {
                 return next as unknown as RFNode<NodeData>[];
               });
 
-              // Draw edges attached to the right interaction handle
-              setEdges((eds) => {
-                const sourceHandle = `${sourceId}:act:${triggerKey}`;
+              // 2) Decide which handle the interaction originates from
+              const sourceHandleId =
+                sourceType === 'component'
+                  ? `${sourceId}:act:${trigger}`
+                  : `data:${slug(sourceDataRef ?? '')}:${trigger}`;
 
+              // 3) Draw edges (one per target)
+              setEdges((eds) => {
                 const add = targets
                   .filter(
                     (tid) =>
@@ -1189,7 +1218,7 @@ export default function Editor() {
                           e.type === 'interaction' &&
                           e.source === sourceId &&
                           e.target === tid &&
-                          e.sourceHandle === sourceHandle
+                          (e.data as any)?.label === name
                       )
                   )
                   .map(
@@ -1197,15 +1226,18 @@ export default function Editor() {
                       ({
                         id: `ix-${sourceId}-${tid}-${nanoid(4)}`,
                         source: sourceId,
-                        sourceHandle,
+                        sourceHandle: sourceHandleId,
                         target: tid,
                         type: 'interaction',
                         data: {
                           kind: 'interaction-link',
                           label: name,
-                          trigger: triggerKey,
-                          activation: triggerKey,
-                          sourceHandle,
+                          trigger,
+                          sourceHandle: sourceHandleId,
+                          sourceType,
+                          ...(sourceType === 'data' && sourceDataRef
+                            ? { sourceDataRef }
+                            : {}),
                         },
                       } as AppEdge)
                   );
