@@ -30,7 +30,7 @@ const pill: React.CSSProperties = {
 
 export default function InteractionPopup({
   initialName = '',
-  initialType = 'Click',
+  initialType = 'click',
   initialResult = 'filter',
   initialTargets = [],
   availableTargets,
@@ -123,26 +123,30 @@ export default function InteractionPopup({
       >
         <div style={pill}>Trigger</div>
         <div style={{ display: 'flex', gap: 12 }}>
-          {(['Hover', 'Click'] as InteractionType[]).map((t) => (
-            <label
-              key={t}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                cursor: 'pointer',
-              }}
-            >
-              <input
-                type="radio"
-                name="int-trigger"
-                value={t}
-                checked={trigger === t}
-                onChange={() => setTrigger(t)}
-              />
-              {t}
-            </label>
-          ))}
+          {(['hover', 'click'] as InteractionType[]).map((t) => {
+            const label = t.charAt(0).toUpperCase() + t.slice(1); // → Hover / Click
+
+            return (
+              <label
+                key={t}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  cursor: 'pointer',
+                }}
+              >
+                <input
+                  type="radio"
+                  name="int-trigger"
+                  value={t}
+                  checked={trigger === t}
+                  onChange={() => setTrigger(t)}
+                />
+                {label}
+              </label>
+            );
+          })}
         </div>
       </div>
 
