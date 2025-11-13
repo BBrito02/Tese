@@ -123,7 +123,7 @@ export default function InteractionPopup({
       >
         <div style={pill}>Trigger</div>
         <div style={{ display: 'flex', gap: 12 }}>
-          {(['Click', 'Hover'] as InteractionType[]).map((t) => (
+          {(['Hover', 'Click'] as InteractionType[]).map((t) => (
             <label
               key={t}
               style={{

@@ -74,14 +74,14 @@ export default function DashboardMenu(p: KindProps) {
       <ListSection
         title="Interaction list"
         items={interactionLabels}
-        // onAdd={() => {
-        //   window.dispatchEvent(
-        //     new CustomEvent('designer:open-interactions', {
-        //       detail: { nodeId: p.node.id },
-        //     })
-        //   );
-        // }}
-        onAdd={() => {}}
+        onAdd={() => {
+          window.dispatchEvent(
+            new CustomEvent('designer:open-interactions', {
+              detail: { nodeId: p.node.id },
+            })
+          );
+        }}
+        //onAdd={() => {}}
         addTooltip="Add interaction"
         disabled={disabled}
       />
