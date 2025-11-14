@@ -1,5 +1,5 @@
 // src/canvas/edges/InteractionEdge.tsx
-import { BaseEdge, EdgeLabelRenderer, type EdgeProps } from 'reactflow';
+import { EdgeLabelRenderer, type EdgeProps } from 'reactflow';
 import { activationIcons, type ActivationKey } from '../../domain/icons';
 import { useObstacles, routeOrthogonalAvoiding } from './obstacleRouter';
 
@@ -46,7 +46,7 @@ export default function InteractionEdge(props: EdgeProps) {
     (data?.sourceSide as 'left' | 'right') ??
     (targetX >= sourceX ? 'right' : 'left');
 
-  // fan-out alignment (same as before)
+  // fan-out alignment
   const siblings = Math.max(1, Number(data?.siblings ?? 1));
   const ordinal = Math.min(
     Math.max(0, Number(data?.ordinal ?? 0)),
@@ -54,10 +54,10 @@ export default function InteractionEdge(props: EdgeProps) {
   );
   const centerOffset = (ordinal - (siblings - 1) / 2) * V_STACK;
 
-  // build obstacle list (exclude this edge's endpoints and their nodes)
+  // obstacle list (exclude this edge's endpoints and their nodes)
   const obstacles = useObstacles(source, target, 8);
 
-  // obstacle-aware orthogonal route (same API as TooltipEdge)
+  // obstacle-aware orthogonal route
   const routed = routeOrthogonalAvoiding(
     { x: sourceX, y: sourceY + centerOffset },
     { x: targetX, y: targetY },
@@ -73,7 +73,6 @@ export default function InteractionEdge(props: EdgeProps) {
     }
   );
 
-  // compose identical leg structure used in TooltipEdge
   const leg1 = `M ${sourceX} ${sourceY + centerOffset} L ${routed.exitX} ${
     routed.exitY
   }`;
@@ -95,7 +94,7 @@ export default function InteractionEdge(props: EdgeProps) {
 
   const path = `${leg1} ${leg2} ${leg3} ${leg4} ${leg5} ${leg6}`;
 
-  // source activation icon (unchanged)
+  // source activation icon
   const activation = (data?.activation ?? data?.trigger) as
     | ActivationKey
     | undefined;
@@ -108,7 +107,6 @@ export default function InteractionEdge(props: EdgeProps) {
   const iconCx = side === 'right' ? sourceX + OUTSET : sourceX - OUTSET;
   const iconCy = routed.exitY;
 
-  // arrow marker at target end
   const markerId = `interaction-arrow-${id}`;
 
   return (
@@ -127,19 +125,45 @@ export default function InteractionEdge(props: EdgeProps) {
         </marker>
       </defs>
 
-      <BaseEdge
-        id={id}
-        path={path}
-        interactionWidth={24}
-        markerEnd={`url(#${markerId})`}
-        style={{
-          stroke: STROKE,
-          strokeWidth: 1.5,
-          strokeDasharray: '4 4', // keep dashed look for InteractionEdge
-          ...style,
+      {/* CLICKABLE EDGE GROUP */}
+      <g
+        onClick={(e) => {
+          e.stopPropagation();
+          window.dispatchEvent(
+            new CustomEvent('designer:select-edge', {
+              detail: {
+                edgeId: id,
+                type: 'interaction',
+                data,
+              },
+            })
+          );
         }}
-      />
+        style={{ cursor: 'pointer' }}
+      >
+        {/* Wide, invisible hit-area for easy clicking */}
+        <path
+          d={path}
+          stroke="transparent"
+          strokeWidth={24}
+          fill="none"
+          pointerEvents="stroke"
+        />
 
+        {/* Visible dashed stroke */}
+        <path
+          d={path}
+          stroke={STROKE}
+          strokeWidth={1.5}
+          strokeDasharray="4 4"
+          fill="none"
+          markerEnd={`url(#${markerId})`}
+          pointerEvents="none"
+          style={style}
+        />
+      </g>
+
+      {/* Activation icon */}
       <EdgeLabelRenderer>
         <div
           style={{

@@ -152,6 +152,11 @@ const EXTRA_COLLAPSED_GAP = 18;
 // Handy aliases for readability (not for hook generics)
 type AppNode = RFNode<NodeData>;
 type AppEdge = RFEdge<any>;
+type SelectedEdgeInfo = {
+  id: string;
+  type: 'tooltip' | 'interaction';
+  data: any;
+};
 
 /** Small util: remove file extension. */
 const baseFrom = (name: string) => name.replace(/\.[^.]+$/, '');
@@ -226,6 +231,9 @@ export default function Editor() {
   // UI state
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedEdge, setSelectedEdge] = useState<SelectedEdgeInfo | null>(
+    null
+  );
   const [menuExiting, setMenuExiting] = useState(false);
   const [menuWidth, setMenuWidth] = useState<number>(PANEL_WIDTH);
   const [lassoMode, setLassoMode] = useState(false);
@@ -274,6 +282,36 @@ export default function Editor() {
     Array.from(new Set([...(a ?? []), ...(b ?? [])]));
 
   /* ---------- Menu animation width sync ---------- */
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { edgeId, type, data } =
+        (
+          e as CustomEvent<{
+            edgeId: string;
+            type: 'tooltip' | 'interaction';
+            data: any;
+          }>
+        ).detail || {};
+
+      if (!edgeId) return;
+
+      console.log('[designer:select-edge]', edgeId, type, data);
+
+      // deselect nodes when an edge is clicked
+      setSelectedId(null);
+
+      // store edge selection
+      setSelectedEdge({ id: edgeId, type, data });
+    };
+
+    window.addEventListener('designer:select-edge', handler as EventListener);
+    return () =>
+      window.removeEventListener(
+        'designer:select-edge',
+        handler as EventListener
+      );
+  }, []);
 
   useEffect(() => {
     function onEnsureVV(e: Event) {
@@ -2046,7 +2084,10 @@ export default function Editor() {
             onMove={() => {
               handleMove();
             }}
-            onPaneClick={() => setSelectedId(null)}
+            onPaneClick={() => {
+              setSelectedId(null);
+              setSelectedEdge(null);
+            }}
             fitView
           >
             <Background />

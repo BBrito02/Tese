@@ -1,5 +1,5 @@
 // src/canvas/edges/TooltipEdge.tsx
-import { BaseEdge, EdgeLabelRenderer, type EdgeProps } from 'reactflow';
+import { EdgeLabelRenderer, type EdgeProps } from 'reactflow';
 import { activationIcons, type ActivationKey } from '../../domain/icons';
 import { useObstacles, routeOrthogonalAvoiding } from './obstacleRouter';
 
@@ -116,25 +116,51 @@ export default function TooltipEdge(props: EdgeProps) {
         </marker>
       </defs>
 
-      <BaseEdge
-        id={id}
-        path={path}
-        interactionWidth={24}
-        markerEnd={`url(#${markerId})`}
-        style={{
-          stroke: STROKE,
-          strokeWidth: 1.5,
-          ...style,
+      {/* CLICKABLE EDGE GROUP */}
+      <g
+        onClick={(e) => {
+          e.stopPropagation();
+          window.dispatchEvent(
+            new CustomEvent('designer:select-edge', {
+              detail: {
+                edgeId: id,
+                type: 'tooltip',
+                data,
+              },
+            })
+          );
         }}
-      />
+        style={{ cursor: 'pointer' }}
+      >
+        {/* Wider invisible hit-area for easier clicking */}
+        <path
+          d={path}
+          stroke="transparent"
+          strokeWidth={24}
+          fill="none"
+          pointerEvents="stroke"
+        />
 
+        {/* Visible stroke */}
+        <path
+          d={path}
+          stroke={STROKE}
+          strokeWidth={1.5}
+          fill="none"
+          markerEnd={`url(#${markerId})`}
+          pointerEvents="none"
+          style={style}
+        />
+      </g>
+
+      {/* Activation icon */}
       <EdgeLabelRenderer>
         <div
           style={{
             position: 'absolute',
             transform: `translate(-50%, -50%) translate(${iconCx}px, ${iconCy}px)`,
             zIndex: 100000,
-            pointerEvents: 'none',
+            pointerEvents: 'none', // important: don't block clicks on the edge
             userSelect: 'none',
           }}
         >
