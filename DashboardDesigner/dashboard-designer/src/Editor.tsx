@@ -1146,9 +1146,17 @@ export default function Editor() {
               })
             : [];
 
+          const isGraph = nd.kind === 'Graph';
+          const graphType = nd.graphType as string | undefined;
+
+          const title =
+            isGraph && graphType
+              ? `${graphType} Graph` // e.g. "Area Graph", "Bars Graph"
+              : nd.title || n.id;
+
           return {
             id: n.id,
-            title: nd.title || n.id,
+            title, // 👈 this is what InteractionPopup will show
             kind: nd.kind || 'Node',
             badge: nd.badge,
             parentId: n.parentNode as string | undefined,
