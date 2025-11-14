@@ -1131,12 +1131,30 @@ export default function Editor() {
       // All possible *targets* for the interaction (any other node)
       const targets = (nodes as AppNode[])
         .filter((n) => n.id !== sourceId)
-        .map((n) => ({
-          id: n.id,
-          title: (n.data as any)?.title || n.id,
-          kind: (n.data as any)?.kind || 'Node',
-          badge: (n.data as any)?.badge as string | undefined,
-        }));
+        .map((n) => {
+          const nd = n.data as any;
+
+          const dataAttrs = Array.isArray(nd.data)
+            ? nd.data.map((v: any) => {
+                const label = typeof v === 'string' ? v : v.name;
+                const ref = label
+                  .toLowerCase()
+                  .trim()
+                  .replace(/\s+/g, '-')
+                  .replace(/[^a-z0-9_-]/g, '');
+                return { ref, label };
+              })
+            : [];
+
+          return {
+            id: n.id,
+            title: nd.title || n.id,
+            kind: nd.kind || 'Node',
+            badge: nd.badge,
+            parentId: n.parentNode as string | undefined,
+            dataAttributes: dataAttrs,
+          };
+        });
 
       // Data attributes available on the source component (if any)
       const rawData = (source.data as any)?.data;
