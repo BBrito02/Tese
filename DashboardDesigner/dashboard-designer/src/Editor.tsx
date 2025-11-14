@@ -1011,12 +1011,15 @@ export default function Editor() {
   }
 
   /** Centralized cleanup: delete nodes (plus descendants), clean edges and related labels. */
+  /** Centralized cleanup: delete nodes (plus descendants), clean edges and related labels + interactions. */
   function pruneAfterRemoval(initialIds: string[]) {
     setNodes((nds) => {
       const all = nds as AppNode[];
       const base = new Set<string>(initialIds);
 
-      // If a Visualization is deleted, also delete its Tooltip nodes attached to it
+      // -------------------------------------------------------------------
+      // 1. If a Visualization is deleted, also delete its Tooltip nodes
+      // -------------------------------------------------------------------
       for (const id of Array.from(base)) {
         const n = all.find((x) => x.id === id);
         if (n?.data?.kind === 'Visualization') {
@@ -1031,11 +1034,16 @@ export default function Editor() {
         }
       }
 
-      // Collect descendants of all roots to delete
+      // -------------------------------------------------------------------
+      // 2. Collect all descendants (legend children, graph children, etc.)
+      // -------------------------------------------------------------------
       const toDelete = collectDescendants(all, base);
 
-      // Gather tooltip labels to remove from visualizations
+      // -------------------------------------------------------------------
+      // 3. Track tooltip labels that must be removed from Visualizations
+      // -------------------------------------------------------------------
       const labelsByViz = new Map<string, Set<string>>();
+
       for (const tip of all) {
         if (!toDelete.has(tip.id)) continue;
         if (tip.data?.kind !== 'Tooltip') continue;
@@ -1043,27 +1051,35 @@ export default function Editor() {
         const attachedTo = (tip.data as any)?.attachedTo as string | undefined;
         const badge = (tip.data as any)?.badge as string | undefined;
         const title = (tip.data as any)?.title as string | undefined;
+
         if (!attachedTo || !title) continue;
 
         const label = `${badge ? badge + ' ' : ''}${title}`;
-        if (!labelsByViz.has(attachedTo))
-          labelsByViz.set(attachedTo, new Set());
+
+        if (!labelsByViz.has(attachedTo)) {
+          labelsByViz.set(attachedTo, new Set<string>());
+        }
         labelsByViz.get(attachedTo)!.add(label);
       }
 
-      // Keep nodes not deleted
+      // -------------------------------------------------------------------
+      // 4. Remove deleted nodes
+      // -------------------------------------------------------------------
       let kept = all.filter((n) => !toDelete.has(n.id));
 
-      // Remove tooltip labels from affected visualizations
+      // -------------------------------------------------------------------
+      // 5. Prune tooltip labels inside Visualizations
+      // -------------------------------------------------------------------
       kept = kept.map((n) => {
         if (n.data?.kind !== 'Visualization') return n;
-        const toPrune = labelsByViz.get(n.id);
-        if (!toPrune?.size) return n;
+        const pruneSet = labelsByViz.get(n.id);
+        if (!pruneSet?.size) return n;
 
         const current = Array.isArray((n.data as any)?.tooltips)
           ? ([...(n.data as any).tooltips] as string[])
           : [];
-        const pruned = current.filter((lbl) => !toPrune.has(lbl));
+
+        const pruned = current.filter((lbl) => !pruneSet.has(lbl));
         if (pruned.length === current.length) return n;
 
         return {
@@ -1072,17 +1088,62 @@ export default function Editor() {
         } as AppNode;
       });
 
-      // Remove edges touching deleted nodes
+      // -------------------------------------------------------------------
+      // 6. REMOVE INTERACTIONS THAT TARGET A DELETED NODE (IMPORTANT!)
+      // -------------------------------------------------------------------
+      kept = kept.map((n) => {
+        const d = n.data as any;
+        if (!d?.interactions) return n;
+
+        const cleaned = d.interactions.filter((ix: any) => {
+          // Remove if ANY target is deleted
+          const stillValid = ix.targets.every(
+            (tid: string) => !toDelete.has(tid)
+          );
+
+          if (!stillValid) return false;
+
+          // Also remove if the SOURCE is data attribute and that attribute no longer exists
+          if (ix.sourceType === 'data' && ix.sourceDataRef) {
+            const dataArr = Array.isArray(d.data) ? d.data : [];
+            const exists = dataArr.some((attr: any) =>
+              typeof attr === 'string'
+                ? attr === ix.sourceDataRef
+                : attr?.name === ix.sourceDataRef
+            );
+            if (!exists) return false;
+          }
+
+          return true;
+        });
+
+        if (cleaned.length === d.interactions.length) return n;
+
+        return {
+          ...n,
+          data: { ...d, interactions: cleaned },
+        } as AppNode;
+      });
+
+      // -------------------------------------------------------------------
+      // 7. Remove edges touching deleted nodes
+      // -------------------------------------------------------------------
       setEdges((eds) =>
         (eds as AppEdge[]).filter(
           (e) => !toDelete.has(e.source) && !toDelete.has(e.target)
         )
       );
 
-      // Clear selection if it was deleted
-      if (selectedId && toDelete.has(selectedId)) setSelectedId(null);
+      // -------------------------------------------------------------------
+      // 8. Reset selection if deleted
+      // -------------------------------------------------------------------
+      if (selectedId && toDelete.has(selectedId)) {
+        setSelectedId(null);
+      }
 
-      // Keep parent graphTypes in sync
+      // -------------------------------------------------------------------
+      // 9. Sync graph types for parent nodes (your original behavior)
+      // -------------------------------------------------------------------
       return syncParentGraphTypes(
         kept as AppNode[]
       ) as unknown as RFNode<NodeData>[];
