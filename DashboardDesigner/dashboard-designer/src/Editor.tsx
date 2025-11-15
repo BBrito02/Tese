@@ -79,6 +79,8 @@ import {
   FaRegSquare,
 } from 'react-icons/fa';
 import { FaHand } from 'react-icons/fa6';
+import InteractionEdgeMenu from './components/menus/InteractionEdgeMenu';
+import TooltipEdgeMenu from './components/menus/TooltipEdgeMenu';
 
 /* =========================
  *  Node/Edge component maps
@@ -231,9 +233,7 @@ export default function Editor() {
   // UI state
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [selectedEdge, setSelectedEdge] = useState<SelectedEdgeInfo | null>(
-    null
-  );
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [menuExiting, setMenuExiting] = useState(false);
   const [menuWidth, setMenuWidth] = useState<number>(PANEL_WIDTH);
   const [lassoMode, setLassoMode] = useState(false);
@@ -245,6 +245,27 @@ export default function Editor() {
   const { openModal, closeModal } = useModal();
 
   const [isConnecting, setIsConnecting] = useState(false);
+
+  const selectedEdge = useMemo(
+    () => edges.find((e) => e.id === selectedEdgeId) ?? null,
+    [edges, selectedEdgeId]
+  );
+
+  const selectedEdgeSource = useMemo(
+    () =>
+      selectedEdge
+        ? nodes.find((n) => n.id === selectedEdge.source)
+        : undefined,
+    [selectedEdge, nodes]
+  );
+
+  const selectedEdgeTarget = useMemo(
+    () =>
+      selectedEdge
+        ? nodes.find((n) => n.id === selectedEdge.target)
+        : undefined,
+    [selectedEdge, nodes]
+  );
 
   // Keep interaction edges fully visible (no dimming)
   const visibleEdges = useMemo(
@@ -284,32 +305,29 @@ export default function Editor() {
   /* ---------- Menu animation width sync ---------- */
 
   useEffect(() => {
-    const handler = (e: Event) => {
-      const { edgeId, type, data } =
-        (
-          e as CustomEvent<{
-            edgeId: string;
-            type: 'tooltip' | 'interaction';
-            data: any;
-          }>
-        ).detail || {};
+    const onSelectEdge = (e: Event) => {
+      const { edgeId, type } =
+        (e as CustomEvent<{ edgeId: string; type: 'tooltip' | 'interaction' }>)
+          .detail || {};
 
       if (!edgeId) return;
 
-      console.log('[designer:select-edge]', edgeId, type, data);
+      console.log('[Editor] select-edge', { edgeId, type });
 
-      // deselect nodes when an edge is clicked
+      // deselect nodes
       setSelectedId(null);
-
-      // store edge selection
-      setSelectedEdge({ id: edgeId, type, data });
+      // select the edge
+      setSelectedEdgeId(edgeId);
     };
 
-    window.addEventListener('designer:select-edge', handler as EventListener);
+    window.addEventListener(
+      'designer:select-edge',
+      onSelectEdge as EventListener
+    );
     return () =>
       window.removeEventListener(
         'designer:select-edge',
-        handler as EventListener
+        onSelectEdge as EventListener
       );
   }, []);
 
@@ -377,7 +395,10 @@ export default function Editor() {
 
   /** When entering lasso mode, clear selection. */
   useEffect(() => {
-    if (lassoMode) setSelectedId(null);
+    if (lassoMode) {
+      setSelectedId(null);
+      setSelectedEdgeId(null);
+    }
   }, [lassoMode]);
 
   /* ---------- Visual Variables popup wiring ---------- */
@@ -442,12 +463,36 @@ export default function Editor() {
 
   /** Keep a single node selected, or clear when multi/none. */
   const handleSelectionChange = useCallback(
-    ({ nodes: sel }: { nodes: RFNode<NodeData>[]; edges: any[] }) => {
-      if (lassoMode || sel.length !== 1) {
+    ({
+      nodes: selNodes,
+      edges: selEdges,
+    }: {
+      nodes: RFNode<NodeData>[];
+      edges: AppEdge[];
+    }) => {
+      if (lassoMode) {
         setSelectedId(null);
+        setSelectedEdgeId(null);
         return;
       }
-      setSelectedId(sel[0].id);
+
+      // exactly one node selected → node menu
+      if (selNodes.length === 1 && selEdges.length === 0) {
+        setSelectedId(selNodes[0].id);
+        setSelectedEdgeId(null);
+        return;
+      }
+
+      // exactly one edge selected → edge menu
+      if (selNodes.length === 0 && selEdges.length === 1) {
+        setSelectedId(null);
+        setSelectedEdgeId(selEdges[0].id);
+        return;
+      }
+
+      // multi-selection or none → clear both
+      setSelectedId(null);
+      setSelectedEdgeId(null);
     },
     [lassoMode]
   );
@@ -1912,13 +1957,29 @@ export default function Editor() {
         ? next.find((n) => n.id === selectedId)
         : null;
 
+      // If a tooltip edge is selected, treat its source viz as “active”
+      let vizIdFromEdge: string | null = null;
+      if (selectedEdgeId) {
+        const edge = (edges as AppEdge[]).find(
+          (e) => e.id === selectedEdgeId && e.type === 'tooltip'
+        );
+        if (edge) {
+          vizIdFromEdge = edge.source;
+        }
+      }
+
       for (const tip of next) {
         if (tip.data?.kind !== 'Tooltip') continue;
 
         const attachedTo = (tip.data as any)?.attachedTo as string | undefined;
         if (!attachedTo) continue;
 
-        const vizSelected = selectedId === attachedTo;
+        // visible when:
+        //  - its attached visualization is selected
+        //  - OR the tooltip edge for that visualization is selected
+        //  - OR the tooltip node / its descendants / viz descendants are selected
+        const vizSelected =
+          selectedId === attachedTo || vizIdFromEdge === attachedTo;
         const tipSelected = selectedId === tip.id;
         const tipChildSelected = selected
           ? isDescendant(selected, tip.id, next)
@@ -1930,25 +1991,28 @@ export default function Editor() {
 
         const visible =
           vizSelected || tipSelected || tipChildSelected || vizChildSelected;
+
         (tip as any).hidden = !visible;
 
         // propagate hide/show to tooltip descendants
         for (let i = 0; i < next.length; i++) {
           const child = next[i];
           if (isDescendant(child, tip.id, next)) {
-            if ((child as any).hidden !== !visible)
+            if ((child as any).hidden !== !visible) {
               next[i] = { ...child, hidden: !visible } as any;
+            }
           }
         }
       }
 
       return next as unknown as RFNode<NodeData>[];
     });
-  }, [selectedId, setNodes]);
+  }, [selectedId, selectedEdgeId, edges, setNodes]);
 
   /* ---------- top-right buttons offset when menu opens/closes ---------- */
 
-  const menuActive = Boolean(selectedId) || menuExiting;
+  const menuActive = Boolean(selectedId || selectedEdgeId) || menuExiting;
+
   const buttonsOffset = menuActive
     ? -(
         menuWidth +
@@ -2072,6 +2136,8 @@ export default function Editor() {
 
               if (selectedId && !nodes.find((n) => n.id === selectedId))
                 setSelectedId(null);
+              if (selectedEdgeId && !edges.find((e) => e.id === selectedEdgeId))
+                setSelectedEdgeId(null);
             }}
             onEdgesChange={onEdgesChange}
             onConnectStart={() => setIsConnecting(true)}
@@ -2086,7 +2152,7 @@ export default function Editor() {
             }}
             onPaneClick={() => {
               setSelectedId(null);
-              setSelectedEdge(null);
+              setSelectedEdgeId(null);
             }}
             fitView
           >
@@ -2138,10 +2204,10 @@ export default function Editor() {
           </div>
         </div>
 
-        {(selectedNode || menuExiting) && (
+        {selectedNode && (
           <ComponentsMenu
-            key={selectedNode?.id ?? 'components-menu'}
-            node={selectedNode as RFNode<NodeData> | undefined}
+            key={selectedNode.id}
+            node={selectedNode as RFNode<NodeData>}
             onChange={updateSelectedNode}
             onDelete={deleteSelectedNode}
             onOpen={(t) =>
@@ -2150,6 +2216,44 @@ export default function Editor() {
             parentData={parentDataForSelected}
           />
         )}
+
+        {!selectedNode && selectedEdge && selectedEdge.type === 'tooltip' && (
+          <TooltipEdgeMenu
+            edge={selectedEdge as AppEdge}
+            sourceTitle={
+              (selectedEdgeSource?.data as any)?.title ?? selectedEdge.source
+            }
+            targetTitle={
+              (selectedEdgeTarget?.data as any)?.title ?? selectedEdge.target
+            }
+            onDelete={() => {
+              setEdges((eds) =>
+                (eds as AppEdge[]).filter((e) => e.id !== selectedEdge.id)
+              );
+              setSelectedEdgeId(null);
+            }}
+          />
+        )}
+
+        {!selectedNode &&
+          selectedEdge &&
+          selectedEdge.type === 'interaction' && (
+            <InteractionEdgeMenu
+              edge={selectedEdge as AppEdge}
+              sourceTitle={
+                (selectedEdgeSource?.data as any)?.title ?? selectedEdge.source
+              }
+              targetTitle={
+                (selectedEdgeTarget?.data as any)?.title ?? selectedEdge.target
+              }
+              onDelete={() => {
+                setEdges((eds) =>
+                  (eds as AppEdge[]).filter((e) => e.id !== selectedEdge.id)
+                );
+                setSelectedEdgeId(null);
+              }}
+            />
+          )}
 
         <DragOverlay dropAnimation={{ duration: 150 }}>
           {dragPreview ? <NodeGhost payload={dragPreview} /> : null}
