@@ -1,7 +1,7 @@
 // src/components/menus/InteractionEdgeMenu.tsx
 import type { Edge as RFEdge } from 'reactflow';
 import EdgesMenu from './EdgesMenu';
-import { NameField, TypeField, ListSection, SectionTitle } from './sections';
+import { NameField, TypeField, SectionTitle } from './sections';
 
 type AppEdge = RFEdge<any>;
 
@@ -12,6 +12,12 @@ type Props = {
   onDelete?: () => void;
 };
 
+// Simple helper to capitalize the first letter
+const capitalize = (s: string) =>
+  typeof s === 'string' && s.length > 0
+    ? s.charAt(0).toUpperCase() + s.slice(1)
+    : s;
+
 export default function InteractionEdgeMenu({
   edge,
   sourceTitle,
@@ -21,22 +27,13 @@ export default function InteractionEdgeMenu({
   const data = (edge.data || {}) as any;
 
   const label = data.label ?? '';
-  const trigger = data.trigger ?? data.activation ?? 'click';
-  const sourceType = data.sourceType ?? data.sourceKind ?? 'component';
+  const trigger = capitalize(data.trigger ?? data.activation ?? 'click');
   const sourceHandle = data.sourceHandle ?? '';
   const sourceDataRef = data.sourceDataRef ?? '';
-  const result = data.result ?? 'filter';
+  const result = capitalize(data.result ?? 'filter');
 
   const fromLabel = sourceTitle ?? edge.source;
   const toLabel = targetTitle ?? edge.target;
-
-  // Lists for ListSection
-  const connectionItems: string[] = [`From · ${fromLabel}`, `To · ${toLabel}`];
-
-  const behaviourItems: string[] = [
-    `Trigger · ${trigger}`,
-    `Source type · ${sourceType}`,
-  ];
 
   const technicalItems: string[] = [`Edge id · ${edge.id}`];
   if (label) technicalItems.push(`Label · ${label}`);
@@ -45,21 +42,20 @@ export default function InteractionEdgeMenu({
 
   return (
     <EdgesMenu>
-      {/* Title / header – same pattern as other menus */}
       <div style={{ fontWeight: 700, textAlign: 'center' }}>
         Interaction Edge
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <SectionTitle>Properties</SectionTitle>
+
         <NameField
           value={label || `${fromLabel} → ${toLabel}`}
           placeholder="Interaction name"
           disabled={true}
-          onChange={() => {
-            /* read-only for now */
-          }}
+          onChange={() => {}}
         />
+
         <TypeField value="Interaction" label="Edge type" />
 
         <SectionTitle>Connection</SectionTitle>
@@ -68,13 +64,12 @@ export default function InteractionEdgeMenu({
         <TypeField value={trigger} label="Activation" />
         <TypeField value={result} label="Result" />
       </div>
-      {/* Footer – same delete style as node menus */}
+
       {onDelete && (
         <div
           style={{
             marginTop: 'auto',
             paddingTop: 12,
-            borderTop: '1px solid #e5e7eb',
           }}
         >
           <button

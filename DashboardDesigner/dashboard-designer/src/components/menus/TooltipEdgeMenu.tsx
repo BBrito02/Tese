@@ -20,8 +20,14 @@ export default function TooltipEdgeMenu({
 }: Props) {
   const data = (edge.data || {}) as any;
 
+  // Simple helper to capitalize the first letter
+  const capitalize = (s: string) =>
+    typeof s === 'string' && s.length > 0
+      ? s.charAt(0).toUpperCase() + s.slice(1)
+      : s;
+
   const label = data.label ?? '';
-  const activation = data.activation ?? 'hover';
+  const activation = capitalize(data.activation ?? 'hover');
 
   const fromLabel = sourceTitle ?? edge.source;
   const toLabel = targetTitle ?? edge.target;
