@@ -215,7 +215,25 @@ export default function BaseNodeShell({
                 {label}
               </button>
 
-              {/* two action-specific handles under the pill */}
+              {/* TARGET handle for incoming interactions to this data attribute */}
+              <Handle
+                id={handleId}
+                type="target"
+                position={Position.Top}
+                className="nodrag nopan"
+                style={{
+                  position: 'absolute',
+                  left: '50%',
+                  top: -3,
+                  transform: 'translateX(-50%)',
+                  borderWidth: 1,
+                  borderStyle: 'solid',
+                  borderColor: '#222',
+                  background: '#111',
+                }}
+              />
+
+              {/* two action-specific SOURCE handles under the pill */}
               <Handle
                 id={`${handleId}:click`}
                 type="source"

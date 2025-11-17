@@ -1273,7 +1273,7 @@ export default function Editor() {
       if (!source) return;
 
       // All possible *targets* for the interaction (any other node)
-      const targets = (nodes as AppNode[])
+      const availableTargets = (nodes as AppNode[])
         .filter((n) => n.id !== sourceId)
         .map((n) => {
           const nd = n.data as any;
@@ -1300,7 +1300,7 @@ export default function Editor() {
 
           return {
             id: n.id,
-            title, // 👈 this is what InteractionPopup will show
+            title,
             kind: nd.kind || 'Node',
             badge: nd.badge,
             parentId: n.parentNode as string | undefined,
@@ -1308,7 +1308,7 @@ export default function Editor() {
           };
         });
 
-      // Data attributes available on the source component (if any)
+      // Data attributes available on the SOURCE component (if any)
       const rawData = (source.data as any)?.data;
       const dataAttributes = Array.isArray(rawData)
         ? (rawData as (string | DataItem)[])
@@ -1334,16 +1334,17 @@ export default function Editor() {
         title: 'Add interaction',
         node: (
           <InteractionPopup
-            availableTargets={targets}
+            availableTargets={availableTargets}
             dataAttributes={dataAttributes}
             onCancel={closeModal}
             onSave={({
               name,
               trigger,
               result,
-              targets,
+              targets: targetNodeIds,
               sourceType,
               sourceDataRef,
+              targetDetails,
             }) => {
               // 1) Persist on source node (in data.interactions)
               setNodes((nds) => {
@@ -1360,7 +1361,7 @@ export default function Editor() {
                     name,
                     trigger,
                     result,
-                    targets,
+                    targets: targetNodeIds, // only node ids in the domain model
                   });
                   next[i] = {
                     ...next[i],
@@ -1379,41 +1380,61 @@ export default function Editor() {
                   ? `${sourceId}:act:${trigger}`
                   : `data:${slug(sourceDataRef ?? '')}:${trigger}`;
 
-              // 3) Draw edges (one per target)
+              // 3) Draw edges (one per target – including data attributes)
               setEdges((eds) => {
-                const add = targets
-                  .filter(
-                    (tid) =>
-                      !(eds as AppEdge[]).some(
-                        (e) =>
-                          e.type === 'interaction' &&
-                          e.source === sourceId &&
-                          e.target === tid &&
-                          (e.data as any)?.label === name
-                      )
-                  )
-                  .map(
-                    (tid) =>
-                      ({
-                        id: `ix-${sourceId}-${tid}-${nanoid(4)}`,
-                        source: sourceId,
-                        sourceHandle: sourceHandleId,
-                        target: tid,
-                        type: 'interaction',
-                        data: {
-                          kind: 'interaction-link',
-                          label: name,
-                          trigger,
-                          sourceHandle: sourceHandleId,
-                          sourceType,
-                          ...(sourceType === 'data' && sourceDataRef
-                            ? { sourceDataRef }
-                            : {}),
-                        },
-                      } as AppEdge)
-                  );
+                const current = eds as AppEdge[];
+                const add: AppEdge[] = [];
 
-                return (eds as AppEdge[]).concat(add) as any;
+                (targetDetails || []).forEach(
+                  ({ targetId, targetType, targetDataRef }) => {
+                    const targetHandle =
+                      targetType === 'data' && targetDataRef
+                        ? `data:${targetDataRef}` // matches BaseNodeShell DataPills target handle
+                        : undefined;
+
+                    const alreadyExists = current.some((e) => {
+                      if (e.type !== 'interaction') return false;
+                      if (e.source !== sourceId || e.target !== targetId)
+                        return false;
+                      const ed = (e.data || {}) as any;
+                      if (ed.label !== name) return false;
+                      if (
+                        targetHandle &&
+                        e.targetHandle &&
+                        e.targetHandle !== targetHandle
+                      )
+                        return false;
+                      return true;
+                    });
+
+                    if (alreadyExists) return;
+
+                    add.push({
+                      id: `ix-${sourceId}-${targetId}-${nanoid(4)}`,
+                      source: sourceId,
+                      sourceHandle: sourceHandleId,
+                      target: targetId,
+                      ...(targetHandle ? { targetHandle } : {}),
+                      type: 'interaction',
+                      data: {
+                        kind: 'interaction-link',
+                        label: name,
+                        trigger,
+                        sourceHandle: sourceHandleId,
+                        sourceType,
+                        ...(sourceType === 'data' && sourceDataRef
+                          ? { sourceDataRef }
+                          : {}),
+                        targetType,
+                        ...(targetType === 'data' && targetDataRef
+                          ? { targetDataRef }
+                          : {}),
+                      },
+                    } as AppEdge);
+                  }
+                );
+
+                return current.concat(add) as any;
               });
 
               closeModal();
