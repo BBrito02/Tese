@@ -136,7 +136,7 @@ export default function TooltipEdge(props: EdgeProps) {
         <path
           d={path}
           stroke="transparent"
-          strokeWidth={24}
+          strokeWidth={10}
           fill="none"
           pointerEvents="stroke"
         />

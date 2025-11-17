@@ -145,7 +145,7 @@ export default function InteractionEdge(props: EdgeProps) {
         <path
           d={path}
           stroke="transparent"
-          strokeWidth={24}
+          strokeWidth={10}
           fill="none"
           pointerEvents="stroke"
         />
