@@ -1,8 +1,7 @@
 // src/components/menus/TooltipEdgeMenu.tsx
-import { useEffect } from 'react';
 import type { Edge as RFEdge } from 'reactflow';
-
-const PANEL_WIDTH = 280;
+import EdgesMenu from './EdgesMenu';
+import { NameField, TypeField, ListSection, SectionTitle } from './sections';
 
 type AppEdge = RFEdge<any>;
 
@@ -19,81 +18,61 @@ export default function TooltipEdgeMenu({
   targetTitle,
   onDelete,
 }: Props) {
-  // keep Save/Load buttons aligned with the panel width
-  useEffect(() => {
-    window.dispatchEvent(
-      new CustomEvent('designer:menu-width', {
-        detail: { width: PANEL_WIDTH },
-      })
-    );
-  }, []);
-
   const data = (edge.data || {}) as any;
 
+  const label = data.label ?? '';
   const activation = data.activation ?? 'hover';
   const attachRef = data.attachRef ?? 'viz';
 
+  const fromLabel = sourceTitle ?? edge.source;
+  const toLabel = targetTitle ?? edge.target;
+
+  const connectionItems: string[] = [`From · ${fromLabel}`, `To · ${toLabel}`];
+
+  const behaviourItems: string[] = [
+    `Activation · ${activation}`,
+    `Attach to · ${attachRef}`,
+  ];
+
+  const technicalItems: string[] = [`Edge id · ${edge.id}`];
+  if (label) technicalItems.push(`Label · ${label}`);
+
   return (
-    <aside
-      style={{
-        width: PANEL_WIDTH,
-        minWidth: PANEL_WIDTH,
-        maxWidth: PANEL_WIDTH,
-        borderLeft: '1px solid #e5e7eb',
-        background: '#f9fafb',
-        display: 'flex',
-        flexDirection: 'column',
-        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
-      }}
-    >
-      {/* Header */}
-      <div
-        style={{
-          padding: '10px 12px',
-          borderBottom: '1px solid #e5e7eb',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 4,
-        }}
-      >
-        <div
-          style={{
-            fontSize: 13,
-            letterSpacing: 0.06,
-            textTransform: 'uppercase',
-            color: '#6b7280',
-          }}
-        >
-          Tooltip link
-        </div>
-        <div style={{ fontSize: 16, fontWeight: 600 }}>Edge details</div>
+    <EdgesMenu>
+      {/* Title / header */}
+      <div style={{ fontWeight: 700, textAlign: 'center', marginBottom: 8 }}>
+        Tooltip Edge
       </div>
 
-      {/* Content */}
-      <div
-        style={{
-          padding: 12,
-          paddingBottom: 16,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 10,
-          fontSize: 13,
-          color: '#111827',
+      <SectionTitle>Properties</SectionTitle>
+      <NameField
+        value={label || `${fromLabel} → ${toLabel}`}
+        placeholder="Tooltip name"
+        disabled={true}
+        onChange={() => {
+          /* read-only for now */
         }}
-      >
-        <Field label="Edge id" value={edge.id} />
-        <Field label="Source" value={sourceTitle ?? edge.source} />
-        <Field label="Target" value={targetTitle ?? edge.target} />
-        <Field label="Activation" value={String(activation)} />
-        <Field label="Attach to" value={String(attachRef)} />
-      </div>
+      />
+      <TypeField value="Tooltip" />
 
-      {/* Footer */}
+      <SectionTitle>Connection</SectionTitle>
+      <ListSection title="Nodes" items={connectionItems} />
+
+      <SectionTitle>Tooltip behaviour</SectionTitle>
+      <ListSection title="Behaviour" items={behaviourItems} />
+
+      {technicalItems.length > 0 && (
+        <>
+          <SectionTitle>Technical details</SectionTitle>
+          <ListSection title="Edge metadata" items={technicalItems} />
+        </>
+      )}
+
       {onDelete && (
         <div
           style={{
             marginTop: 'auto',
-            padding: 12,
+            paddingTop: 12,
             borderTop: '1px solid #e5e7eb',
           }}
         >
@@ -102,11 +81,11 @@ export default function TooltipEdgeMenu({
             onClick={onDelete}
             style={{
               width: '100%',
-              padding: '6px 10px',
-              borderRadius: 6,
+              padding: '8px 10px',
+              borderRadius: 8,
               border: '1px solid #ef4444',
-              background: '#fef2f2',
-              color: '#b91c1c',
+              background: 'white',
+              color: '#ef4444',
               fontSize: 13,
               cursor: 'pointer',
             }}
@@ -115,25 +94,6 @@ export default function TooltipEdgeMenu({
           </button>
         </div>
       )}
-    </aside>
-  );
-}
-
-function Field({ label, value }: { label: string; value?: string }) {
-  if (!value && value !== '') return null;
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <span
-        style={{
-          fontSize: 11,
-          textTransform: 'uppercase',
-          letterSpacing: 0.04,
-          color: '#6b7280',
-        }}
-      >
-        {label}
-      </span>
-      <span style={{ fontSize: 13, color: '#111827' }}>{value}</span>
-    </div>
+    </EdgesMenu>
   );
 }
