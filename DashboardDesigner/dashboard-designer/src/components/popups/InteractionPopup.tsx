@@ -469,7 +469,8 @@ export default function InteractionPopup({
         >
           <option value="filter">Filtering</option>
           <option value="highlight">Highlighting</option>
-          <option value="link">Dashboard Link</option>
+          <option value="dashboard">Dashboard</option>
+          <option value="link">Link</option>
         </select>
       </section>
 
