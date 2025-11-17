@@ -1,7 +1,9 @@
 // src/components/menus/TooltipEdgeMenu.tsx
+import { useEffect, useState } from 'react';
 import type { Edge as RFEdge } from 'reactflow';
-import EdgesMenu from './EdgesMenu';
-import { NameField, TypeField, ListSection, SectionTitle } from './sections';
+import { NameField, TypeField, SectionTitle } from './sections';
+
+const PANEL_WIDTH = 280;
 
 type AppEdge = RFEdge<any>;
 
@@ -10,6 +12,7 @@ type Props = {
   sourceTitle?: string;
   targetTitle?: string;
   onDelete?: () => void;
+  onChange?: (patch: { label?: string }) => void; // NEW
 };
 
 export default function TooltipEdgeMenu({
@@ -17,83 +20,87 @@ export default function TooltipEdgeMenu({
   sourceTitle,
   targetTitle,
   onDelete,
+  onChange,
 }: Props) {
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent('designer:menu-width', {
+        detail: { width: PANEL_WIDTH },
+      })
+    );
+  }, []);
+
   const data = (edge.data || {}) as any;
 
-  const label = data.label ?? '';
   const activation = data.activation ?? 'hover';
   const attachRef = data.attachRef ?? 'viz';
 
-  const fromLabel = sourceTitle ?? edge.source;
-  const toLabel = targetTitle ?? edge.target;
+  // --- editable name coming from edge.data.label ---
+  const [name, setName] = useState<string>(data.label ?? '');
 
-  const connectionItems: string[] = [`From · ${fromLabel}`, `To · ${toLabel}`];
-
-  const behaviourItems: string[] = [
-    `Activation · ${activation}`,
-    `Attach to · ${attachRef}`,
-  ];
-
-  const technicalItems: string[] = [`Edge id · ${edge.id}`];
-  if (label) technicalItems.push(`Label · ${label}`);
+  useEffect(() => {
+    // keep in sync if a different edge gets selected
+    setName(data.label ?? '');
+  }, [edge.id, data.label]);
 
   return (
-    <EdgesMenu>
-      {/* Title / header */}
-      <div style={{ fontWeight: 700, textAlign: 'center', marginBottom: 8 }}>
-        Tooltip Edge
+    <aside
+      style={{
+        width: PANEL_WIDTH,
+        minWidth: PANEL_WIDTH,
+        maxWidth: PANEL_WIDTH,
+        borderLeft: '1px solid #e5e7eb',
+        background: '#fafafa',
+        display: 'flex',
+        flexDirection: 'column',
+        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+        borderRadius: 20,
+        marginTop: 7,
+        marginBottom: 7,
+        padding: 12,
+        boxSizing: 'border-box',
+      }}
+    >
+      {/* Header – mimics your node menus */}
+      <div
+        style={{
+          fontWeight: 700,
+          textAlign: 'center',
+          marginBottom: 8,
+        }}
+      >
+        EDGE MENU
       </div>
 
       <SectionTitle>Properties</SectionTitle>
-      <NameField
-        value={label || `${fromLabel} → ${toLabel}`}
-        placeholder="Tooltip name"
-        disabled={true}
-        onChange={() => {
-          /* read-only for now */
-        }}
-      />
-      <TypeField value="Tooltip" />
 
-      <SectionTitle>Connection</SectionTitle>
-      <ListSection title="Nodes" items={connectionItems} />
+      {/* Type: tooltip/trigger/source/target */}
+      <TypeField value="Tooltip edge" />
+      <TypeField value={`Trigger: ${String(activation)}`} />
+      <TypeField value={`Attach: ${String(attachRef)}`} />
+      <TypeField value={`Source: ${sourceTitle ?? edge.source}`} />
+      <TypeField value={`Target: ${targetTitle ?? edge.target}`} />
 
-      <SectionTitle>Tooltip behaviour</SectionTitle>
-      <ListSection title="Behaviour" items={behaviourItems} />
-
-      {technicalItems.length > 0 && (
-        <>
-          <SectionTitle>Technical details</SectionTitle>
-          <ListSection title="Edge metadata" items={technicalItems} />
-        </>
-      )}
-
+      {/* Footer */}
       {onDelete && (
-        <div
+        <button
+          type="button"
+          onClick={onDelete}
           style={{
-            marginTop: 'auto',
-            paddingTop: 12,
-            borderTop: '1px solid #e5e7eb',
+            marginTop: 16,
+            width: '100%',
+            padding: '8px 10px',
+            borderRadius: 8,
+            border: '1px solid #ef4444',
+            background: '#fef2f2',
+            color: '#b91c1c',
+            fontSize: 13,
+            cursor: 'pointer',
           }}
         >
-          <button
-            type="button"
-            onClick={onDelete}
-            style={{
-              width: '100%',
-              padding: '8px 10px',
-              borderRadius: 8,
-              border: '1px solid #ef4444',
-              background: 'white',
-              color: '#ef4444',
-              fontSize: 13,
-              cursor: 'pointer',
-            }}
-          >
-            Delete tooltip edge
-          </button>
-        </div>
+          Delete tooltip edge
+        </button>
       )}
-    </EdgesMenu>
+    </aside>
   );
 }

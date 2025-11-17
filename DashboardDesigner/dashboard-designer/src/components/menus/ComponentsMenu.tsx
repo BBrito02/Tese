@@ -119,7 +119,9 @@ export default function ComponentsMenu({
         display: 'flex',
         flexDirection: 'column',
         gap: 8,
-        zIndex: 1000, // stay above canvas & buttons
+        zIndex: 1000,
+        fontFamily:
+          'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       }}
     >
       {/* toggle */}

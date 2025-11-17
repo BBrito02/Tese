@@ -312,11 +312,15 @@ export default function Editor() {
 
       if (!edgeId) return;
 
-      console.log('[Editor] select-edge', { edgeId, type });
+      const edge = (edges as AppEdge[]).find((ed) => ed.id === edgeId);
 
-      // deselect nodes
+      console.log('[Editor] edge selected', {
+        edgeId,
+        type,
+        edge,
+      });
+
       setSelectedId(null);
-      // select the edge
       setSelectedEdgeId(edgeId);
     };
 
@@ -329,7 +333,7 @@ export default function Editor() {
         'designer:select-edge',
         onSelectEdge as EventListener
       );
-  }, []);
+  }, [edges]);
 
   useEffect(() => {
     function onEnsureVV(e: Event) {
@@ -1341,11 +1345,13 @@ export default function Editor() {
               name,
               trigger,
               result,
-              targets: targetNodeIds,
+              targets,
               sourceType,
               sourceDataRef,
-              targetDetails,
             }) => {
+              // Create a stable interaction id
+              const interactionId = nanoid();
+
               // 1) Persist on source node (in data.interactions)
               setNodes((nds) => {
                 const next = (nds as AppNode[]).map((n) => ({ ...n }));
@@ -1357,11 +1363,11 @@ export default function Editor() {
                     ? ([...(next[i].data as any).interactions] as Interaction[])
                     : [];
                   cur.push({
-                    id: nanoid(),
+                    id: interactionId,
                     name,
                     trigger,
                     result,
-                    targets: targetNodeIds, // only node ids in the domain model
+                    targets,
                   });
                   next[i] = {
                     ...next[i],
@@ -1380,61 +1386,43 @@ export default function Editor() {
                   ? `${sourceId}:act:${trigger}`
                   : `data:${slug(sourceDataRef ?? '')}:${trigger}`;
 
-              // 3) Draw edges (one per target – including data attributes)
+              // 3) Draw edges (one per target), tagged with interactionId + targetId
               setEdges((eds) => {
-                const current = eds as AppEdge[];
-                const add: AppEdge[] = [];
-
-                (targetDetails || []).forEach(
-                  ({ targetId, targetType, targetDataRef }) => {
-                    const targetHandle =
-                      targetType === 'data' && targetDataRef
-                        ? `data:${targetDataRef}` // matches BaseNodeShell DataPills target handle
-                        : undefined;
-
-                    const alreadyExists = current.some((e) => {
-                      if (e.type !== 'interaction') return false;
-                      if (e.source !== sourceId || e.target !== targetId)
-                        return false;
-                      const ed = (e.data || {}) as any;
-                      if (ed.label !== name) return false;
-                      if (
-                        targetHandle &&
-                        e.targetHandle &&
-                        e.targetHandle !== targetHandle
+                const add = targets
+                  .filter(
+                    (tid) =>
+                      !(eds as AppEdge[]).some(
+                        (e) =>
+                          e.type === 'interaction' &&
+                          e.source === sourceId &&
+                          e.target === tid &&
+                          (e.data as any)?.label === name
                       )
-                        return false;
-                      return true;
-                    });
-
-                    if (alreadyExists) return;
-
-                    add.push({
-                      id: `ix-${sourceId}-${targetId}-${nanoid(4)}`,
-                      source: sourceId,
-                      sourceHandle: sourceHandleId,
-                      target: targetId,
-                      ...(targetHandle ? { targetHandle } : {}),
-                      type: 'interaction',
-                      data: {
-                        kind: 'interaction-link',
-                        label: name,
-                        trigger,
+                  )
+                  .map(
+                    (tid) =>
+                      ({
+                        id: `ix-${sourceId}-${tid}-${nanoid(4)}`,
+                        source: sourceId,
                         sourceHandle: sourceHandleId,
-                        sourceType,
-                        ...(sourceType === 'data' && sourceDataRef
-                          ? { sourceDataRef }
-                          : {}),
-                        targetType,
-                        ...(targetType === 'data' && targetDataRef
-                          ? { targetDataRef }
-                          : {}),
-                      },
-                    } as AppEdge);
-                  }
-                );
+                        target: tid,
+                        type: 'interaction',
+                        data: {
+                          kind: 'interaction-link',
+                          label: name,
+                          trigger,
+                          sourceHandle: sourceHandleId,
+                          sourceType,
+                          ...(sourceType === 'data' && sourceDataRef
+                            ? { sourceDataRef }
+                            : {}),
+                          interactionId, // <-- link back
+                          targetId: tid, // <-- explicit target
+                        },
+                      } as AppEdge)
+                  );
 
-                return current.concat(add) as any;
+                return (eds as AppEdge[]).concat(add) as any;
               });
 
               closeModal();
@@ -2253,6 +2241,15 @@ export default function Editor() {
               );
               setSelectedEdgeId(null);
             }}
+            onChange={(patch) => {
+              setEdges((eds) =>
+                (eds as AppEdge[]).map((e) =>
+                  e.id === selectedEdge.id
+                    ? { ...e, data: { ...(e.data || {}), ...patch } }
+                    : e
+                )
+              );
+            }}
           />
         )}
 
@@ -2268,10 +2265,121 @@ export default function Editor() {
                 (selectedEdgeTarget?.data as any)?.title ?? selectedEdge.target
               }
               onDelete={() => {
+                // Capture edge info before we clear selection
+                const edgeToRemove = selectedEdge as AppEdge;
+                const edgeData = (edgeToRemove.data || {}) as any;
+                const interactionId = edgeData.interactionId as
+                  | string
+                  | undefined;
+                const targetId =
+                  (edgeData.targetId as string | undefined) ??
+                  edgeToRemove.target;
+                const label = edgeData.label as string | undefined;
+                const sourceId = edgeToRemove.source;
+
+                // 1) Remove the edge itself
                 setEdges((eds) =>
-                  (eds as AppEdge[]).filter((e) => e.id !== selectedEdge.id)
+                  (eds as AppEdge[]).filter((e) => e.id !== edgeToRemove.id)
                 );
+
+                // 2) Clean up the interaction on the source node
+                setNodes((nds) => {
+                  const all = nds as AppNode[];
+
+                  const next = all.map((n) => {
+                    if (n.id !== sourceId) return n;
+                    const d = n.data as any;
+                    if (!Array.isArray(d.interactions)) return n;
+
+                    let changed = false;
+                    let interactions: any[] = d.interactions;
+
+                    if (interactionId) {
+                      // Prefer precise match using interactionId
+                      interactions = d.interactions
+                        .map((ix: any) => {
+                          if (ix.id !== interactionId) return ix;
+
+                          const currentTargets: string[] = Array.isArray(
+                            ix.targets
+                          )
+                            ? ix.targets
+                            : [];
+                          const newTargets = currentTargets.filter(
+                            (tid) => tid !== targetId
+                          );
+
+                          if (newTargets.length === 0) {
+                            // remove whole interaction
+                            changed = true;
+                            return null;
+                          }
+
+                          if (newTargets.length !== currentTargets.length) {
+                            changed = true;
+                            return { ...ix, targets: newTargets };
+                          }
+
+                          return ix;
+                        })
+                        .filter(Boolean);
+                    } else {
+                      // Fallback for older edges without interactionId:
+                      // remove interaction whose name matches label and contains this target
+                      interactions = d.interactions.filter((ix: any) => {
+                        const currentTargets: string[] = Array.isArray(
+                          ix.targets
+                        )
+                          ? ix.targets
+                          : [];
+
+                        const matchesLabel =
+                          label &&
+                          typeof ix.name === 'string' &&
+                          ix.name === label;
+                        const containsTarget =
+                          currentTargets.includes(targetId);
+
+                        if (matchesLabel && containsTarget) {
+                          const newTargets = currentTargets.filter(
+                            (tid) => tid !== targetId
+                          );
+                          if (newTargets.length === 0) {
+                            // drop interaction
+                            changed = true;
+                            return false;
+                          }
+                          ix.targets = newTargets;
+                          changed = true;
+                          return true;
+                        }
+
+                        return true;
+                      });
+                    }
+
+                    if (!changed) return n;
+
+                    return {
+                      ...n,
+                      data: { ...d, interactions },
+                    } as AppNode;
+                  });
+
+                  return next as unknown as RFNode<NodeData>[];
+                });
+
+                // 3) Clear edge selection
                 setSelectedEdgeId(null);
+              }}
+              onChange={(patch) => {
+                setEdges((eds) =>
+                  (eds as AppEdge[]).map((e) =>
+                    e.id === selectedEdge.id
+                      ? { ...e, data: { ...(e.data || {}), ...patch } }
+                      : e
+                  )
+                );
               }}
             />
           )}
