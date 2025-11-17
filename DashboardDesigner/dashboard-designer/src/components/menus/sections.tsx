@@ -279,7 +279,9 @@ export function NameField(props: {
 }
 
 // type field section
-export function TypeField(props: { value: string }) {
+export function TypeField(props: { value: string; label?: string }) {
+  const title = props.label ?? 'Component type';
+
   return (
     <div>
       <label
@@ -291,8 +293,9 @@ export function TypeField(props: { value: string }) {
           paddingLeft: 6,
         }}
       >
-        Component type
+        {title}
       </label>
+
       <div style={{ position: 'relative' }}>
         <input
           value={props.value}

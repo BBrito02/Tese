@@ -1411,6 +1411,7 @@ export default function Editor() {
                           kind: 'interaction-link',
                           label: name,
                           trigger,
+                          result,
                           sourceHandle: sourceHandleId,
                           sourceType,
                           ...(sourceType === 'data' && sourceDataRef
@@ -2241,15 +2242,6 @@ export default function Editor() {
               );
               setSelectedEdgeId(null);
             }}
-            onChange={(patch) => {
-              setEdges((eds) =>
-                (eds as AppEdge[]).map((e) =>
-                  e.id === selectedEdge.id
-                    ? { ...e, data: { ...(e.data || {}), ...patch } }
-                    : e
-                )
-              );
-            }}
           />
         )}
 
@@ -2371,15 +2363,6 @@ export default function Editor() {
 
                 // 3) Clear edge selection
                 setSelectedEdgeId(null);
-              }}
-              onChange={(patch) => {
-                setEdges((eds) =>
-                  (eds as AppEdge[]).map((e) =>
-                    e.id === selectedEdge.id
-                      ? { ...e, data: { ...(e.data || {}), ...patch } }
-                      : e
-                  )
-                );
               }}
             />
           )}

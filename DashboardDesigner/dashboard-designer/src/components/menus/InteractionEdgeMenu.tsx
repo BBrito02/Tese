@@ -1,9 +1,7 @@
 // src/components/menus/InteractionEdgeMenu.tsx
-import { useEffect, useState } from 'react';
 import type { Edge as RFEdge } from 'reactflow';
-import { NameField, TypeField, SectionTitle } from './sections';
-
-const PANEL_WIDTH = 280;
+import EdgesMenu from './EdgesMenu';
+import { NameField, TypeField, ListSection, SectionTitle } from './sections';
 
 type AppEdge = RFEdge<any>;
 
@@ -12,7 +10,6 @@ type Props = {
   sourceTitle?: string;
   targetTitle?: string;
   onDelete?: () => void;
-  onChange?: (patch: { label?: string }) => void; // NEW
 };
 
 export default function InteractionEdgeMenu({
@@ -20,16 +17,7 @@ export default function InteractionEdgeMenu({
   sourceTitle,
   targetTitle,
   onDelete,
-  onChange,
 }: Props) {
-  useEffect(() => {
-    window.dispatchEvent(
-      new CustomEvent('designer:menu-width', {
-        detail: { width: PANEL_WIDTH },
-      })
-    );
-  }, []);
-
   const data = (edge.data || {}) as any;
 
   const label = data.label ?? '';
@@ -37,85 +25,76 @@ export default function InteractionEdgeMenu({
   const sourceType = data.sourceType ?? data.sourceKind ?? 'component';
   const sourceHandle = data.sourceHandle ?? '';
   const sourceDataRef = data.sourceDataRef ?? '';
+  const result = data.result ?? 'filter';
 
-  // editable name (interaction label)
-  const [name, setName] = useState<string>(label);
+  const fromLabel = sourceTitle ?? edge.source;
+  const toLabel = targetTitle ?? edge.target;
 
-  useEffect(() => {
-    setName(label);
-  }, [edge.id, label]);
+  // Lists for ListSection
+  const connectionItems: string[] = [`From · ${fromLabel}`, `To · ${toLabel}`];
+
+  const behaviourItems: string[] = [
+    `Trigger · ${trigger}`,
+    `Source type · ${sourceType}`,
+  ];
+
+  const technicalItems: string[] = [`Edge id · ${edge.id}`];
+  if (label) technicalItems.push(`Label · ${label}`);
+  if (sourceHandle) technicalItems.push(`Source handle · ${sourceHandle}`);
+  if (sourceDataRef) technicalItems.push(`Source data attr · ${sourceDataRef}`);
 
   return (
-    <aside
-      style={{
-        width: PANEL_WIDTH,
-        minWidth: PANEL_WIDTH,
-        maxWidth: PANEL_WIDTH,
-        borderLeft: '1px solid #e5e7eb',
-        background: '#fafafa',
-        display: 'flex',
-        flexDirection: 'column',
-        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
-        borderRadius: 20,
-        marginTop: 7,
-        marginBottom: 7,
-        padding: 12,
-        boxSizing: 'border-box',
-      }}
-    >
-      {/* Header to match other menus */}
-      <div
-        style={{
-          fontWeight: 700,
-          textAlign: 'center',
-          marginBottom: 8,
-        }}
-      >
-        EDGE MENU
+    <EdgesMenu>
+      {/* Title / header – same pattern as other menus */}
+      <div style={{ fontWeight: 700, textAlign: 'center' }}>
+        Interaction Edge
       </div>
 
-      <SectionTitle>Properties</SectionTitle>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <SectionTitle>Properties</SectionTitle>
+        <NameField
+          value={label || `${fromLabel} → ${toLabel}`}
+          placeholder="Interaction name"
+          disabled={true}
+          onChange={() => {
+            /* read-only for now */
+          }}
+        />
+        <TypeField value="Interaction" label="Edge type" />
 
-      {/* Name – interaction name, editable */}
-      <NameField
-        value={name}
-        onChange={(val) => {
-          setName(val);
-          onChange?.({ label: val });
-        }}
-        disabled={!onChange}
-      />
-
-      {/* Type & metadata */}
-      <TypeField value="Interaction edge" />
-      <TypeField value={`Trigger: ${String(trigger)}`} />
-      <TypeField value={`Source: ${sourceTitle ?? edge.source}`} />
-      <TypeField value={`Target: ${targetTitle ?? edge.target}`} />
-      <TypeField value={`Source type: ${String(sourceType)}`} />
-      {sourceHandle && <TypeField value={`Source handle: ${sourceHandle}`} />}
-      {sourceDataRef && (
-        <TypeField value={`Source data attribute: ${sourceDataRef}`} />
-      )}
-
+        <SectionTitle>Connection</SectionTitle>
+        <TypeField value={fromLabel} label="Source" />
+        <TypeField value={toLabel} label="Target" />
+        <TypeField value={trigger} label="Activation" />
+        <TypeField value={result} label="Result" />
+      </div>
+      {/* Footer – same delete style as node menus */}
       {onDelete && (
-        <button
-          type="button"
-          onClick={onDelete}
+        <div
           style={{
-            marginTop: 16,
-            width: '100%',
-            padding: '8px 10px',
-            borderRadius: 8,
-            border: '1px solid #ef4444',
-            background: '#fef2f2',
-            color: '#b91c1c',
-            fontSize: 13,
-            cursor: 'pointer',
+            marginTop: 'auto',
+            paddingTop: 12,
+            borderTop: '1px solid #e5e7eb',
           }}
         >
-          Delete interaction edge
-        </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            style={{
+              width: '100%',
+              padding: '8px 10px',
+              borderRadius: 8,
+              border: '1px solid #ef4444',
+              background: 'white',
+              color: '#ef4444',
+              fontSize: 13,
+              cursor: 'pointer',
+            }}
+          >
+            Delete interaction edge
+          </button>
+        </div>
       )}
-    </aside>
+    </EdgesMenu>
   );
 }
