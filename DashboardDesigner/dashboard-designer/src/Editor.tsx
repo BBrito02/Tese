@@ -1406,6 +1406,7 @@ export default function Editor() {
                         source: sourceId,
                         sourceHandle: sourceHandleId,
                         target: tid,
+                        targetHandle: `${tid}:target`, // 🔹 always hit the node-level target
                         type: 'interaction',
                         data: {
                           kind: 'interaction-link',
@@ -1417,8 +1418,8 @@ export default function Editor() {
                           ...(sourceType === 'data' && sourceDataRef
                             ? { sourceDataRef }
                             : {}),
-                          interactionId, // <-- link back
-                          targetId: tid, // <-- explicit target
+                          interactionId,
+                          targetId: tid,
                         },
                       } as AppEdge)
                   );
@@ -1538,6 +1539,7 @@ export default function Editor() {
                       id: `e-viz-${vizId}-tip-${tipId}`,
                       source: vizId,
                       target: tipId,
+                      targetHandle: `${tipId}:target`, // 🔹 always hit node-level handle
                       type: 'tooltip',
                       data: { activation, targetH: 180 },
                     } as AppEdge) as any
@@ -1562,9 +1564,10 @@ export default function Editor() {
                       source: vizId,
                       sourceHandle,
                       target: tipId,
+                      targetHandle: `${tipId}:target`, // 🔹 this is the key line
                       type: 'tooltip',
                       data: { activation, attachRef, targetH: 180 },
-                    } as AppEdge) as any;
+                    } as AppEdge);
                   });
                 };
 

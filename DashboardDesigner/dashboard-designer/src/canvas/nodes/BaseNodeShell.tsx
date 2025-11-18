@@ -215,7 +215,25 @@ export default function BaseNodeShell({
                 {label}
               </button>
 
-              {/* two action-specific handles under the pill */}
+              {/* 🔹 target handle for this data attribute */}
+              <Handle
+                id={`${handleId}:target`}
+                type="target"
+                position={Position.Top}
+                className="nodrag nopan"
+                style={{
+                  position: 'absolute',
+                  left: '50%',
+                  top: -3,
+                  transform: 'translateX(-50%)',
+                  borderWidth: 1,
+                  borderStyle: 'solid',
+                  borderColor: '#222',
+                  background: '#111',
+                }}
+              />
+
+              {/* 🔹 two source handles under the pill */}
               <Handle
                 id={`${handleId}:click`}
                 type="source"
@@ -440,7 +458,15 @@ export default function BaseNodeShell({
           ))}
       </div>
 
-      {leftHandle && <Handle type="target" position={Position.Left} />}
+      {leftHandle && (
+        <Handle
+          id={`${id}:target`} // 🔹 stable id for “whole component”
+          type="target"
+          position={Position.Left}
+          className="nodrag nopan"
+        />
+      )}
+
       {rightHandle && canInteract && (
         // two interaction ports on the right: "<id>:act:hover" / "<id>:act:click"
         <ClickHoverPorts position={Position.Right} idPrefix={`${id}:act`} />
