@@ -1,5 +1,10 @@
 import { WhiteField, type KindProps } from './common';
-import { TypeField, ListAttributesSection, SectionTitle } from './sections';
+import {
+  TypeField,
+  ListAttributesSection,
+  SectionTitle,
+  DescriptionSection,
+} from './sections';
 import type { DataItem, GraphType, VisualVariable } from '../../domain/types';
 import { GRAPH_TYPE_ICONS, VISUAL_VAR_ICONS } from '../../domain/icons';
 import { useModal } from '../ui/ModalHost';
@@ -326,6 +331,14 @@ export default function GraphMenu(p: KindProps) {
         disabled={disabled}
         onRemove={() => p.onChange({ marks: { ...marks, text: null } } as any)}
         icon={vvIcon('Text')}
+      />
+
+      {/* Description Section */}
+      <DescriptionSection
+        placeholder="Describe this tooltip"
+        value={d.description}
+        disabled={disabled}
+        onChange={(val) => p.onChange({ description: val })} // <- adapt string → patch
       />
     </div>
   );
