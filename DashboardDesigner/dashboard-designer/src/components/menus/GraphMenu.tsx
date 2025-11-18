@@ -223,6 +223,14 @@ export default function GraphMenu(p: KindProps) {
         </div>
       </div>
 
+      {/* Description Section */}
+      <DescriptionSection
+        placeholder="Describe this tooltip"
+        value={d.description}
+        disabled={disabled}
+        onChange={(val) => p.onChange({ description: val })} // <- adapt string → patch
+      />
+
       {/* Graph Fields header with + button */}
       <div style={headerRow}>
         <div
@@ -331,14 +339,6 @@ export default function GraphMenu(p: KindProps) {
         disabled={disabled}
         onRemove={() => p.onChange({ marks: { ...marks, text: null } } as any)}
         icon={vvIcon('Text')}
-      />
-
-      {/* Description Section */}
-      <DescriptionSection
-        placeholder="Describe this tooltip"
-        value={d.description}
-        disabled={disabled}
-        onChange={(val) => p.onChange({ description: val })} // <- adapt string → patch
       />
     </div>
   );
