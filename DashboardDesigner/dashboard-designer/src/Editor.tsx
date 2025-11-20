@@ -1349,6 +1349,15 @@ export default function Editor() {
               sourceType,
               sourceDataRef,
             }) => {
+              console.log('Begin of print onOpenInteractions');
+              console.log('Name:' + name);
+              console.log('Trigger:' + trigger);
+              console.log('Result:' + result);
+              console.log('Targets:' + targets);
+              console.log('SouceType:' + sourceType);
+              console.log('SourceDataRef:' + sourceDataRef);
+              console.log('End of print onOpenInteractions');
+
               // Create a stable interaction id
               const interactionId = nanoid();
 

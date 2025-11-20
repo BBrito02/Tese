@@ -616,6 +616,19 @@ export default function InteractionPopup({
               }
             }
 
+            // Log the data being saved for debugging purposes
+            console.log('Data to be saved inside Interaction Popup:', {
+              name: name.trim(),
+              trigger,
+              result,
+              targets: Array.from(targetsSet),
+              sourceType,
+              ...(sourceType === 'data' && sourceDataRef
+                ? { sourceDataRef }
+                : {}),
+              targetDetails,
+            });
+
             onSave({
               name: name.trim(),
               trigger,

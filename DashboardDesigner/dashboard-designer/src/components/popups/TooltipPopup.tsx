@@ -8,7 +8,7 @@ type Props = {
   onCancel: () => void;
   onSave?: (payload: {
     mode: 'new';
-    attachRef: string;         // REQUIRED: slug of the data attribute
+    attachRef: string; // REQUIRED: slug of the data attribute
     activation: Activation;
     newTooltip: { title: string };
   }) => void;
@@ -32,7 +32,11 @@ function slugify(s: string) {
     .replace(/[^a-z0-9_-]/g, '');
 }
 
-export default function TooltipPopup({ availableData, onCancel, onSave }: Props) {
+export default function TooltipPopup({
+  availableData,
+  onCancel,
+  onSave,
+}: Props) {
   const existingNames = useMemo(
     () => availableData.map((v) => (typeof v === 'string' ? v : v.name)),
     [availableData]
@@ -45,6 +49,12 @@ export default function TooltipPopup({ availableData, onCancel, onSave }: Props)
   const canSave = attachRef.length > 0;
 
   const handleSave = () => {
+    console.log('Data to be saved inside Tooltip Popup:', {
+      mode: 'new',
+      attachRef,
+      activation,
+      newTooltip: { title: name || 'Tooltip' },
+    });
     if (!onSave || !canSave) return;
     onSave({
       mode: 'new',
@@ -123,7 +133,9 @@ export default function TooltipPopup({ availableData, onCancel, onSave }: Props)
       >
         <div style={pill}>Activation</div>
         <div style={{ display: 'flex', gap: 12 }}>
-          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <label
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          >
             <input
               type="radio"
               name="tt-activation"
@@ -133,7 +145,9 @@ export default function TooltipPopup({ availableData, onCancel, onSave }: Props)
             />
             Hover
           </label>
-          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <label
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          >
             <input
               type="radio"
               name="tt-activation"
