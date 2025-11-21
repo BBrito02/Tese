@@ -154,11 +154,6 @@ const EXTRA_COLLAPSED_GAP = 18;
 // Handy aliases for readability (not for hook generics)
 type AppNode = RFNode<NodeData>;
 type AppEdge = RFEdge<any>;
-type SelectedEdgeInfo = {
-  id: string;
-  type: 'tooltip' | 'interaction';
-  data: any;
-};
 
 /** Small util: remove file extension. */
 const baseFrom = (name: string) => name.replace(/\.[^.]+$/, '');
@@ -1348,6 +1343,7 @@ export default function Editor() {
               targets,
               sourceType,
               sourceDataRef,
+              targetDetails,
             }) => {
               console.log('Begin of print onOpenInteractions');
               console.log('Name:' + name);
@@ -1356,6 +1352,15 @@ export default function Editor() {
               console.log('Targets:' + targets);
               console.log('SouceType:' + sourceType);
               console.log('SourceDataRef:' + sourceDataRef);
+              console.log('TargetDetails:');
+              targetDetails.forEach((detail, index) => {
+                console.log(`Detail ${index + 1}:`);
+                console.log('  TargetId:', detail.targetId);
+                console.log('  TargetType:', detail.targetType);
+                if (detail.targetDataRef) {
+                  console.log('  TargetDataRef:', detail.targetDataRef);
+                }
+              });
               console.log('End of print onOpenInteractions');
 
               // Create a stable interaction id
@@ -1376,8 +1381,9 @@ export default function Editor() {
                     name,
                     trigger,
                     result,
-                    targets,
-                  });
+                    targets, // keep your existing field
+                    ...({ targetDetails } as any), // add details (cast to any to satisfy TS)
+                  } as any);
                   next[i] = {
                     ...next[i],
                     data: {
@@ -1396,42 +1402,59 @@ export default function Editor() {
                   : `data:${slug(sourceDataRef ?? '')}:${trigger}`;
 
               // 3) Draw edges (one per target), tagged with interactionId + targetId
+              // 3) Draw edges (one per targetDetail), tagged with interactionId + target meta
               setEdges((eds) => {
-                const add = targets
-                  .filter(
-                    (tid) =>
-                      !(eds as AppEdge[]).some(
-                        (e) =>
-                          e.type === 'interaction' &&
-                          e.source === sourceId &&
-                          e.target === tid &&
-                          (e.data as any)?.label === name
-                      )
-                  )
-                  .map(
-                    (tid) =>
-                      ({
-                        id: `ix-${sourceId}-${tid}-${nanoid(4)}`,
-                        source: sourceId,
+                const add = targetDetails
+                  .filter((detail) => {
+                    // de-dupe per (sourceId, targetId, label, and targetDataRef if present)
+                    return !(eds as AppEdge[]).some((e) => {
+                      if (e.type !== 'interaction') return false;
+                      if (e.source !== sourceId) return false;
+                      if (e.target !== detail.targetId) return false;
+                      const d = (e.data as any) || {};
+                      const sameLabel = d?.label === name;
+                      const sameAttr =
+                        (d?.targetDataRef ?? null) ===
+                        (detail.targetDataRef ?? null);
+                      return sameLabel && sameAttr;
+                    });
+                  })
+                  .map((detail) => {
+                    const tid = detail.targetId;
+
+                    // If target is a DATA ATTRIBUTE, hit its pill handle: data:<slug>:target
+                    // Otherwise, fall back to the component-level target handle
+                    const targetHandle =
+                      detail.targetType === 'data' && detail.targetDataRef
+                        ? `data:${slug(detail.targetDataRef)}:target`
+                        : `${tid}:target`;
+
+                    return {
+                      id: `ix-${sourceId}-${tid}-${nanoid(4)}`,
+                      source: sourceId,
+                      sourceHandle: sourceHandleId,
+                      target: tid,
+                      targetHandle,
+                      type: 'interaction',
+                      data: {
+                        kind: 'interaction-link',
+                        label: name,
+                        trigger,
+                        result,
                         sourceHandle: sourceHandleId,
-                        target: tid,
-                        targetHandle: `${tid}:target`, // 🔹 always hit the node-level target
-                        type: 'interaction',
-                        data: {
-                          kind: 'interaction-link',
-                          label: name,
-                          trigger,
-                          result,
-                          sourceHandle: sourceHandleId,
-                          sourceType,
-                          ...(sourceType === 'data' && sourceDataRef
-                            ? { sourceDataRef }
-                            : {}),
-                          interactionId,
-                          targetId: tid,
-                        },
-                      } as AppEdge)
-                  );
+                        sourceType,
+                        ...(sourceType === 'data' && sourceDataRef
+                          ? { sourceDataRef }
+                          : {}),
+                        interactionId,
+                        targetId: tid,
+                        targetType: detail.targetType,
+                        ...(detail.targetDataRef
+                          ? { targetDataRef: detail.targetDataRef }
+                          : {}),
+                      },
+                    } as AppEdge;
+                  });
 
                 return (eds as AppEdge[]).concat(add) as any;
               });
