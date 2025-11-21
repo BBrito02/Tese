@@ -1,4 +1,3 @@
-// src/components/popups/ShowMeHint.tsx
 import React from 'react';
 import type { GraphType } from '../../domain/types';
 import { GrBladesHorizontal, GrBladesVertical } from 'react-icons/gr';
@@ -6,8 +5,15 @@ import { VISUAL_VAR_ICONS } from '../../domain/icons';
 
 /* ------------ Types ------------ */
 
-type PillKind = 'Measure' | 'Dimension' | 'Date' | 'Any';
-type Pill = { label: string; kind: PillKind; optional?: boolean };
+// "Continuous" = Green (Measures/Axes)
+// "Discrete"   = Blue (Headers/Buckets)
+type PillKind = 'Continuous' | 'Discrete' | 'Date' | 'Any';
+
+type Pill = {
+  label: string;
+  kind: PillKind;
+  optional?: boolean;
+};
 
 type ShowSpec = {
   columns?: Pill[];
@@ -20,179 +26,166 @@ type ShowSpec = {
   };
 };
 
-/* ------------ Recommendations ------------ */
+/* ------------ Recommendations (Audited) ------------ */
 
 const REQ: Partial<Record<GraphType, ShowSpec>> = {
+  /* --- XY PLOTS --- */
+
   Dispersion: {
-    columns: [{ label: 'Measure (X)', kind: 'Measure' }],
-    rows: [{ label: 'Measure (Y)', kind: 'Measure' }],
+    // Scatter Plot: Needs two numerical axes to show correlation.
+    columns: [{ label: 'Continuous (X)', kind: 'Continuous' }],
+    rows: [{ label: 'Continuous (Y)', kind: 'Continuous' }],
     marks: {
-      color: [
-        { label: 'Dimension (group)', kind: 'Dimension', optional: true },
+      color: [{ label: 'Discrete (Group)', kind: 'Discrete', optional: true }],
+      size: [
+        { label: 'Continuous (Size)', kind: 'Continuous', optional: true },
       ],
-      size: [{ label: 'Measure (size)', kind: 'Measure', optional: true }],
-      shape: [
-        { label: 'Dimension (shape)', kind: 'Dimension', optional: true },
-      ],
-      text: [{ label: 'Dimension (label)', kind: 'Dimension', optional: true }], // optional labels
-    },
-  },
-
-  Line: {
-    columns: [{ label: 'Date or Dimension (X)', kind: 'Any' }],
-    rows: [{ label: 'Measure', kind: 'Measure' }],
-    marks: {
-      color: [
-        { label: 'Dimension (series)', kind: 'Dimension', optional: true },
-      ],
-      text: [
-        { label: 'Dimension/Measure (label)', kind: 'Any', optional: true },
-      ],
-    },
-  },
-
-  MultipleLines: {
-    columns: [{ label: 'Date or Dimension (X)', kind: 'Any' }],
-    rows: [{ label: 'Measure', kind: 'Measure' }],
-    marks: {
-      color: [{ label: 'Dimension (series)', kind: 'Dimension' }],
-      text: [
-        { label: 'Dimension/Measure (label)', kind: 'Any', optional: true },
-      ],
-    },
-  },
-
-  Area: {
-    columns: [{ label: 'Date or Dimension (X)', kind: 'Any' }],
-    rows: [{ label: 'Measure', kind: 'Measure' }],
-    marks: {
-      color: [
-        { label: 'Dimension (series)', kind: 'Dimension', optional: true },
-      ],
-      text: [
-        { label: 'Dimension/Measure (label)', kind: 'Any', optional: true },
-      ],
-    },
-  },
-
-  Bars: {
-    rows: [{ label: 'Dimension (category)', kind: 'Dimension' }],
-    columns: [{ label: 'Measure', kind: 'Measure' }],
-    marks: {},
-  },
-
-  PilledBars: {
-    rows: [],
-    columns: [{ label: 'Measure', kind: 'Measure' }],
-    marks: {
-      color: [{ label: 'Dimension (stack)', kind: 'Dimension' }],
-    },
-  },
-
-  Pilled100: {
-    columns: [{ label: 'Dimension (category)', kind: 'Dimension' }],
-    rows: [{ label: 'Measure', kind: 'Measure' }],
-    marks: {
-      color: [{ label: 'Dimension (stack)', kind: 'Dimension' }],
-      text: [
-        { label: 'Measure (percent label)', kind: 'Measure', optional: true },
-      ],
-    },
-  },
-
-  Gantt: {
-    columns: [{ label: 'Start date/time', kind: 'Date' }],
-    rows: [{ label: 'Task', kind: 'Dimension' }],
-    marks: {
-      size: [{ label: 'Duration', kind: 'Measure' }],
-      color: [
-        { label: 'Status / Category', kind: 'Dimension', optional: true },
-      ],
-      text: [{ label: 'Task name', kind: 'Dimension', optional: true }],
-    },
-  },
-
-  Dots: {
-    columns: [{ label: 'Dimension (category)', kind: 'Dimension' }],
-    rows: [{ label: 'Measure', kind: 'Measure' }],
-    marks: {
-      color: [
-        { label: 'Dimension (group)', kind: 'Dimension', optional: true },
-      ],
-      size: [{ label: 'Measure (size)', kind: 'Measure', optional: true }],
-      text: [{ label: 'Dimension (label)', kind: 'Dimension', optional: true }],
-    },
-  },
-
-  Map: {
-    columns: [{ label: 'Geography', kind: 'Dimension' }],
-    rows: [],
-    marks: {
-      color: [{ label: 'Measure or Dimension', kind: 'Any', optional: true }],
-      size: [{ label: 'Measure (size)', kind: 'Measure', optional: true }],
-      text: [
-        { label: 'Label (e.g., name)', kind: 'Dimension', optional: true },
-      ],
-    },
-  },
-
-  ColorMap: {
-    columns: [{ label: 'Geography', kind: 'Dimension' }],
-    rows: [],
-    marks: {
-      color: [{ label: 'Measure (color scale)', kind: 'Measure' }],
-      text: [{ label: 'Label (optional)', kind: 'Any', optional: true }],
     },
   },
 
   Hexabin: {
-    columns: [{ label: 'Longitude', kind: 'Measure' }],
-    rows: [{ label: 'Latitude', kind: 'Measure' }],
+    // Density Plot: Needs two numerical coordinates.
+    columns: [{ label: 'Continuous (X)', kind: 'Continuous' }],
+    rows: [{ label: 'Continuous (Y)', kind: 'Continuous' }],
     marks: {
-      color: [{ label: 'Measure (intensity)', kind: 'Measure' }],
-      size: [{ label: 'Count / Measure', kind: 'Measure', optional: true }],
-      text: [{ label: 'Label (optional)', kind: 'Any', optional: true }],
+      color: [
+        { label: 'Continuous (Density)', kind: 'Continuous', optional: true },
+      ], // Often auto-calculated
     },
   },
 
-  // Crosstab: [T] Measure + [list] Dimension (your screenshot)
-  Table: {
-    columns: [
-      { label: 'Column Dimension(s)', kind: 'Dimension', optional: true },
-    ],
-    rows: [{ label: 'Row Dimension(s)', kind: 'Dimension' }],
+  /* --- TIME / TRENDS --- */
+
+  Line: {
+    // Line Chart: Needs an ordered X axis (Time or Number) and a Measure.
+    columns: [{ label: 'Date or Continuous', kind: 'Date' }],
+    rows: [{ label: 'Continuous (Y)', kind: 'Continuous' }],
     marks: {
-      text: [{ label: 'Measure (cell text)', kind: 'Measure' }], // <-- key requirement
+      color: [{ label: 'Discrete (Series)', kind: 'Discrete', optional: true }],
     },
   },
 
-  HeatMap: {
-    rows: [{ label: 'Dimension (Y)', kind: 'Dimension' }],
+  MultipleLines: {
+    // Multi-Line: STRICTLY requires a Date, a Value, and a Splitter (Color).
+    columns: [{ label: 'Date or Continuous', kind: 'Date' }],
+    rows: [{ label: 'Continuous (Y)', kind: 'Continuous' }],
     marks: {
-      color: [{ label: 'Measure (color)', kind: 'Measure' }],
-      size: [{ label: 'Measure (size)', kind: 'Measure', optional: true }],
+      color: [{ label: 'Discrete (Break by)', kind: 'Discrete' }],
+    },
+  },
+
+  Area: {
+    // Area Chart: Similar to line, implies volume.
+    columns: [{ label: 'Date or Continuous', kind: 'Date' }],
+    rows: [{ label: 'Continuous (Y)', kind: 'Continuous' }],
+    marks: {
+      color: [{ label: 'Discrete (Stack)', kind: 'Discrete', optional: true }],
+    },
+  },
+
+  Gantt: {
+    // Gantt: Needs Start Time, Categorical Task, and Duration.
+    columns: [{ label: 'Date (Start)', kind: 'Date' }],
+    rows: [{ label: 'Discrete (Task)', kind: 'Discrete' }],
+    marks: {
+      size: [{ label: 'Continuous (Duration)', kind: 'Continuous' }],
+      color: [{ label: 'Discrete (Status)', kind: 'Discrete', optional: true }],
     },
   },
 
   Clock: {
-    columns: [{ label: 'Time (hour/min)', kind: 'Date' }],
-    rows: [{ label: 'Measure (value)', kind: 'Measure', optional: true }],
+    // Radial/Rose: usually Time on circle, Value on radius.
+    columns: [{ label: 'Date / Time', kind: 'Date' }],
+    rows: [{ label: 'Continuous (Radius)', kind: 'Continuous' }],
     marks: {
       color: [
-        { label: 'Dimension (category)', kind: 'Dimension', optional: true },
+        { label: 'Discrete (Category)', kind: 'Discrete', optional: true },
       ],
-      size: [{ label: 'Measure (size)', kind: 'Measure', optional: true }],
-      shape: [
-        { label: 'Dimension (shape)', kind: 'Dimension', optional: true },
+    },
+  },
+
+  /* --- CATEGORICAL COMPARISON --- */
+
+  Bars: {
+    // Standard Bar: Comparison of categories.
+    rows: [{ label: 'Discrete (Category)', kind: 'Discrete' }],
+    columns: [{ label: 'Continuous (Length)', kind: 'Continuous' }],
+  },
+
+  PilledBars: {
+    // Stacked Bar: Needs Category Axis + Stack Group + Length.
+    rows: [{ label: 'Discrete (Category)', kind: 'Discrete' }],
+    columns: [{ label: 'Continuous (Length)', kind: 'Continuous' }],
+    marks: {
+      color: [{ label: 'Discrete (Stack group)', kind: 'Discrete' }],
+    },
+  },
+
+  Pilled100: {
+    // 100% Stacked: Same as stacked, visualization engine handles normalization.
+    rows: [{ label: 'Discrete (Category)', kind: 'Discrete' }],
+    columns: [{ label: 'Continuous (Length)', kind: 'Continuous' }],
+    marks: {
+      color: [{ label: 'Discrete (Stack group)', kind: 'Discrete' }],
+    },
+  },
+
+  Dots: {
+    // Cleveland Dot Plot: 1 Categorical, 1 Continuous.
+    rows: [{ label: 'Discrete (Category)', kind: 'Discrete' }],
+    columns: [{ label: 'Continuous (Position)', kind: 'Continuous' }],
+    marks: {
+      color: [{ label: 'Discrete (Group)', kind: 'Discrete', optional: true }],
+    },
+  },
+
+  /* --- GEOSPATIAL --- */
+
+  Map: {
+    // Symbol Map: Dots on a map. Needs Geo + optional size/color.
+    columns: [{ label: 'Discrete (Geo/Country)', kind: 'Discrete' }],
+    rows: [],
+    marks: {
+      size: [
+        { label: 'Continuous (Size)', kind: 'Continuous', optional: true },
       ],
-      text: [{ label: 'Label (optional)', kind: 'Any', optional: true }],
+      color: [{ label: 'Any (Color)', kind: 'Any', optional: true }],
+    },
+  },
+
+  ColorMap: {
+    // Choropleth (Filled Map): Needs Geo + Value determines color.
+    columns: [{ label: 'Discrete (Geo/Country)', kind: 'Discrete' }],
+    rows: [],
+    marks: {
+      color: [{ label: 'Continuous (Value)', kind: 'Continuous' }],
+    },
+  },
+
+  /* --- MATRICES --- */
+
+  Table: {
+    // Crosstab: Rows + Text. Columns are optional but common.
+    rows: [{ label: 'Discrete (Row)', kind: 'Discrete' }],
+    columns: [{ label: 'Discrete (Column)', kind: 'Discrete', optional: true }],
+    marks: {
+      text: [{ label: 'Any (Value)', kind: 'Any' }],
+    },
+  },
+
+  HeatMap: {
+    // Matrix Heatmap: X vs Y density.
+    rows: [{ label: 'Discrete (Y)', kind: 'Discrete' }],
+    columns: [{ label: 'Discrete (X)', kind: 'Discrete' }],
+    marks: {
+      color: [{ label: 'Continuous (Intensity)', kind: 'Continuous' }],
     },
   },
 };
 
 const DEFAULT_SPEC: ShowSpec = {
-  columns: [{ label: 'Dimension', kind: 'Dimension' }],
-  rows: [{ label: 'Measure', kind: 'Measure' }],
+  columns: [{ label: 'Discrete', kind: 'Discrete' }],
+  rows: [{ label: 'Continuous', kind: 'Continuous' }],
 };
 
 /* ------------ Styles (compact) ------------ */
@@ -221,10 +214,10 @@ const pillBase: React.CSSProperties = {
 };
 
 const pillColors: Record<PillKind, { bg: string; fg: string; br: string }> = {
-  Measure: { bg: '#10b981', fg: '#ffffff', br: '#059669' }, // green
-  Dimension: { bg: '#60a5fa', fg: '#ffffff', br: '#3b82f6' }, // blue
-  Date: { bg: '#f59e0b', fg: '#ffffff', br: '#d97706' }, // amber
-  Any: { bg: '#9ca3af', fg: '#ffffff', br: '#6b7280' }, // gray
+  Continuous: { bg: '#10b981', fg: '#ffffff', br: '#059669' }, // Green
+  Discrete: { bg: '#3b82f6', fg: '#ffffff', br: '#2563eb' }, // Blue
+  Date: { bg: '#f59e0b', fg: '#ffffff', br: '#d97706' }, // Amber
+  Any: { bg: '#9ca3af', fg: '#ffffff', br: '#6b7280' }, // Gray
 };
 
 /* ------------ Helpers ------------ */
@@ -259,7 +252,6 @@ const vvImg = (key: 'Color' | 'Size' | 'Shape' | 'Text') => {
       />
     );
   }
-  // Fallback tiny "T" for Text if missing
   if (key === 'Text') {
     return (
       <span
@@ -284,7 +276,6 @@ const vvImg = (key: 'Color' | 'Size' | 'Shape' | 'Text') => {
   return null;
 };
 
-/** Build compact “Show me” line items */
 function buildCompact(
   spec: ShowSpec
 ): Array<{ left: React.ReactNode; kind: PillKind }> {
@@ -301,23 +292,23 @@ function buildCompact(
   const textP = first(spec.marks?.text);
   if (textP) out.push({ left: vvImg('Text'), kind: textP.kind });
 
-  // 2) Always add one axis pill (rows preferred, else columns)
+  // 2) Axes
   const rowP = first(spec.rows);
   const colP = first(spec.columns);
 
-  let axis: { left: React.ReactNode; kind: PillKind } | null = null;
-
+  // Logic: If we have both, show both. If only one, show it.
+  // If it's a map (no rows), show columns (Geo).
+  if (colP) {
+    // For charts where Column is the main Dimension (like Line/Bar)
+    out.push({ left: <GrBladesHorizontal size={18} />, kind: colP.kind });
+  }
   if (rowP) {
-    axis = { left: <GrBladesVertical size={18} />, kind: rowP.kind };
-  } else if (colP) {
-    axis = { left: <GrBladesHorizontal size={18} />, kind: colP.kind };
+    out.push({ left: <GrBladesVertical size={18} />, kind: rowP.kind });
   }
 
-  if (axis) out.push(axis);
-
-  // 3) Still nothing? fall back
+  // 3) Fallback
   if (out.length === 0) {
-    out.push({ left: <GrBladesVertical size={18} />, kind: 'Measure' });
+    out.push({ left: <GrBladesVertical size={18} />, kind: 'Continuous' });
   }
 
   return out;
@@ -326,14 +317,16 @@ function buildCompact(
 /* ------------ Component ------------ */
 
 export function ShowMeHint({ type }: { type: GraphType | undefined }) {
-  const spec = (type && REQ[type]) || DEFAULT_SPEC;
+  // If no type is hovered, we can return null or a placeholder.
+  // The parent component handles the "Show me -" title.
+  if (!type) return null;
+
+  const spec = REQ[type] || DEFAULT_SPEC;
   const compact = buildCompact(spec);
 
   return (
     <div style={wrap}>
-      <div style={lead}>
-        for {String(type ?? 'this chart').toLowerCase()} use:
-      </div>
+      <div style={lead}>Minimum requirements:</div>
       {compact.map((rowItem, i) => (
         <div key={i} style={line}>
           <div

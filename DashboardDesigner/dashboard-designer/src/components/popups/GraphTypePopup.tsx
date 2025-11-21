@@ -1,4 +1,3 @@
-// src/components/popups/GraphTypePopup.tsx
 import { useState, useMemo } from 'react';
 import type { GraphType } from '../../domain/types';
 import { GRAPH_TYPE_ICONS } from '../../domain/icons';
@@ -15,15 +14,13 @@ export default function GraphTypePopup({
   onCancel,
   onConfirm,
 }: Props) {
-  // Selected types (unchanged behavior)
+  // Selected types
   const [selected, setSelected] = useState<Set<GraphType>>(
     new Set(initialGraphTypes)
   );
 
-  // Track the currently "active" type to show requirements for
-  const [active, setActive] = useState<GraphType | undefined>(
-    initialGraphTypes[0]
-  );
+  // Track active hover
+  const [active, setActive] = useState<GraphType | undefined>(undefined);
 
   const ALL: GraphType[] = Object.keys(GRAPH_TYPE_ICONS) as GraphType[];
 
@@ -33,10 +30,8 @@ export default function GraphTypePopup({
       next.has(gt) ? next.delete(gt) : next.add(gt);
       return next;
     });
-    setActive(gt); // show hint for the last interacted type
   }
 
-  // build a stable list for chips & save
   const list = useMemo(() => Array.from(selected), [selected]);
   const canSave = selected.size > 0;
 
@@ -63,10 +58,10 @@ export default function GraphTypePopup({
             <button
               key={gt}
               type="button"
-              onClick={() => {
-                toggle(gt); // still toggles selection
-                setActive(gt); // ← only trigger active on click
-              }}
+              onClick={() => toggle(gt)}
+              // Hover events
+              onMouseEnter={() => setActive(gt)}
+              onMouseLeave={() => setActive(undefined)}
               aria-pressed={isChecked}
               title={gt}
               style={{
@@ -78,8 +73,9 @@ export default function GraphTypePopup({
                 padding: '6px 8px',
                 background: isChecked ? '#eef2ff' : '#fff',
                 cursor: 'pointer',
-                // highlight the active graph type
                 boxShadow: isActive ? '0 0 0 2px #38bdf8' : 'none',
+                transition: 'box-shadow 0.1s ease',
+                height: 40, // Enforce fixed height for buttons
               }}
             >
               <input type="checkbox" readOnly checked={isChecked} />
@@ -94,13 +90,17 @@ export default function GraphTypePopup({
         })}
       </div>
 
-      {/* Current list with remove chips (unchanged) */}
-      {list.length > 0 && (
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      {/* Selected Chips */}
+      {list.length > 0 ? (
+        <div
+          style={{ display: 'flex', gap: 6, flexWrap: 'wrap', minHeight: 24 }}
+        >
           {list.map((gt) => (
             <button
               key={`cur-${gt}`}
               onClick={() => toggle(gt)}
+              onMouseEnter={() => setActive(gt)}
+              onMouseLeave={() => setActive(undefined)}
               title={`Remove ${gt}`}
               style={{
                 border: '1px solid #e5e7eb',
@@ -123,16 +123,22 @@ export default function GraphTypePopup({
             </button>
           ))}
         </div>
+      ) : (
+        <div style={{ minHeight: 24 }} />
       )}
 
-      {/* --- Show Me panel (new) --- */}
+      {/* --- Show Me panel --- */}
       <div
         style={{
           marginTop: 4,
-          padding: 12,
+          padding: 16, // Slightly more padding for a spacious look
           border: '1px solid #e5e7eb',
           borderRadius: 10,
           background: '#f8fafc',
+          // Taller fixed height to fit all content without scrollbar
+          height: 200,
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
         <div
@@ -140,12 +146,28 @@ export default function GraphTypePopup({
             fontWeight: 700,
             fontSize: 13,
             color: '#0f172a',
-            marginBottom: 6,
+            marginBottom: 12, // Increased margin
+            display: 'flex',
+            justifyContent: 'space-between',
+            flexShrink: 0,
           }}
         >
-          Show me{active ? ` — ${active}` : ''}
+          <span>
+            Show me
+            {active ? (
+              <span style={{ fontWeight: 400, marginLeft: 4 }}>— {active}</span>
+            ) : (
+              <span style={{ fontWeight: 400, opacity: 0.5, marginLeft: 4 }}>
+                (Hover to see requirements)
+              </span>
+            )}
+          </span>
         </div>
-        <ShowMeHint type={active} />
+
+        {/* Content container */}
+        <div style={{ flex: 1 }}>
+          <ShowMeHint type={active} />
+        </div>
       </div>
 
       {/* Footer */}
