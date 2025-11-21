@@ -1,25 +1,17 @@
 // src/canvas/edges/TooltipEdge.tsx
-import { EdgeLabelRenderer, type EdgeProps } from 'reactflow';
+import {
+  EdgeLabelRenderer,
+  type EdgeProps,
+  useNodes,
+  getSmoothStepPath,
+  Position,
+  type Node,
+} from 'reactflow';
+import { getSmartEdge } from '@tisoap/react-flow-smart-edge';
 import { activationIcons, type ActivationKey } from '../../domain/icons';
-import { useObstacles, routeOrthogonalAvoiding } from './obstacleRouter';
 
 const ICON_SIZE = 25;
-const EXIT_GAP = 12;
-const H_GAP = 18;
-const V_STACK = 18;
-const CORNER_RADIUS = 8;
 const STROKE = '#000';
-
-function roundedElbowPath(x1: number, y1: number, x2: number, y2: number) {
-  const dx = Math.sign(x2 - x1);
-  const dy = Math.sign(y2 - y1);
-  const r = Math.min(CORNER_RADIUS, Math.abs(y2 - y1), Math.abs(x2 - x1));
-  const p1x = x1;
-  const p1y = y2 - dy * r;
-  const p2x = x1 + dx * r;
-  const p2y = y2;
-  return `L ${p1x} ${p1y} Q ${x1} ${y2} ${p2x} ${p2y} L ${x2} ${y2}`;
-}
 
 export default function TooltipEdge(props: EdgeProps) {
   const {
@@ -32,61 +24,89 @@ export default function TooltipEdge(props: EdgeProps) {
     targetY,
     style,
     data,
+    sourcePosition = Position.Right,
+    targetPosition = Position.Left,
   } = props;
 
-  const TARGET_HALF_H = Math.max(12, Number(data?.targetH ?? 120));
-  const TARGET_MARGIN = 12;
-  const APPROACH_GAP = 24; // a bit larger so the arrow is clearer
+  // 1. GET NODES
+  // Casting to avoid type conflicts between react-flow versions
+  const allNodes = useNodes<Record<string, unknown>>() as unknown as Node[];
+
+  // 2. FILTER & TRANSFORM OBSTACLES
+  // This applies the same fix used in InteractionEdge to handle nested nodes
+  const obstacles = allNodes
+    .filter((n) => {
+      // Exclude endpoints
+      if (n.id === source || n.id === target) return false;
+
+      // Exclude Dashboard Background (D0) so the edge can travel inside it
+      // Check both type and ID prefix to be safe
+      if (n.type === 'dashboard' || n.id.startsWith('D0')) return false;
+
+      // Exclude hidden nodes
+      if (n.hidden) return false;
+
+      return true;
+    })
+    .map((n) => {
+      // CRITICAL FIX: CONVERT RELATIVE POSITIONS TO ABSOLUTE
+      // React Flow stores child nodes (charts inside dashboard) with relative positions (e.g., x: 10).
+      // The Smart Edge library calculates paths in global screen space.
+      // We must map 'position' to 'positionAbsolute' so the library knows where the obstacles actually are.
+      if (n.positionAbsolute) {
+        return { ...n, position: n.positionAbsolute };
+      }
+      return n;
+    });
 
   const side: 'left' | 'right' =
     data?.sourceSide ?? (targetX >= sourceX ? 'right' : 'left');
 
+  // Fan-out alignment logic (offsets edges if multiple connect to same node)
   const siblings = Math.max(1, Number(data?.siblings ?? 1));
   const ordinal = Math.min(
     Math.max(0, Number(data?.ordinal ?? 0)),
     siblings - 1
   );
-  const centerOffset = (ordinal - (siblings - 1) / 2) * V_STACK;
+  // V_STACK = 18
+  const centerOffset = (ordinal - (siblings - 1) / 2) * 18;
+  const adjustedSourceY = sourceY + centerOffset;
 
-  const obstacles = useObstacles(source, target, 8);
+  // 3. CALCULATE SMART PATH
+  const smartResponse = getSmartEdge({
+    sourcePosition,
+    targetPosition,
+    sourceX,
+    sourceY: adjustedSourceY,
+    targetX,
+    targetY,
+    nodes: obstacles as any, // Pass the transformed obstacles
+    options: {
+      nodePadding: 10, // Small padding to allow routing through tight gaps
+      gridRatio: 2, // High precision grid for accurate pathfinding
+    },
+  });
 
-  const routed = routeOrthogonalAvoiding(
-    { x: sourceX, y: sourceY + centerOffset },
-    { x: targetX, y: targetY },
-    {
-      side,
-      exitGap: EXIT_GAP,
-      hGap: H_GAP,
-      approachGap: APPROACH_GAP,
-      targetHalfH: TARGET_HALF_H,
-      targetMargin: TARGET_MARGIN,
-      cornerR: CORNER_RADIUS,
-      obstacles,
-    }
-  );
+  // 4. FALLBACK LOGIC
+  let finalPath = '';
 
-  const leg1 = `M ${sourceX} ${sourceY + centerOffset} L ${routed.exitX} ${
-    routed.exitY
-  }`;
-  const leg2 = `L ${routed.awayX} ${routed.exitY}`;
-  const leg3 = roundedElbowPath(
-    routed.awayX,
-    routed.exitY,
-    routed.awayX,
-    routed.corridorY
-  );
-  const leg4 = `L ${routed.approachX} ${routed.corridorY}`;
-  const leg5 = roundedElbowPath(
-    routed.approachX,
-    routed.corridorY,
-    routed.approachX,
-    targetY
-  );
-  const leg6 = `L ${targetX} ${targetY}`;
+  if (smartResponse && 'svgPath' in smartResponse) {
+    finalPath = smartResponse.svgPath as string;
+  } else {
+    // Use SmoothStep (right-angled lines) as fallback if smart routing fails
+    // This looks cleaner in a dashboard context than curved bezier lines
+    const [fallbackPath] = getSmoothStepPath({
+      sourceX,
+      sourceY: adjustedSourceY,
+      sourcePosition,
+      targetX,
+      targetY,
+      targetPosition,
+    });
+    finalPath = fallbackPath;
+  }
 
-  const path = `${leg1} ${leg2} ${leg3} ${leg4} ${leg5} ${leg6}`;
-
-  // activation icon by the source
+  // 5. ICON & STYLING
   const key: ActivationKey =
     data?.activation === 'click' || data?.activation === 'hover'
       ? data.activation
@@ -95,9 +115,8 @@ export default function TooltipEdge(props: EdgeProps) {
 
   const OUTSET = 1;
   const iconCx = side === 'right' ? sourceX + OUTSET : sourceX - OUTSET;
-  const iconCy = routed.exitY;
+  const iconCy = adjustedSourceY;
 
-  // Arrow marker
   const markerId = `tooltip-arrow-${id}`;
 
   return (
@@ -132,18 +151,18 @@ export default function TooltipEdge(props: EdgeProps) {
         }}
         style={{ cursor: 'pointer' }}
       >
-        {/* Wider invisible hit-area for easier clicking */}
+        {/* Invisible wide hit-area for easier clicking */}
         <path
-          d={path}
+          d={finalPath}
           stroke="transparent"
-          strokeWidth={10}
+          strokeWidth={20}
           fill="none"
           pointerEvents="stroke"
         />
 
-        {/* Visible stroke */}
+        {/* Visible stroke (Solid line for Tooltips) */}
         <path
-          d={path}
+          d={finalPath}
           stroke={STROKE}
           strokeWidth={1.5}
           fill="none"
@@ -153,14 +172,14 @@ export default function TooltipEdge(props: EdgeProps) {
         />
       </g>
 
-      {/* Activation icon */}
+      {/* Activation Icon */}
       <EdgeLabelRenderer>
         <div
           style={{
             position: 'absolute',
             transform: `translate(-50%, -50%) translate(${iconCx}px, ${iconCy}px)`,
             zIndex: 100000,
-            pointerEvents: 'none', // important: don't block clicks on the edge
+            pointerEvents: 'none',
             userSelect: 'none',
           }}
         >
