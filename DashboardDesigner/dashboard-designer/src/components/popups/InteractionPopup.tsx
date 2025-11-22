@@ -1,3 +1,4 @@
+// src/components/popups/InteractionPopup.tsx
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { InteractionType, InteractionResult } from '../../domain/types';
 
@@ -102,17 +103,24 @@ export default function InteractionPopup({
 
   // ---------- Build target lookup & hierarchy ----------
 
+  // 1. FILTER: Exclude 'GraphType' from the list of connectable targets
+  const validTargets = useMemo(() => {
+    return availableTargets.filter((t) => t.kind !== 'Graph');
+  }, [availableTargets]);
+
   const targetById = useMemo(() => {
     const m = new Map<string, TargetOption>();
-    for (const t of availableTargets) m.set(t.id, t);
+    // Use validTargets instead of availableTargets
+    for (const t of validTargets) m.set(t.id, t);
     return m;
-  }, [availableTargets]);
+  }, [validTargets]);
 
   const childrenByParent = useMemo(() => {
     const m = new Map<string | null, TargetOption[]>();
 
-    for (const t of availableTargets) {
-      // Only nest under parent if that parent is also in the target list;
+    // Use validTargets here as well
+    for (const t of validTargets) {
+      // Only nest under parent if that parent is also in the VALID target list;
       // otherwise treat as root.
       const hasParentInList = t.parentId && targetById.has(t.parentId);
       const parentKey: string | null = hasParentInList ? t.parentId! : null;
@@ -128,7 +136,7 @@ export default function InteractionPopup({
     }
 
     return m;
-  }, [availableTargets, targetById]);
+  }, [validTargets, targetById]);
 
   const rootTargets = childrenByParent.get(null) ?? [];
 
@@ -189,13 +197,17 @@ export default function InteractionPopup({
         });
       } else {
         const t = targetById.get(key);
-        const badgePrefix = t?.badge ? t.badge + ' ' : '';
-        const title = t?.title ?? key;
+        // If the target was filtered out (e.g. it was a GraphType selected previously),
+        // handle gracefully or skip. Here we try to show it if it exists in lookup.
+        if (t) {
+          const badgePrefix = t?.badge ? t.badge + ' ' : '';
+          const title = t?.title ?? key;
 
-        entries.push({
-          key,
-          label: `${badgePrefix}${title}`,
-        });
+          entries.push({
+            key,
+            label: `${badgePrefix}${title}`,
+          });
+        }
       }
     }
 
@@ -524,7 +536,8 @@ export default function InteractionPopup({
             >
               {rootTargets.map((t) => renderTargetRow(t, 0))}
 
-              {availableTargets.length === 0 && (
+              {/* Use validTargets length for the empty state check */}
+              {validTargets.length === 0 && (
                 <div
                   style={{
                     padding: 8,
@@ -533,7 +546,7 @@ export default function InteractionPopup({
                     textAlign: 'center',
                   }}
                 >
-                  No components available
+                  No connectable components available
                 </div>
               )}
             </div>
@@ -616,7 +629,6 @@ export default function InteractionPopup({
               }
             }
 
-            // Log the data being saved for debugging purposes
             console.log('Data to be saved inside Interaction Popup:', {
               name: name.trim(),
               trigger,
