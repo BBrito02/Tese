@@ -15,13 +15,15 @@ import {
   LuPanelLeftClose,
   LuPanelRightClose,
 } from 'react-icons/lu';
+import { SectionTitle } from './sections';
 
 export type DragData = { kind: NodeKind; title?: string };
 
-// ---- layout constants (tweak to taste) ----
-const SIDEBAR_W = 240;
-const TILE_H = 76;
-const TILE_RADIUS = 12;
+// ---- layout constants ----
+const SIDEBAR_W = 260;
+const TILE_H = 80;
+const MARGIN = 12;
+const LS_KEY = 'designer:sidemenu:collapsed'; // Key for local storage
 
 type Section = {
   title: string;
@@ -30,7 +32,7 @@ type Section = {
 
 const SECTIONS: Section[] = [
   {
-    title: 'Visualization Components',
+    title: 'Visualization',
     items: [
       { kind: 'Dashboard', label: 'Dashboard', Icon: LuLayoutDashboard },
       {
@@ -43,16 +45,16 @@ const SECTIONS: Section[] = [
     ],
   },
   {
-    title: 'Interaction Components',
+    title: 'Interaction',
     items: [
       { kind: 'Button', label: 'Button', Icon: LuMousePointerClick },
       { kind: 'Filter', label: 'Filter', Icon: LuFilter },
       { kind: 'Parameter', label: 'Parameter', Icon: LuSlidersHorizontal },
-      { kind: 'DataAction', label: 'DataAction', Icon: LuZap },
+      { kind: 'DataAction', label: 'Action', Icon: LuZap },
     ],
   },
   {
-    title: 'Others',
+    title: 'Layout',
     items: [{ kind: 'Placeholder', label: 'Placeholder', Icon: LuImageOff }],
   },
 ];
@@ -71,6 +73,8 @@ function PaletteTile({
     data: payload,
   });
 
+  const [isHovered, setIsHovered] = useState(false);
+
   return (
     <button
       ref={setNodeRef}
@@ -78,6 +82,8 @@ function PaletteTile({
       {...listeners}
       type="button"
       title={`Drag ${label}`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       style={{
         width: '100%',
         height: TILE_H,
@@ -86,31 +92,41 @@ function PaletteTile({
         userSelect: 'none',
         WebkitUserSelect: 'none',
 
-        background: '#fff',
-        border: '1px solid #e5e7eb',
-        borderRadius: TILE_RADIUS,
-        boxShadow: '0 1px 1px rgba(0,0,0,0.06)',
+        background: isHovered ? '#f8fafc' : '#ffffff',
+        border: isHovered ? '1px solid #94a3b8' : '1px solid #e2e8f0',
+        borderRadius: 12,
+
+        boxShadow: isHovered
+          ? '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)'
+          : '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
 
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 6,
-        padding: 10,
+        gap: 8,
+        padding: 12,
 
-        opacity: isDragging ? 0.6 : 1,
+        opacity: isDragging ? 0.5 : 1,
+        transition: 'all 0.2s ease',
+        transform: isHovered && !isDragging ? 'translateY(-1px)' : 'none',
       }}
     >
-      <Icon size={18} />
+      <div
+        style={{
+          color: isHovered ? '#0f172a' : '#64748b',
+          transition: 'color 0.2s ease',
+        }}
+      >
+        <Icon size={22} strokeWidth={1.5} />
+      </div>
       <span
         style={{
           fontSize: 12,
           fontWeight: 600,
-          lineHeight: 1,
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          maxWidth: '100%',
+          color: '#334155',
+          lineHeight: 1.2,
+          textAlign: 'center',
         }}
       >
         {label}
@@ -120,141 +136,165 @@ function PaletteTile({
 }
 
 export default function SideMenu() {
-  const [collapsed, setCollapsed] = useState(false);
+  // Initialize state from Local Storage
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      const item = localStorage.getItem(LS_KEY);
+      return item ? JSON.parse(item) : false;
+    } catch {
+      return false;
+    }
+  });
 
   const width = collapsed ? 0 : SIDEBAR_W;
+
+  // Shared Toggle Logic
+  const handleToggle = () => {
+    const next = !collapsed;
+    setCollapsed(next);
+    localStorage.setItem(LS_KEY, JSON.stringify(next));
+
+    // Let Editor know our width (0 if collapsed, SIDEBAR_W if open)
+    window.dispatchEvent(
+      new CustomEvent('designer:menu-width', {
+        detail: { width: next ? 0 : SIDEBAR_W },
+      })
+    );
+  };
+
+  // Common style for the toggle button (from your request)
+  const toggleButtonStyle: React.CSSProperties = {
+    position: 'absolute',
+    top: 6,
+    right: collapsed ? -38 : 8,
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    border: '1px solid #e5e7eb',
+    background: '#fff',
+    boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    zIndex: 2000,
+  };
 
   return (
     <>
       <aside
         className="sidebar no-scrollbar"
         style={{
+          // Dimensions
           width,
-          background: '#eee',
-          padding: collapsed ? 0 : 12,
-          height: collapsed ? 0 : 'calc(100vh - 14px)',
-          marginLeft: collapsed ? 0 : 7,
-          marginTop: collapsed ? 0 : 7,
-          marginBottom: collapsed ? 0 : 7,
+          height: collapsed ? 0 : `calc(100vh - ${MARGIN * 2}px)`,
+
+          // Position / Floating style
+          marginTop: collapsed ? 0 : MARGIN,
+          marginBottom: collapsed ? 0 : MARGIN,
+          marginLeft: collapsed ? 0 : MARGIN,
+
+          // Visuals
+          background: '#fafafa',
+          border: collapsed ? 'none' : '1px solid #e2e8f0',
           borderRadius: collapsed ? 0 : 20,
+
+          // Behavior
+          display: 'flex',
+          flexDirection: 'column',
           overflowY: collapsed ? 'hidden' : 'auto',
           overflowX: 'hidden',
-          boxSizing: 'border-box',
-          transition:
-            'width 200ms ease, padding 200ms ease, margin 200ms ease, height 200ms ease, border-radius 200ms ease',
+          transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)',
+          position: 'relative',
+          zIndex: 50,
+          boxShadow: collapsed ? 'none' : '0 4px 12px rgba(0,0,0,0.03)',
         }}
       >
-        {/* Header with collapse button */}
+        {/* Header */}
         {!collapsed && (
           <div
             style={{
+              padding: '20px 24px 10px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               marginBottom: 10,
+              position: 'sticky',
+              top: 0,
+              background: '#fafafa',
+              zIndex: 10,
             }}
           >
-            <div style={{ fontWeight: 700, textAlign: 'center' }}>MENU</div>
+            <div
+              style={{
+                fontSize: 18,
+                fontWeight: 800,
+                letterSpacing: '-0.025em',
+                color: '#0f172a',
+              }}
+            >
+              Components
+            </div>
+
+            {/* Close Button (Inside) */}
             <button
               type="button"
-              onClick={() => setCollapsed(true)}
-              title="Hide menu"
-              style={{
-                border: '1px solid #e5e7eb',
-                background: '#fff',
-                width: 36,
-                height: 36,
-                borderRadius: 8,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-              }}
+              onClick={handleToggle}
+              title="Collapse component menu"
+              style={toggleButtonStyle}
             >
               <LuPanelLeftClose size={16} />
             </button>
           </div>
         )}
 
-        {/* Content fades a bit during transition */}
+        {/* Content */}
         {!collapsed && (
           <div
             style={{
-              transition: 'opacity 180ms ease',
+              padding: '0 24px 20px',
               opacity: collapsed ? 0 : 1,
+              transition: 'opacity 150ms ease',
             }}
           >
             {SECTIONS.map((sec) => (
-              <section
-                key={sec.title}
-                style={{
-                  background: '#f3f4f6',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: 14,
-                  padding: 10,
-                  marginBottom: 12,
-                  boxSizing: 'border-box',
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 700,
-                    background: '#d1d5db',
-                    padding: '6px 10px',
-                    borderRadius: 8,
-                    marginBottom: 8,
-                    textAlign: 'center',
-                    boxSizing: 'border-box',
-                  }}
-                >
-                  {sec.title}
-                </div>
+              <div key={sec.title} style={{ marginBottom: 28 }}>
+                <SectionTitle>{sec.title}</SectionTitle>
 
                 <div
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-                    gap: 8,
+                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gap: 12,
                   }}
                 >
                   {sec.items.map((it) => (
-                    <div key={it.kind} style={{ minWidth: 0 }}>
-                      <PaletteTile
-                        payload={{ kind: it.kind }}
-                        label={it.label}
-                        Icon={it.Icon}
-                      />
-                    </div>
+                    <PaletteTile
+                      key={it.kind}
+                      payload={{ kind: it.kind }}
+                      label={it.label}
+                      Icon={it.Icon}
+                    />
                   ))}
                 </div>
-              </section>
+              </div>
             ))}
           </div>
         )}
       </aside>
 
-      {/* Floating reopen button when collapsed */}
+      {/* Floating Reopen Button (Outside) */}
       {collapsed && (
         <button
           type="button"
-          onClick={() => setCollapsed(false)}
-          title="Show menu"
+          onClick={handleToggle}
+          title="Expand component menu"
           style={{
+            ...toggleButtonStyle,
             position: 'absolute',
-            left: 12,
-            top: 18,
-            zIndex: 20,
-            width: 36,
-            height: 36,
-            borderRadius: 8,
-            border: '1px solid #e5e7eb',
-            background: '#fff',
-            boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
+            left: MARGIN,
+            top: 20,
+            zIndex: 50,
           }}
         >
           <LuPanelRightClose size={16} />
