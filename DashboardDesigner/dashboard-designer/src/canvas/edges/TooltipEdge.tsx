@@ -11,7 +11,8 @@ import { getSmartEdge } from '@tisoap/react-flow-smart-edge';
 import { activationIcons, type ActivationKey } from '../../domain/icons';
 
 const ICON_SIZE = 25;
-const STROKE = '#000';
+const STROKE_DEFAULT = '#000';
+const STROKE_SELECTED = '#3b82f6'; // Bright blue for selection
 
 export default function TooltipEdge(props: EdgeProps) {
   const {
@@ -26,33 +27,21 @@ export default function TooltipEdge(props: EdgeProps) {
     data,
     sourcePosition = Position.Right,
     targetPosition = Position.Left,
+    selected, // <--- 1. Get selection state from React Flow
   } = props;
 
   // 1. GET NODES
-  // Casting to avoid type conflicts between react-flow versions
   const allNodes = useNodes<Record<string, unknown>>() as unknown as Node[];
 
   // 2. FILTER & TRANSFORM OBSTACLES
-  // This applies the same fix used in InteractionEdge to handle nested nodes
   const obstacles = allNodes
     .filter((n) => {
-      // Exclude endpoints
       if (n.id === source || n.id === target) return false;
-
-      // Exclude Dashboard Background (D0) so the edge can travel inside it
-      // Check both type and ID prefix to be safe
       if (n.type === 'dashboard' || n.id.startsWith('D0')) return false;
-
-      // Exclude hidden nodes
       if (n.hidden) return false;
-
       return true;
     })
     .map((n) => {
-      // CRITICAL FIX: CONVERT RELATIVE POSITIONS TO ABSOLUTE
-      // React Flow stores child nodes (charts inside dashboard) with relative positions (e.g., x: 10).
-      // The Smart Edge library calculates paths in global screen space.
-      // We must map 'position' to 'positionAbsolute' so the library knows where the obstacles actually are.
       if (n.positionAbsolute) {
         return { ...n, position: n.positionAbsolute };
       }
@@ -62,13 +51,12 @@ export default function TooltipEdge(props: EdgeProps) {
   const side: 'left' | 'right' =
     data?.sourceSide ?? (targetX >= sourceX ? 'right' : 'left');
 
-  // Fan-out alignment logic (offsets edges if multiple connect to same node)
+  // Fan-out alignment logic
   const siblings = Math.max(1, Number(data?.siblings ?? 1));
   const ordinal = Math.min(
     Math.max(0, Number(data?.ordinal ?? 0)),
     siblings - 1
   );
-  // V_STACK = 18
   const centerOffset = (ordinal - (siblings - 1) / 2) * 18;
   const adjustedSourceY = sourceY + centerOffset;
 
@@ -80,10 +68,10 @@ export default function TooltipEdge(props: EdgeProps) {
     sourceY: adjustedSourceY,
     targetX,
     targetY,
-    nodes: obstacles as any, // Pass the transformed obstacles
+    nodes: obstacles as any,
     options: {
-      nodePadding: 10, // Small padding to allow routing through tight gaps
-      gridRatio: 2, // High precision grid for accurate pathfinding
+      nodePadding: 10,
+      gridRatio: 2,
     },
   });
 
@@ -93,8 +81,6 @@ export default function TooltipEdge(props: EdgeProps) {
   if (smartResponse && 'svgPath' in smartResponse) {
     finalPath = smartResponse.svgPath as string;
   } else {
-    // Use SmoothStep (right-angled lines) as fallback if smart routing fails
-    // This looks cleaner in a dashboard context than curved bezier lines
     const [fallbackPath] = getSmoothStepPath({
       sourceX,
       sourceY: adjustedSourceY,
@@ -119,6 +105,9 @@ export default function TooltipEdge(props: EdgeProps) {
 
   const markerId = `tooltip-arrow-${id}`;
 
+  // 2. DETERMINE STROKE COLOR
+  const currentStroke = selected ? STROKE_SELECTED : STROKE_DEFAULT;
+
   return (
     <>
       <defs>
@@ -131,14 +120,15 @@ export default function TooltipEdge(props: EdgeProps) {
           orient="auto"
           markerUnits="userSpaceOnUse"
         >
-          <path d="M 0 0 L 12 6 L 0 12 z" fill={STROKE} />
+          {/* 3. Apply color to arrow head */}
+          <path d="M 0 0 L 12 6 L 0 12 z" fill={currentStroke} />
         </marker>
       </defs>
 
       {/* CLICKABLE EDGE GROUP */}
       <g
-        onClick={(e) => {
-          e.stopPropagation();
+        onClick={() => {
+          //e.stopPropagation();
           window.dispatchEvent(
             new CustomEvent('designer:select-edge', {
               detail: {
@@ -160,15 +150,22 @@ export default function TooltipEdge(props: EdgeProps) {
           pointerEvents="stroke"
         />
 
-        {/* Visible stroke (Solid line for Tooltips) */}
+        {/* Visible stroke */}
         <path
           d={finalPath}
-          stroke={STROKE}
-          strokeWidth={1.5}
+          stroke={currentStroke} // 4. Apply dynamic color
+          strokeWidth={selected ? 2.5 : 1.5} // 5. Make thicker when selected
           fill="none"
           markerEnd={`url(#${markerId})`}
           pointerEvents="none"
-          style={style}
+          style={{
+            ...style,
+            // Add a subtle glow/shadow if selected
+            filter: selected
+              ? 'drop-shadow(0 0 2px rgba(59, 130, 246, 0.5))'
+              : 'none',
+            transition: 'stroke 0.2s, stroke-width 0.2s',
+          }}
         />
       </g>
 
@@ -190,10 +187,14 @@ export default function TooltipEdge(props: EdgeProps) {
               borderRadius: '50%',
               overflow: 'hidden',
               background: '#fff',
-              boxShadow: '0 1px 2px rgba(0,0,0,.25)',
+              // Highlight icon border if selected
+              boxShadow: selected
+                ? `0 0 0 2px ${STROKE_SELECTED}, 0 1px 4px rgba(0,0,0,0.2)`
+                : '0 1px 2px rgba(0,0,0,.25)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              transition: 'box-shadow 0.2s',
             }}
           >
             <img
