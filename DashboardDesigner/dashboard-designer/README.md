@@ -1,69 +1,48 @@
-# React + TypeScript + Vite
+PROJETO: Dashboard Designer
+DATA: 24/11/2025
+AUTOR: Bernardo Geada de Brito
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+---
 
-Currently, two official plugins are available:
+## RESUMO
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+A ferramenta permite desenhar e prototipar Dashboards de Visualização de Informação. O objetivo é facilitar a criação de layouts, a definição da gramática visual dos gráficos e a modelação da interatividade entre os vários componentes.
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## FUNCIONALIDADES PRINCIPAIS
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+1. Gestão de Layout e Composição
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+   - Drag-and-Drop: Construção do dashboard arrastando componentes do menu lateral diretamente para o canvas.
+   - Criação de Hierarquias: Possibilidade de colocar componentes dentro de outros (ex: Gráficos dentro de Visualizações) para organizar o layout.
+   - Métodos de Composição: A hierarquia pode ser criada de duas formas:
+     a) Arrastando um componente do meu lateral diretamente para cima de outro no canvas;
+     b) Utilizando o menu contextual ("Actions") de um componente existente para adicionar filhos.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+2. Configuração de Dados e Visualização
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+   - Definição de Dados: Interface para adicionar e listar atributos de dados (Data Items) associados a cada componente.
+   - Gramática Visual: Seleção do tipo de gráfico (Bar, Line, Scatter, etc.) e mapeamento de atributos de dados para variáveis visuais (Cor, Tamanho, Forma, Texto).
+   - Imagens de Referência: Funcionalidade para carregar screenshots reais de gráficos já existentes (ex: do Tableau ou PowerBI) para substituir o ícone padrão, permitindo um protótipo visualmente fiel ao resultado final.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+3. Modelação de Interatividade
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+   - Criação de Fluxos: Sistema visual de criação de ligações para ligar componentes e definir dependências.
+   - Especificação de Interações: Configuração detalhada da ação ("Click" ou "Hover") e do resultado no sistema (ex: Filtragem, Highlight, Dashboard, Link).
+   - Tooltips Dinâmicos: Criação de componentes de Tooltip e associação visual direta a gráficos específicos.
+
+4. Persistência e Portabilidade
+   - Guardar/Carregar: O sistema exporta o projeto num formato (.dashboard).
+   - Bundle Autocontido: O ficheiro guardado contém não só a estrutura lógica, mas também todas as imagens carregadas pelo utilizador, permitindo abrir e editar o projeto em qualquer computador sem dependências externas ou perda de dados.
+
+---
+
+## COMO EXECUTAR O PROJETO
+
+Requisitos: Node.js instalado.
+
+1. Abrir o terminal na pasta raiz do projeto.
+2. Instalar as dependências com o comando: npm install
+3. Iniciar a aplicação com o comando: npm run dev
+4. Abrir o link fornecido no browser (habitualmente http://localhost:5173).
