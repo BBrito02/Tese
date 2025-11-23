@@ -2,6 +2,26 @@
 import type { Edge as RFEdge } from 'reactflow';
 import EdgesMenu from './EdgesMenu';
 import { NameField, TypeField, SectionTitle } from './sections';
+import type { IconType } from 'react-icons';
+import {
+  // Visualization
+  LuLayoutDashboard,
+  LuChartColumnDecreasing,
+  LuInfo,
+  LuList,
+  // Interaction
+  LuMousePointerClick,
+  LuFilter,
+  LuSlidersHorizontal,
+  LuZap,
+  // Layout
+  LuImageOff,
+  // Extras for logic
+  LuMousePointer2, // Hover
+  LuTag, // Fallback
+  LuArrowRight, // Navigate result
+  LuRefreshCw, // Reset/Update result
+} from 'react-icons/lu';
 
 type AppEdge = RFEdge<any>;
 
@@ -10,6 +30,27 @@ type Props = {
   sourceTitle?: string;
   targetTitle?: string;
   onDelete?: () => void;
+};
+
+// Map based on your SideMenu items + common Result types
+const ICON_MAP: Record<string, IconType> = {
+  // --- SideMenu Types ---
+  Dashboard: LuLayoutDashboard,
+  Visualization: LuChartColumnDecreasing,
+  Tooltip: LuInfo,
+  Legend: LuList,
+  Button: LuMousePointerClick,
+  Filter: LuFilter,
+  Parameter: LuSlidersHorizontal,
+  Action: LuZap,
+  DataAction: LuZap,
+  Placeholder: LuImageOff,
+
+  // --- Interaction Results ---
+  Navigate: LuArrowRight,
+  Reset: LuRefreshCw,
+  // 'Filter' matches the SideMenu type above
+  // 'Action' matches the SideMenu type above
 };
 
 // Simple helper to capitalize the first letter
@@ -35,6 +76,24 @@ export default function InteractionEdgeMenu({
   const fromLabel = sourceTitle ?? edge.source;
   const toLabel = targetTitle ?? edge.target;
 
+  // --- Icon Logic ---
+
+  // Helper to find icon by string (e.g. "Button")
+  const getIcon = (text: string): IconType => {
+    // try exact match, then capitalized match, then default
+    return ICON_MAP[text] || ICON_MAP[capitalize(text)] || LuTag;
+  };
+
+  const SourceIcon = getIcon(fromLabel);
+  const TargetIcon = getIcon(toLabel);
+  const ResultIcon = getIcon(result);
+
+  // Special logic for Trigger (Click vs Hover)
+  const TriggerIcon =
+    trigger.toLowerCase() === 'hover' ? LuMousePointer2 : LuMousePointerClick;
+
+  // ------------------
+
   const technicalItems: string[] = [`Edge id · ${edge.id}`];
   if (label) technicalItems.push(`Label · ${label}`);
   if (sourceHandle) technicalItems.push(`Source handle · ${sourceHandle}`);
@@ -56,13 +115,14 @@ export default function InteractionEdgeMenu({
           onChange={() => {}}
         />
 
-        <TypeField value="Interaction" label="Edge type" />
+        {/* General type icon */}
+        <TypeField value="Interaction" label="Edge type" icon={LuZap} />
 
         <SectionTitle>Connection</SectionTitle>
-        <TypeField value={fromLabel} label="Source" />
-        <TypeField value={toLabel} label="Target" />
-        <TypeField value={trigger} label="Activation" />
-        <TypeField value={result} label="Result" />
+        <TypeField value={fromLabel} label="Source" icon={SourceIcon} />
+        <TypeField value={toLabel} label="Target" icon={TargetIcon} />
+        <TypeField value={trigger} label="Activation" icon={TriggerIcon} />
+        <TypeField value={result} label="Result" icon={ResultIcon} />
       </div>
 
       {onDelete && (

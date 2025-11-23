@@ -1,10 +1,16 @@
 // src/components/menus/sections.tsx
-import React, { useState } from 'react';
+import React, { useState, type ElementType } from 'react';
 import { LuPlus, LuPencil, LuTag } from 'react-icons/lu';
 import type { DataItem } from '../../domain/types';
 import { WhiteField, GhostLine } from './common';
 
 export type ListItem = string | DataItem;
+
+interface TypeFieldProps {
+  value: string;
+  label?: string;
+  icon?: ElementType; // Accepts a React Icon component (e.g., LuUser, LuSettings)
+}
 
 // badge css
 const dtypeBadge: React.CSSProperties = {
@@ -279,8 +285,11 @@ export function NameField(props: {
 }
 
 // type field section
-export function TypeField(props: { value: string; label?: string }) {
-  const title = props.label ?? 'Component type';
+export function TypeField({ value, label, icon }: TypeFieldProps) {
+  const title = label ?? 'Component type';
+
+  // 2. Determine which icon to use: The passed prop OR the default LuTag
+  const IconComponent = icon ?? LuTag;
 
   return (
     <div>
@@ -298,17 +307,18 @@ export function TypeField(props: { value: string; label?: string }) {
 
       <div style={{ position: 'relative' }}>
         <input
-          value={props.value}
+          value={value}
           readOnly
           disabled
           style={{
-            ...WhiteField,
+            ...WhiteField, // Assuming this is defined elsewhere in your file
             paddingRight: 34,
             opacity: 1,
             color: '#0f172a',
           }}
         />
-        <LuTag size={16} style={smallIconRight} />
+        {/* 3. Render the dynamic icon */}
+        <IconComponent size={16} style={smallIconRight} />
       </div>
     </div>
   );
