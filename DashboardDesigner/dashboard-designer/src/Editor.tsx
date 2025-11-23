@@ -82,6 +82,8 @@ import { FaHand } from 'react-icons/fa6';
 import InteractionEdgeMenu from './components/menus/InteractionEdgeMenu';
 import TooltipEdgeMenu from './components/menus/TooltipEdgeMenu';
 
+import { saveProjectAsZip, loadProjectFromZip } from './utils/fileUtils';
+
 /* =========================
  *  Node/Edge component maps
  * ========================= */
@@ -161,8 +163,8 @@ const baseFrom = (name: string) => name.replace(/\.[^.]+$/, '');
 /** Minimum container base sizes (keeps dashboards a bit larger than visualizations). */
 function baseMinFor(kind: NodeKind | undefined) {
   return {
-    w: kind === 'Dashboard' ? 320 : 240,
-    h: kind === 'Dashboard' ? 180 : 140,
+    w: kind === 'Dashboard' ? 320 : 180,
+    h: kind === 'Dashboard' ? 180 : 100,
   };
 }
 
@@ -875,20 +877,22 @@ export default function Editor() {
   /** Show Save modal and download project on confirm. */
   const openSaveModal = useCallback(() => {
     openModal({
-      title: 'Save',
+      title: 'Save Project',
       node: (
         <SavePopup
           initialName={saveNameBase}
           onCancel={closeModal}
           onConfirm={(finalFilename) => {
-            downloadJSON(buildSave(), finalFilename);
+            const projectData = buildSave(); // Get the raw data
+            saveProjectAsZip(projectData, finalFilename); // Zip it with images
+
             setSaveNameBase(baseFrom(finalFilename));
             closeModal();
           }}
         />
       ),
     });
-  }, [buildSave, downloadJSON, openModal, closeModal, saveNameBase]);
+  }, [buildSave, openModal, closeModal, saveNameBase]);
 
   /* ---------- Layout/constraints ---------- */
 
@@ -2137,12 +2141,45 @@ export default function Editor() {
           >
             <FaCloudUploadAlt size={16} aria-hidden="true" />
             <span>Load</span>
+            {/* --- CHANGE START --- */}
             <input
               type="file"
-              accept="application/json,.json"
-              onChange={openJSONFile}
+              accept=".json,.dashboard,.zip" // Allow new formats
               style={{ display: 'none' }}
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                e.target.value = ''; // Reset
+                if (!file) return;
+
+                setSaveNameBase(baseFrom(file.name));
+
+                try {
+                  let data;
+
+                  // Check file type
+                  if (file.name.endsWith('.json')) {
+                    // Legacy Support (Old files)
+                    const text = await file.text();
+                    data = JSON.parse(text);
+                  } else {
+                    // New Bundle Support (Unpacks images to DB)
+                    data = await loadProjectFromZip(file);
+                  }
+
+                  // Validate version check
+                  if (!('version' in data)) {
+                    alert('Invalid file format');
+                    return;
+                  }
+
+                  loadSave(data);
+                } catch (err) {
+                  console.error(err);
+                  alert('Failed to load project.');
+                }
+              }}
             />
+            {/* --- CHANGE END --- */}
           </label>
         </div>
 

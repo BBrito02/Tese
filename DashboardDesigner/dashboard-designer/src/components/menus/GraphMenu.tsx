@@ -1,3 +1,4 @@
+import { useRef, useState, useEffect } from 'react';
 import { WhiteField, type KindProps } from './common';
 import {
   TypeField,
@@ -10,9 +11,16 @@ import { GRAPH_TYPE_ICONS, VISUAL_VAR_ICONS } from '../../domain/icons';
 import { useModal } from '../ui/ModalHost';
 import GraphFieldsPopup from '../popups/GraphFieldsPopup';
 import GraphMarkPopup from '../popups/GraphMarkPopup';
-import { LuPlus } from 'react-icons/lu';
+import { LuPlus, LuImagePlus, LuTrash2, LuLoader } from 'react-icons/lu';
 import { GrBladesHorizontal, GrBladesVertical } from 'react-icons/gr';
 import type { ListItem } from './sections';
+
+// Import Local Store Utils
+import {
+  saveLocalImage,
+  getLocalImageSrc,
+  deleteLocalImage,
+} from '../../utils/localStore';
 
 function namesFromParent(data?: (string | DataItem)[]): string[] {
   if (!Array.isArray(data)) return [];
@@ -29,7 +37,6 @@ const vvIcon = (k: 'Color' | 'Size' | 'Shape' | 'Text') => (
   />
 );
 
-// local header row & round icon (mirrors sections.tsx)
 const headerRow: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
@@ -58,7 +65,88 @@ export default function GraphMenu(p: KindProps) {
   const gt = (p.node.data as any)?.graphType as GraphType | undefined;
   const { openModal, closeModal } = useModal();
 
-  // Prefer parent visualization data; fallback to local data
+  // --- IMAGE LOGIC ---
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Get the ID from node data
+  const imageId = d.previewImageId as string | undefined;
+  const [viewableSrc, setViewableSrc] = useState<string | null>(null);
+
+  // 1. Load the image from DB when the menu opens or ID changes
+  useEffect(() => {
+    let active = true;
+    if (imageId) {
+      getLocalImageSrc(imageId).then((src) => {
+        if (active) setViewableSrc(src);
+      });
+    } else {
+      setViewableSrc(null);
+    }
+    return () => {
+      active = false;
+    };
+  }, [imageId]);
+
+  // 2. Handle Upload
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsProcessing(true);
+    try {
+      // Save to browser DB
+      const newId = await saveLocalImage(file);
+      // Save ID to Node Data
+      p.onChange({ previewImageId: newId } as any);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save image locally.');
+    } finally {
+      setIsProcessing(false);
+      e.target.value = '';
+    }
+  };
+
+  // 3. Handle Remove
+  const handleRemoveImage = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (imageId) {
+      await deleteLocalImage(imageId); // Clean up DB
+    }
+    p.onChange({ previewImageId: undefined } as any);
+  };
+
+  // 4. Handle Zoom
+  const handleZoomImage = () => {
+    if (!viewableSrc) return;
+    openModal({
+      title: 'Reference Image',
+      node: (
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            padding: 10,
+            background: '#fff',
+          }}
+        >
+          <img
+            src={viewableSrc}
+            alt="Reference"
+            style={{
+              maxWidth: '100%',
+              maxHeight: '80vh',
+              objectFit: 'contain',
+              borderRadius: 4,
+            }}
+          />
+        </div>
+      ),
+    });
+  };
+  // -------------------
+
   const available = namesFromParent((p as any).parentData ?? d?.data);
   const columns = Array.isArray(d.columns) ? (d.columns as string[]) : [];
   const rows = Array.isArray(d.rows) ? (d.rows as string[]) : [];
@@ -67,12 +155,9 @@ export default function GraphMenu(p: KindProps) {
     | DataItem
   )[];
 
-  // Build a fast lookup: name -> DataItem (if present)
   const dataIndex = new Map<string, DataItem>();
   for (const it of availableRaw) {
-    if (typeof it !== 'string' && it?.name) {
-      dataIndex.set(it.name, it);
-    }
+    if (typeof it !== 'string' && it?.name) dataIndex.set(it.name, it);
   }
 
   const asListItems = (names: string[]): ListItem[] =>
@@ -100,7 +185,6 @@ export default function GraphMenu(p: KindProps) {
     });
   };
 
-  // ---------- MARKS ----------
   const marks = (d.marks ?? {}) as {
     color?: string | null;
     size?: string | null;
@@ -118,10 +202,7 @@ export default function GraphMenu(p: KindProps) {
           graphType={gt}
           onCancel={closeModal}
           onSave={(next) => {
-            // 1) persist marks on the graph
             p.onChange({ marks: next } as any);
-
-            // 2) auto-ensure corresponding visual variables on parent Visualization
             const need: VisualVariable[] = [];
             if (next.color) need.push('Color');
             if (next.size) need.push('Size');
@@ -129,7 +210,7 @@ export default function GraphMenu(p: KindProps) {
             if (next.text) need.push('Text');
 
             if (need.length) {
-              const parentId = (p.node as any)?.parentNode; // React Flow parent
+              const parentId = (p.node as any)?.parentNode;
               if (parentId) {
                 window.dispatchEvent(
                   new CustomEvent('designer:ensure-visual-vars', {
@@ -138,7 +219,6 @@ export default function GraphMenu(p: KindProps) {
                 );
               }
             }
-
             closeModal();
           }}
         />
@@ -146,10 +226,8 @@ export default function GraphMenu(p: KindProps) {
     });
   };
 
-  // Prepare ListItem[] for rows/columns and marks (so dtype badge appears)
   const columnsItems: ListItem[] = asListItems(columns);
   const rowsItems: ListItem[] = asListItems(rows);
-
   const colorItems: ListItem[] = marks.color
     ? [dataIndex.get(marks.color) ?? marks.color]
     : [];
@@ -170,7 +248,6 @@ export default function GraphMenu(p: KindProps) {
       <SectionTitle>Properties</SectionTitle>
       <TypeField value="Graph" />
 
-      {/* Graph type (read-only, with icon) */}
       <div>
         <label
           style={{
@@ -223,15 +300,139 @@ export default function GraphMenu(p: KindProps) {
         </div>
       </div>
 
-      {/* Description Section */}
       <DescriptionSection
-        placeholder="Describe this tooltip"
+        placeholder="Describe this graph"
         value={d.description}
         disabled={disabled}
-        onChange={(val) => p.onChange({ description: val })} // <- adapt string → patch
+        onChange={(val) => p.onChange({ description: val })}
       />
 
-      {/* Graph Fields header with + button */}
+      {/* --- REFERENCE IMAGE SECTION --- */}
+      <div style={{ marginTop: 4 }}>
+        <SectionTitle>Reference Image</SectionTitle>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/png, image/jpeg, image/webp"
+          hidden
+          onChange={handleImageUpload}
+        />
+
+        {viewableSrc ? (
+          <div
+            onClick={handleZoomImage}
+            title="Click to zoom"
+            style={{
+              position: 'relative',
+              border: '1px solid #e5e7eb',
+              borderRadius: 8,
+              overflow: 'hidden',
+              background: '#f8fafc',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              minHeight: 120,
+              cursor: 'zoom-in',
+              transition: 'border-color 0.2s',
+            }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.borderColor = '#94a3b8')
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.borderColor = '#e5e7eb')
+            }
+          >
+            <img
+              src={viewableSrc}
+              alt="Graph preview"
+              style={{
+                maxWidth: '100%',
+                maxHeight: 180,
+                objectFit: 'contain',
+                display: 'block',
+              }}
+            />
+            {!disabled && (
+              <button
+                onClick={handleRemoveImage}
+                title="Remove image"
+                style={{
+                  position: 'absolute',
+                  top: 6,
+                  right: 6,
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: 6,
+                  width: 28,
+                  height: 28,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#ef4444',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                }}
+              >
+                <LuTrash2 size={16} />
+              </button>
+            )}
+          </div>
+        ) : (
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={disabled || isProcessing}
+            style={{
+              width: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              padding: 16,
+              border: '1px dashed #cbd5e1',
+              borderRadius: 8,
+              background: '#f8fafc',
+              cursor: disabled || isProcessing ? 'default' : 'pointer',
+              color: '#64748b',
+              transition: 'background 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              if (!disabled && !isProcessing) {
+                e.currentTarget.style.background = '#f1f5f9';
+                e.currentTarget.style.borderColor = '#94a3b8';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!disabled && !isProcessing) {
+                e.currentTarget.style.background = '#f8fafc';
+                e.currentTarget.style.borderColor = '#cbd5e1';
+              }
+            }}
+          >
+            {isProcessing ? (
+              <>
+                <LuLoader
+                  size={24}
+                  style={{ animation: 'spin 1s linear infinite' }}
+                />
+                <div style={{ fontSize: 12, fontWeight: 500 }}>
+                  Processing...
+                </div>
+              </>
+            ) : (
+              <>
+                <LuImagePlus size={24} style={{ opacity: 0.7 }} />
+                <div style={{ fontSize: 12, fontWeight: 500 }}>
+                  Upload Screenshot
+                </div>
+              </>
+            )}
+          </button>
+        )}
+      </div>
+      {/* ------------------------------------------ */}
+
       <div style={headerRow}>
         <div
           style={{
@@ -256,7 +457,6 @@ export default function GraphMenu(p: KindProps) {
         </button>
       </div>
 
-      {/* Current Columns (chips with dtype) */}
       <ListAttributesSection
         title="Columns"
         items={columnsItems}
@@ -267,8 +467,6 @@ export default function GraphMenu(p: KindProps) {
         }}
         icon={<GrBladesHorizontal size={16} />}
       />
-
-      {/* Current Rows (chips with dtype) */}
       <ListAttributesSection
         title="Rows"
         items={rowsItems}
@@ -280,7 +478,6 @@ export default function GraphMenu(p: KindProps) {
         icon={<GrBladesVertical size={16} />}
       />
 
-      {/* ---- Marks section + popup ---- */}
       <div style={headerRow}>
         <div
           style={{
@@ -305,7 +502,6 @@ export default function GraphMenu(p: KindProps) {
         </button>
       </div>
 
-      {/* Color */}
       <ListAttributesSection
         title="Color"
         items={colorItems}
@@ -313,8 +509,6 @@ export default function GraphMenu(p: KindProps) {
         onRemove={() => p.onChange({ marks: { ...marks, color: null } } as any)}
         icon={vvIcon('Color')}
       />
-
-      {/* Size */}
       <ListAttributesSection
         title="Size"
         items={sizeItems}
@@ -322,8 +516,6 @@ export default function GraphMenu(p: KindProps) {
         onRemove={() => p.onChange({ marks: { ...marks, size: null } } as any)}
         icon={vvIcon('Size')}
       />
-
-      {/* Shape */}
       <ListAttributesSection
         title="Shape"
         items={shapeItems}
@@ -331,8 +523,6 @@ export default function GraphMenu(p: KindProps) {
         onRemove={() => p.onChange({ marks: { ...marks, shape: null } } as any)}
         icon={vvIcon('Shape')}
       />
-
-      {/* Text */}
       <ListAttributesSection
         title="Text"
         items={textItems}

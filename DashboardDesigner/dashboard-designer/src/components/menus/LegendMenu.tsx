@@ -1,3 +1,5 @@
+// src/components/menus/LegendMenu.tsx
+
 import type { KindProps } from './common';
 import {
   NameField,
@@ -46,6 +48,8 @@ export default function LegendMenu(p: KindProps) {
   const handleAddComponent = () => {
     const parentKind = (p.node.data?.kind ?? 'Visualization') as NodeKind;
     const baseKinds = allowedChildKinds(parentKind); // NodeKind[]
+
+    // Allow VisualVariable to be added
     const kinds = [...baseKinds, 'VisualVariable'] as const;
 
     openModal({
@@ -55,21 +59,19 @@ export default function LegendMenu(p: KindProps) {
           kinds={
             kinds as unknown as (NodeKind | 'GraphType' | 'VisualVariable')[]
           }
+          initialVisualVars={d.visualVars ?? []} // Pass current vars so popup shows them checked
           onCancel={closeModal}
           onSave={(payload) => {
             // Route by payload.kind
             if (payload.kind === 'VisualVariable') {
-              window.dispatchEvent(
-                new CustomEvent('designer:update-visualization-props', {
-                  detail: {
-                    nodeId: p.node.id,
-                    patch: {
-                      visualVars: payload.variables as VisualVariable[],
-                    },
-                  },
-                })
-              );
+              // FIX: Use p.onChange directly to update the node data
+              p.onChange({ visualVars: payload.variables } as any);
+
+              closeModal();
+              return;
             }
+
+            // Handle other adds if necessary
             closeModal();
           }}
         />
@@ -114,7 +116,6 @@ export default function LegendMenu(p: KindProps) {
                 initial={toDataItems(dataList)}
                 onCancel={closeModal}
                 onSave={(items: DataItem[]) => {
-                  // If you’re standardizing on DataItem[], keep as-is:
                   p.onChange({ data: items } as any);
                   closeModal();
                 }}
@@ -137,7 +138,6 @@ export default function LegendMenu(p: KindProps) {
             })
           );
         }}
-        //onAdd={() => {}}
         addTooltip="Add interaction"
         disabled={disabled}
       />

@@ -9,12 +9,19 @@ type Props = {
   onSave: (
     payload:
       | { kind: NodeKind; title: string; description?: string }
-      | { kind: 'GraphType'; graphTypes: GraphType[] } // ← array here
+      | { kind: 'GraphType'; graphTypes: GraphType[] }
       | { kind: 'VisualVariable'; variables: VisualVariable[] }
   ) => void;
   initialVisualVars?: VisualVariable[];
   initialGraphTypes?: GraphType[];
 };
+
+// Helper to format label (e.g., "GraphType" -> "Graph Type")
+function formatKindLabel(kind: string) {
+  if (kind === 'GraphType') return 'Graph Type';
+  if (kind === 'VisualVariable') return 'Visual Variable';
+  return kind; // Return as-is for others (like "Button", "Filter")
+}
 
 export default function AddComponentPopup({
   kinds,
@@ -87,7 +94,7 @@ export default function AddComponentPopup({
         >
           {kinds.map((k) => (
             <option key={k} value={k}>
-              {k}
+              {formatKindLabel(k)}
             </option>
           ))}
         </select>

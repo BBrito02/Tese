@@ -18,7 +18,7 @@ import ClickHoverPorts from '../nodes/ClickHoverPorts'; // adjust the path if ne
 // Per-kind minimums (match your previous sizes)
 const MIN_SIZE: Record<string, { w: number; h: number }> = {
   Dashboard: { w: 260, h: 200 },
-  Visualization: { w: 260, h: 200 },
+  Visualization: { w: 260, h: 100 },
   Tooltip: { w: 250, h: 180 },
   Legend: { w: 170, h: 75 },
   Button: { w: 140, h: 75 },

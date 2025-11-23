@@ -162,6 +162,7 @@ interface PlaceholderNodeData extends NodeDataBase {
 export interface GraphNodeData extends NodeDataBase {
   kind: 'Graph';
   graphType: GraphType;
+  previewImageId?: string;
 }
 
 export type NodeData =

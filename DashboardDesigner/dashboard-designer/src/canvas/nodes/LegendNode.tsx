@@ -5,13 +5,18 @@ import BaseNodeShell from './BaseNodeShell';
 export default function LegendNode(p: NodeProps<NodeData>) {
   const d: any = p.data;
   const footer = d.data as (string | DataItem)[] | undefined;
-  const vv = d.visualVars as VisualVariable[] | undefined;
+
+  const visualVars: VisualVariable[] = Array.isArray(d.visualVariables)
+    ? (d.visualVariables as VisualVariable[])
+    : Array.isArray(d.visualVars)
+    ? (d.visualVars as VisualVariable[])
+    : [];
 
   return (
     <BaseNodeShell
       {...p}
       footerItems={footer}
-      visualVars={vv}
+      visualVars={visualVars}
       cardStyle={{
         borderRadius: 8,
         background: '#E6E6E6',
