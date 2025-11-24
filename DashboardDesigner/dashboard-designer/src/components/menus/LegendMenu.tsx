@@ -8,12 +8,7 @@ import {
   AddComponentSection,
   SectionTitle,
 } from './sections';
-import type {
-  DataItem,
-  Interaction,
-  NodeKind,
-  VisualVariable,
-} from '../../domain/types';
+import type { DataItem, Interaction, NodeKind } from '../../domain/types';
 import { useModal } from '../ui/ModalHost';
 import { allowedChildKinds } from '../../domain/rules';
 import AddComponentPopup from '../popups/ComponentPopup';
