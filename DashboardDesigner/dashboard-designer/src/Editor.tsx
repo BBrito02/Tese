@@ -2309,9 +2309,10 @@ export default function Editor() {
               (selectedEdgeTarget?.data as any)?.title ?? selectedEdge.target
             }
             onDelete={() => {
-              setEdges((eds) =>
-                (eds as AppEdge[]).filter((e) => e.id !== selectedEdge.id)
-              );
+              const tooltipNodeId = selectedEdge.target;
+
+              pruneAfterRemoval([tooltipNodeId]);
+
               setSelectedEdgeId(null);
             }}
           />
