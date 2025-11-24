@@ -445,21 +445,171 @@ export default function Editor() {
    * ===================================================== */
 
   /** Patch a node's data by id. */
-  const updateNodeById = useCallback(
-    (id: string, patch: Partial<NodeData>) => {
-      setNodes(
-        (nds) =>
-          (nds as unknown as Array<RFNode<NodeData>>).map((n) =>
-            n.id === id
-              ? ({
-                  ...n,
-                  data: { ...(n.data as any), ...(patch as any) } as NodeData,
-                } as RFNode<NodeData>)
-              : (n as RFNode<NodeData>)
-          ) as unknown as typeof nds
+const updateNodeById = useCallback(
+    async (id: string, patch: Partial<NodeData>) => {
+      const patchAny = patch as any;
+
+      // --- 1. DETECT DATA REMOVAL ---
+      if (patchAny.data && Array.isArray(patchAny.data)) {
+        const node = nodes.find((n) => n.id === id);
+        const rawOld = (node?.data as any)?.data;
+        
+        const oldItems = Array.isArray(rawOld) ? rawOld : [];
+        const newItems = patchAny.data;
+
+        // Helper: Normalize string vs object
+        const toName = (i: any) => {
+          if (!i) return '';
+          if (typeof i === 'string') return i.trim();
+          return (i.name || '').trim();
+        };
+
+        const newNamesSet = new Set(newItems.map(toName));
+        const removedItems = oldItems.filter((i: any) => !newNamesSet.has(toName(i)));
+
+        if (removedItems.length > 0) {
+          // console.log('Cleaning up removed items:', removedItems);
+
+          const toSlug = (s: string) =>
+            s.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9_-]/g, '');
+
+          const removedPrefixes = new Set(
+            removedItems.map((i: any) => `data:${toSlug(toName(i))}`)
+          );
+
+          const edgeIdsToDelete: string[] = [];
+          const nodeIdsToDelete: string[] = []; // Tooltip IDs
+          const interactionsToRemove = new Set<string>(); // Interaction IDs
+          const tooltipLabelsToRemove = new Set<string>(); // Tooltip Labels (e.g. "T0 Title")
+
+          // A. Find Edges
+          edges.forEach((e) => {
+            let isMatch = false;
+            if (e.source === id && e.sourceHandle) {
+               for (const prefix of removedPrefixes) {
+                 if (e.sourceHandle.startsWith(prefix)) { isMatch = true; break; }
+               }
+            }
+            if (!isMatch && e.target === id && e.targetHandle) {
+               for (const prefix of removedPrefixes) {
+                 if (e.targetHandle.startsWith(prefix)) { isMatch = true; break; }
+               }
+            }
+
+            if (isMatch) {
+              edgeIdsToDelete.push(e.id);
+              // If this is a tooltip edge, mark the tooltip node for deletion
+              if (e.type === 'tooltip' && e.source === id) {
+                nodeIdsToDelete.push(e.target);
+              }
+              // If this is an interaction edge, remember its interactionId so we
+              // can remove the corresponding entry from the parent/source node.
+              if (e.type === 'interaction') {
+                const d: any = e.data || {};
+                if (d?.interactionId) {
+                  interactionsToRemove.add(d.interactionId);
+                }
+              }
+            }
+          });
+
+          // B. Identify Interactions to remove
+          const currentInteractions = (node?.data as any)?.interactions || [];
+          currentInteractions.forEach((ix: any) => {
+            if (
+              ix.sourceType === 'data' &&
+              ix.sourceDataRef &&
+              removedItems.some((rm: any) => toName(rm) === ix.sourceDataRef)
+            ) {
+              interactionsToRemove.add(ix.id);
+            }
+          });
+
+          // C. Identify Tooltip Labels to remove from Parent
+          // We look up the actual Tooltip Nodes before we delete them to get their Badge/Title
+          if (nodeIdsToDelete.length > 0) {
+            const nodesToDeleteSet = new Set(nodeIdsToDelete);
+            const tooltipNodes = nodes.filter(n => nodesToDeleteSet.has(n.id));
+            
+            tooltipNodes.forEach(t => {
+                const d = t.data as any;
+                // Format must match exactly how TooltipPopup creates it: "${badge} ${title}"
+                const label = `${d.badge ? d.badge + ' ' : ''}${d.title || ''}`;
+                tooltipLabelsToRemove.add(label);
+            });
+          }
+
+          // --- EXECUTE CLEANUP ---
+
+          // 1. Delete Elements via React Flow (Safe delete)
+          if (rf && (edgeIdsToDelete.length > 0 || nodeIdsToDelete.length > 0)) {
+            const edgesToDelete = edgeIdsToDelete.map(eid => ({ id: eid }));
+            const nodesToDelete = nodeIdsToDelete.map(nid => ({ id: nid }));
+            await rf.deleteElements({ nodes: nodesToDelete, edges: edgesToDelete });
+          }
+
+          // 2. Update nodes (apply patch to THIS node + clean interactions globally)
+          setNodes((nds) =>
+            (nds as unknown as Array<RFNode<NodeData>>).map((n) => {
+              const curData: any = n.data as any;
+              let nextData: any = curData;
+              let changed = false;
+
+              // Apply incoming patch only to the edited node
+              if (n.id === id) {
+                nextData = { ...curData, ...patchAny };
+                changed = true;
+              }
+
+              // Clean Interaction List on ALL nodes (remove by interactionId)
+              if (
+                interactionsToRemove.size > 0 &&
+                Array.isArray(nextData?.interactions)
+              ) {
+                const filtered = nextData.interactions.filter(
+                  (ix: any) => !interactionsToRemove.has(ix?.id)
+                );
+                if (filtered.length !== nextData.interactions.length) {
+                  if (!changed) nextData = { ...nextData };
+                  nextData.interactions = filtered;
+                  changed = true;
+                }
+              }
+
+              // Clean Tooltip List (badge counter) only on THIS node
+              if (
+                n.id === id &&
+                tooltipLabelsToRemove.size > 0 &&
+                Array.isArray(nextData?.tooltips)
+              ) {
+                const filtered = nextData.tooltips.filter(
+                  (lbl: string) => !tooltipLabelsToRemove.has(lbl)
+                );
+                if (filtered.length !== nextData.tooltips.length) {
+                  if (!changed) nextData = { ...nextData };
+                  nextData.tooltips = filtered;
+                  changed = true;
+                }
+              }
+
+              return changed ? ({ ...n, data: nextData } as RFNode<NodeData>) : n;
+            }) as unknown as typeof nds
+          );
+
+          return; // Stop here
+        }
+      }
+
+      // --- STANDARD UPDATE ---
+      setNodes((nds) =>
+        (nds as unknown as Array<RFNode<NodeData>>).map((n) =>
+          n.id === id
+            ? { ...n, data: { ...(n.data as any), ...patchAny } } as RFNode<NodeData>
+            : n
+        ) as unknown as typeof nds
       );
     },
-    [setNodes]
+    [nodes, edges, rf, setNodes]
   );
 
   /** Keep a single node selected, or clear when multi/none. */
@@ -551,6 +701,8 @@ export default function Editor() {
     (patch: Partial<NodeData>, opts?: { reflow?: boolean }) => {
       if (!selectedId) return;
       const reflow = opts?.reflow ?? false;
+
+      updateNodeById(selectedId, patch);
 
       setNodes((nds) => {
         const next = (nds as unknown as Array<RFNode<NodeData>>).map((n) =>
