@@ -445,7 +445,7 @@ export default function Editor() {
    * ===================================================== */
 
   /** Patch a node's data by id. */
-const updateNodeById = useCallback(
+  const updateNodeById = useCallback(
     async (id: string, patch: Partial<NodeData>) => {
       const patchAny = patch as any;
 
@@ -453,7 +453,7 @@ const updateNodeById = useCallback(
       if (patchAny.data && Array.isArray(patchAny.data)) {
         const node = nodes.find((n) => n.id === id);
         const rawOld = (node?.data as any)?.data;
-        
+
         const oldItems = Array.isArray(rawOld) ? rawOld : [];
         const newItems = patchAny.data;
 
@@ -465,13 +465,19 @@ const updateNodeById = useCallback(
         };
 
         const newNamesSet = new Set(newItems.map(toName));
-        const removedItems = oldItems.filter((i: any) => !newNamesSet.has(toName(i)));
+        const removedItems = oldItems.filter(
+          (i: any) => !newNamesSet.has(toName(i))
+        );
 
         if (removedItems.length > 0) {
           // console.log('Cleaning up removed items:', removedItems);
 
           const toSlug = (s: string) =>
-            s.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9_-]/g, '');
+            s
+              .toLowerCase()
+              .trim()
+              .replace(/\s+/g, '-')
+              .replace(/[^a-z0-9_-]/g, '');
 
           const removedPrefixes = new Set(
             removedItems.map((i: any) => `data:${toSlug(toName(i))}`)
@@ -486,14 +492,20 @@ const updateNodeById = useCallback(
           edges.forEach((e) => {
             let isMatch = false;
             if (e.source === id && e.sourceHandle) {
-               for (const prefix of removedPrefixes) {
-                 if (e.sourceHandle.startsWith(prefix)) { isMatch = true; break; }
-               }
+              for (const prefix of removedPrefixes) {
+                if (e.sourceHandle.startsWith(prefix)) {
+                  isMatch = true;
+                  break;
+                }
+              }
             }
             if (!isMatch && e.target === id && e.targetHandle) {
-               for (const prefix of removedPrefixes) {
-                 if (e.targetHandle.startsWith(prefix)) { isMatch = true; break; }
-               }
+              for (const prefix of removedPrefixes) {
+                if (e.targetHandle.startsWith(prefix)) {
+                  isMatch = true;
+                  break;
+                }
+              }
             }
 
             if (isMatch) {
@@ -529,71 +541,82 @@ const updateNodeById = useCallback(
           // We look up the actual Tooltip Nodes before we delete them to get their Badge/Title
           if (nodeIdsToDelete.length > 0) {
             const nodesToDeleteSet = new Set(nodeIdsToDelete);
-            const tooltipNodes = nodes.filter(n => nodesToDeleteSet.has(n.id));
-            
-            tooltipNodes.forEach(t => {
-                const d = t.data as any;
-                // Format must match exactly how TooltipPopup creates it: "${badge} ${title}"
-                const label = `${d.badge ? d.badge + ' ' : ''}${d.title || ''}`;
-                tooltipLabelsToRemove.add(label);
+            const tooltipNodes = nodes.filter((n) =>
+              nodesToDeleteSet.has(n.id)
+            );
+
+            tooltipNodes.forEach((t) => {
+              const d = t.data as any;
+              // Format must match exactly how TooltipPopup creates it: "${badge} ${title}"
+              const label = `${d.badge ? d.badge + ' ' : ''}${d.title || ''}`;
+              tooltipLabelsToRemove.add(label);
             });
           }
 
           // --- EXECUTE CLEANUP ---
 
           // 1. Delete Elements via React Flow (Safe delete)
-          if (rf && (edgeIdsToDelete.length > 0 || nodeIdsToDelete.length > 0)) {
-            const edgesToDelete = edgeIdsToDelete.map(eid => ({ id: eid }));
-            const nodesToDelete = nodeIdsToDelete.map(nid => ({ id: nid }));
-            await rf.deleteElements({ nodes: nodesToDelete, edges: edgesToDelete });
+          if (
+            rf &&
+            (edgeIdsToDelete.length > 0 || nodeIdsToDelete.length > 0)
+          ) {
+            const edgesToDelete = edgeIdsToDelete.map((eid) => ({ id: eid }));
+            const nodesToDelete = nodeIdsToDelete.map((nid) => ({ id: nid }));
+            await rf.deleteElements({
+              nodes: nodesToDelete,
+              edges: edgesToDelete,
+            });
           }
 
           // 2. Update nodes (apply patch to THIS node + clean interactions globally)
-          setNodes((nds) =>
-            (nds as unknown as Array<RFNode<NodeData>>).map((n) => {
-              const curData: any = n.data as any;
-              let nextData: any = curData;
-              let changed = false;
+          setNodes(
+            (nds) =>
+              (nds as unknown as Array<RFNode<NodeData>>).map((n) => {
+                const curData: any = n.data as any;
+                let nextData: any = curData;
+                let changed = false;
 
-              // Apply incoming patch only to the edited node
-              if (n.id === id) {
-                nextData = { ...curData, ...patchAny };
-                changed = true;
-              }
-
-              // Clean Interaction List on ALL nodes (remove by interactionId)
-              if (
-                interactionsToRemove.size > 0 &&
-                Array.isArray(nextData?.interactions)
-              ) {
-                const filtered = nextData.interactions.filter(
-                  (ix: any) => !interactionsToRemove.has(ix?.id)
-                );
-                if (filtered.length !== nextData.interactions.length) {
-                  if (!changed) nextData = { ...nextData };
-                  nextData.interactions = filtered;
+                // Apply incoming patch only to the edited node
+                if (n.id === id) {
+                  nextData = { ...curData, ...patchAny };
                   changed = true;
                 }
-              }
 
-              // Clean Tooltip List (badge counter) only on THIS node
-              if (
-                n.id === id &&
-                tooltipLabelsToRemove.size > 0 &&
-                Array.isArray(nextData?.tooltips)
-              ) {
-                const filtered = nextData.tooltips.filter(
-                  (lbl: string) => !tooltipLabelsToRemove.has(lbl)
-                );
-                if (filtered.length !== nextData.tooltips.length) {
-                  if (!changed) nextData = { ...nextData };
-                  nextData.tooltips = filtered;
-                  changed = true;
+                // Clean Interaction List on ALL nodes (remove by interactionId)
+                if (
+                  interactionsToRemove.size > 0 &&
+                  Array.isArray(nextData?.interactions)
+                ) {
+                  const filtered = nextData.interactions.filter(
+                    (ix: any) => !interactionsToRemove.has(ix?.id)
+                  );
+                  if (filtered.length !== nextData.interactions.length) {
+                    if (!changed) nextData = { ...nextData };
+                    nextData.interactions = filtered;
+                    changed = true;
+                  }
                 }
-              }
 
-              return changed ? ({ ...n, data: nextData } as RFNode<NodeData>) : n;
-            }) as unknown as typeof nds
+                // Clean Tooltip List (badge counter) only on THIS node
+                if (
+                  n.id === id &&
+                  tooltipLabelsToRemove.size > 0 &&
+                  Array.isArray(nextData?.tooltips)
+                ) {
+                  const filtered = nextData.tooltips.filter(
+                    (lbl: string) => !tooltipLabelsToRemove.has(lbl)
+                  );
+                  if (filtered.length !== nextData.tooltips.length) {
+                    if (!changed) nextData = { ...nextData };
+                    nextData.tooltips = filtered;
+                    changed = true;
+                  }
+                }
+
+                return changed
+                  ? ({ ...n, data: nextData } as RFNode<NodeData>)
+                  : n;
+              }) as unknown as typeof nds
           );
 
           return; // Stop here
@@ -601,12 +624,16 @@ const updateNodeById = useCallback(
       }
 
       // --- STANDARD UPDATE ---
-      setNodes((nds) =>
-        (nds as unknown as Array<RFNode<NodeData>>).map((n) =>
-          n.id === id
-            ? { ...n, data: { ...(n.data as any), ...patchAny } } as RFNode<NodeData>
-            : n
-        ) as unknown as typeof nds
+      setNodes(
+        (nds) =>
+          (nds as unknown as Array<RFNode<NodeData>>).map((n) =>
+            n.id === id
+              ? ({
+                  ...n,
+                  data: { ...(n.data as any), ...patchAny },
+                } as RFNode<NodeData>)
+              : n
+          ) as unknown as typeof nds
       );
     },
     [nodes, edges, rf, setNodes]
@@ -992,39 +1019,39 @@ const updateNodeById = useCallback(
     [rf, setNodes, setEdges]
   );
 
-  /** Trigger a browser download of the current project as JSON. */
-  const downloadJSON = useCallback((obj: unknown, filename: string) => {
-    const blob = new Blob([JSON.stringify(obj, null, 2)], {
-      type: 'application/json',
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  }, []);
+  // /** Trigger a browser download of the current project as JSON. */
+  // const downloadJSON = useCallback((obj: unknown, filename: string) => {
+  //   const blob = new Blob([JSON.stringify(obj, null, 2)], {
+  //     type: 'application/json',
+  //   });
+  //   const url = URL.createObjectURL(blob);
+  //   const a = document.createElement('a');
+  //   a.href = url;
+  //   a.download = filename;
+  //   document.body.appendChild(a);
+  //   a.click();
+  //   a.remove();
+  //   URL.revokeObjectURL(url);
+  // }, []);
 
   /** Open a .json file and load it as a project. */
-  const openJSONFile: React.ChangeEventHandler<HTMLInputElement> = async (
-    e
-  ) => {
-    const file = e.target.files?.[0];
-    e.currentTarget.value = '';
-    if (!file) return;
+  // const openJSONFile: React.ChangeEventHandler<HTMLInputElement> = async (
+  //   e
+  // ) => {
+  //   const file = e.target.files?.[0];
+  //   e.currentTarget.value = '';
+  //   if (!file) return;
 
-    setSaveNameBase(baseFrom(file.name));
+  //   setSaveNameBase(baseFrom(file.name));
 
-    const text = await file.text();
-    const data = JSON.parse(text) as SaveFile;
-    if (!('version' in data)) {
-      alert('Invalid file');
-      return;
-    }
-    loadSave(data);
-  };
+  //   const text = await file.text();
+  //   const data = JSON.parse(text) as SaveFile;
+  //   if (!('version' in data)) {
+  //     alert('Invalid file');
+  //     return;
+  //   }
+  //   loadSave(data);
+  // };
 
   /** Show Save modal and download project on confirm. */
   const openSaveModal = useCallback(() => {
