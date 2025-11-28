@@ -1004,6 +1004,8 @@ export default function Editor() {
   const buildSave = useCallback((): SaveFile => {
     const vp = (rf && (rf as any).getViewport?.()) || { x: 0, y: 0, zoom: 1 };
 
+    const allReviews = Object.values(reviewsByTarget).flat();
+
     const exNodes: ExportNode[] = nodes.map((n) => {
       const kind = (n.data as any)?.kind as NodeKind | undefined;
       const inferred = kind ? nodeTypeFor(kind) : 'visualization';
@@ -1027,8 +1029,9 @@ export default function Editor() {
       viewport: vp,
       nodes: exNodes,
       edges: edges as AppEdge[],
+      reviews: allReviews,
     };
-  }, [rf, nodes, edges]);
+  }, [rf, nodes, edges, reviewsByTarget]);
 
   /** Load a project from a previously saved JSON payload. */
   const loadSave = useCallback(
@@ -1051,6 +1054,18 @@ export default function Editor() {
 
       setNodes(restored as unknown as RFNode<NodeData>[]);
       setEdges(save.edges as AppEdge[]);
+
+      const reviewsMap: Record<string, Review[]> = {};
+      if (save.reviews) {
+        save.reviews.forEach((r) => {
+          if (!reviewsMap[r.targetId]) {
+            reviewsMap[r.targetId] = [];
+          }
+          reviewsMap[r.targetId].push(r);
+        });
+      }
+      setReviewsByTarget(reviewsMap);
+
       if (rf && save.viewport)
         (rf as any).setViewport?.(save.viewport, { duration: 0 });
       setSelectedId(null);

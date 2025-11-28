@@ -21,7 +21,7 @@ export type SaveFileV1 = {
   viewport: { x: number; y: number; zoom: number };
   nodes: ExportNode[];
   edges: ExportEdge[];
-  review?: Review;
+  reviews?: Review[];
 };
 
 export type SaveFile = SaveFileV1;
