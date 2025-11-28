@@ -250,13 +250,24 @@ export function Chips({
 }
 
 // name field section
+// src/components/menus/sections.tsx
+
+// name field section
 export function NameField(props: {
   value: string;
   placeholder?: string;
   disabled?: boolean;
   onChange: (val: string) => void;
+  label?: string; // ⬅️ NEW
 }) {
-  const { value, onChange, disabled, placeholder = 'Component name' } = props;
+  const {
+    value,
+    onChange,
+    disabled,
+    placeholder = 'Component name',
+    label = 'Component name', // ⬅️ NEW
+  } = props;
+
   return (
     <div>
       <label
@@ -268,7 +279,7 @@ export function NameField(props: {
           paddingLeft: 6,
         }}
       >
-        Component name
+        {label} {/* ⬅️ use prop */}
       </label>
       <div style={{ position: 'relative' }}>
         <input

@@ -1,6 +1,18 @@
 export type InteractionType = 'click' | 'hover';
 export type InteractionResult = 'filter' | 'highlight' | 'dashboard' | 'link';
 
+// add near your other domain types
+export type Review = {
+  id: string;
+  targetId: string; // node id or edge id
+  text: string;
+  category?: 'Design' | 'Functionality' | 'Data' | 'Other';
+  priority?: 'Low' | 'Medium' | 'High';
+  resolved: boolean;
+  author?: string;
+  createdAt: number; // Date.now()
+};
+
 export type Interaction = {
   id: string; // unique id
   name: string; // human-friendly label

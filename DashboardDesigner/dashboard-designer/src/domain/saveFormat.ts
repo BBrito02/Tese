@@ -1,5 +1,5 @@
 import type { Edge, Node } from 'reactflow';
-import type { NodeData } from './types';
+import type { NodeData, Review } from './types';
 
 export const SAVE_VERSION = 1 as const;
 
@@ -21,6 +21,7 @@ export type SaveFileV1 = {
   viewport: { x: number; y: number; zoom: number };
   nodes: ExportNode[];
   edges: ExportEdge[];
+  review?: Review;
 };
 
 export type SaveFile = SaveFileV1;
