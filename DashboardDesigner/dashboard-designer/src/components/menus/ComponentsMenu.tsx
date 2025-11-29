@@ -4,7 +4,7 @@ import type { Node as RFNode } from 'reactflow';
 import type { DataItem, NodeData, NodeKind } from '../../domain/types';
 import type { Review } from '../../domain/types';
 import { MENUS } from '.';
-import { BaseMenu, WhiteField } from './common';
+import { BaseMenu } from './common';
 import {
   LuPanelRightClose,
   LuPanelLeftClose,
@@ -24,12 +24,12 @@ type Props = {
   ) => void;
   parentData?: (string | DataItem)[];
 
-  // --- review mode wiring ---
+  // review mode wiring
   reviewMode?: boolean;
-  reviewTargetId?: string; // usually node?.id or edge id (not displayed)
-  reviewTargetLabel?: string; // human label for target (component name or edge target)
-  reviewSourceLabel?: string; // when reviewing an edge, pass the SOURCE label
-  reviews?: Review[]; // already filtered for this target
+  reviewTargetId?: string;
+  reviewTargetLabel?: string;
+  reviewSourceLabel?: string;
+  reviews?: Review[];
   onReviewCreate?: (r: Review) => void;
   onReviewUpdate?: (id: string, patch: Partial<Review>) => void;
   onReviewDelete?: (id: string) => void;
@@ -46,7 +46,6 @@ export default function ComponentsMenu({
   onDelete,
   onOpen,
   parentData,
-  // review
   reviewMode = false,
   reviewTargetId,
   reviewTargetLabel,
@@ -257,7 +256,7 @@ function Chip({ children }: { children: React.ReactNode }) {
 }
 
 function ReviewBody({
-  targetId, // kept only for wiring (never shown)
+  targetId, // wiring only
   targetLabel,
   sourceLabel,
   reviews,
@@ -286,19 +285,33 @@ function ReviewBody({
     return b.createdAt - a.createdAt;
   });
 
+  // local helper for small field titles consistent with your sections
+  const fieldLabel: React.CSSProperties = {
+    display: 'block',
+    fontSize: 12,
+    opacity: 0.8,
+    marginBottom: 6,
+    paddingLeft: 6,
+  };
+
   return (
     <>
-      {/* Centered title */}
+      {/* Title styled like your MENU header */}
       <div
         style={{
           fontWeight: 700,
           textAlign: 'center',
+          letterSpacing: 0.4,
+          fontSize: 14,
+          textTransform: 'uppercase',
+          color: '#0f172a',
+          marginBottom: 4,
         }}
       >
-        REVIEWS
+        Reviews
       </div>
 
-      {/* Details section (Component OR Edge) */}
+      {/* Details */}
       <SectionTitle>Details</SectionTitle>
       <div style={{ display: 'grid', gap: 8 }}>
         {sourceLabel ? (
@@ -329,10 +342,8 @@ function ReviewBody({
         )}
       </div>
 
-      {/* Review section (matches sections styling) */}
+      {/* Review (add new) */}
       <SectionTitle>Review</SectionTitle>
-
-      {/* Add review */}
       <div
         style={{
           background: '#fff',
@@ -343,53 +354,62 @@ function ReviewBody({
         }}
       >
         <div style={{ display: 'grid', gap: 8 }}>
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value as any)}
-            style={{
-              width: '100%',
-              padding: 8,
-              borderRadius: 10,
-              border: '1px solid #cbd5e1',
-              background: '#fff',
-            }}
-          >
-            <option>Design</option>
-            <option>Functionality</option>
-            <option>Data</option>
-            <option>Other</option>
-          </select>
+          <div>
+            <label style={fieldLabel}>Category</label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value as any)}
+              style={{
+                width: '100%',
+                padding: 8,
+                borderRadius: 10,
+                border: '1px solid #cbd5e1',
+                background: '#fff',
+              }}
+            >
+              <option>Design</option>
+              <option>Functionality</option>
+              <option>Data</option>
+              <option>Other</option>
+            </select>
+          </div>
 
-          <select
-            value={priority}
-            onChange={(e) => setPriority(e.target.value as any)}
-            style={{
-              width: '100%',
-              padding: 8,
-              borderRadius: 10,
-              border: '1px solid #cbd5e1',
-              background: '#fff',
-            }}
-          >
-            <option>Low</option>
-            <option>Medium</option>
-            <option>High</option>
-          </select>
+          <div>
+            <label style={fieldLabel}>Priority</label>
+            <select
+              value={priority}
+              onChange={(e) => setPriority(e.target.value as any)}
+              style={{
+                width: '100%',
+                padding: 8,
+                borderRadius: 10,
+                border: '1px solid #cbd5e1',
+                background: '#fff',
+              }}
+            >
+              <option>Low</option>
+              <option>Medium</option>
+              <option>High</option>
+            </select>
+          </div>
 
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            rows={3}
-            placeholder="What should be improved?"
-            style={{
-              width: '100%',
-              padding: 8,
-              borderRadius: 10,
-              border: '1px solid #cbd5e1',
-              resize: 'vertical',
-              background: '#fff',
-            }}
-          />
+          <div>
+            <label style={fieldLabel}>Comment</label>
+            <textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              rows={3}
+              placeholder="What should be improved?"
+              style={{
+                width: '100%',
+                padding: 8,
+                borderRadius: 10,
+                border: '1px solid #cbd5e1',
+                resize: 'vertical',
+                background: '#fff',
+              }}
+            />
+          </div>
 
           <button
             onClick={() => {
@@ -414,7 +434,8 @@ function ReviewBody({
         </div>
       </div>
 
-      {/* Existing notes */}
+      {/* Notes list */}
+      <SectionTitle>Notes</SectionTitle>
       <div style={{ display: 'grid', gap: 8 }}>
         {sorted.length === 0 && (
           <div
@@ -436,9 +457,8 @@ function ReviewBody({
           <div
             key={r.id}
             style={{
-              // ✅ green highlight when resolved
-              background: r.resolved ? '#ecfdf5' : '#fff', // green-50
-              border: r.resolved ? '1px solid #86efac' : '1px solid #e5e7eb', // green-300
+              background: r.resolved ? '#ecfdf5' : '#fff',
+              border: r.resolved ? '1px solid #86efac' : '1px solid #e5e7eb',
               borderRadius: 12,
               padding: 10,
               transition: 'background 160ms ease, border-color 160ms ease',
@@ -463,7 +483,7 @@ function ReviewBody({
 
             <div
               style={{
-                color: r.resolved ? '#065f46' : '#0f172a', // deeper green for resolved text
+                color: r.resolved ? '#065f46' : '#0f172a',
                 fontSize: 13,
                 lineHeight: 1.35,
               }}
@@ -478,7 +498,6 @@ function ReviewBody({
                   flex: 1,
                   padding: '6px 8px',
                   borderRadius: 8,
-                  // keep button green in both states, darker when resolved
                   border: r.resolved
                     ? '1px solid #86efac'
                     : '1px solid #a7f3d0',
