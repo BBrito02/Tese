@@ -22,6 +22,72 @@ function Chip({ children }: { children: React.ReactNode }) {
   );
 }
 
+function PriorityPill({ level }: { level: Review['priority'] }) {
+  const norm = String(level || '').toLowerCase();
+
+  const styles =
+    norm === 'high'
+      ? { bg: '#fef2f2', br: '#fecaca', fg: '#991b1b' } // red
+      : norm === 'medium'
+      ? { bg: '#fffbeb', br: '#fde68a', fg: '#92400e' } // amber
+      : { bg: '#ecfdf5', br: '#a7f3d0', fg: '#065f46' }; // green (low)
+
+  return (
+    <span
+      title={`Priority: ${level}`}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        padding: '2px 8px',
+        fontSize: 10,
+        fontWeight: 700,
+        borderRadius: 999,
+        background: styles.bg,
+        border: `1px solid ${styles.br}`,
+        color: styles.fg,
+        textTransform: 'uppercase',
+        letterSpacing: 0.3,
+      }}
+    >
+      {level}
+    </span>
+  );
+}
+
+function CategoryPill({ category }: { category: Review['category'] | string }) {
+  const norm = String(category || '').toLowerCase();
+
+  // Design=blue, Functionality=violet, Data=cyan, Other/custom=slate
+  const styles =
+    norm === 'design'
+      ? { bg: '#eff6ff', br: '#bfdbfe', fg: '#1e3a8a' } // blue
+      : norm === 'functionality'
+      ? { bg: '#f5f3ff', br: '#ddd6fe', fg: '#4c1d95' } // violet
+      : norm === 'data'
+      ? { bg: '#ecfeff', br: '#a5f3fc', fg: '#164e63' } // cyan
+      : { bg: '#f1f5f9', br: '#e2e8f0', fg: '#0f172a' }; // slate (other/custom)
+
+  return (
+    <span
+      title={`Category: ${category}`}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        padding: '2px 8px',
+        fontSize: 10,
+        fontWeight: 700,
+        borderRadius: 999,
+        background: styles.bg,
+        border: `1px solid ${styles.br}`,
+        color: styles.fg,
+        letterSpacing: 0.2,
+      }}
+    >
+      {category}
+    </span>
+  );
+}
+
 export default function ReviewMenu({
   targetLabel,
   sourceLabel,
@@ -44,6 +110,7 @@ export default function ReviewMenu({
   const [text, setText] = useState('');
   const [category, setCategory] = useState<Review['category']>('Design');
   const [priority, setPriority] = useState<Review['priority']>('Medium');
+  const [customCategory, setCustomCategory] = useState<string>('');
 
   const sorted = [...reviews].sort((a, b) => {
     if (!!a.resolved !== !!b.resolved) return a.resolved ? 1 : -1;
@@ -57,6 +124,9 @@ export default function ReviewMenu({
     marginBottom: 6,
     paddingLeft: 6,
   };
+
+  const needsCustom = category === 'Other';
+  const canSubmit = !!text.trim() && (!needsCustom || !!customCategory.trim());
 
   return (
     <>
@@ -133,6 +203,19 @@ export default function ReviewMenu({
             </select>
           </div>
 
+          {needsCustom && (
+            <>
+              <SectionTitle>Custom category</SectionTitle>
+              <NameField
+                label="Custom category"
+                placeholder="Enter a custom category"
+                value={customCategory}
+                onChange={setCustomCategory}
+                disabled={false}
+              />
+            </>
+          )}
+
           <div>
             <label style={fieldLabel}>Priority</label>
             <select
@@ -173,19 +256,27 @@ export default function ReviewMenu({
           <button
             onClick={() => {
               const t = text.trim();
+              const custom = customCategory.trim();
               if (!t) return;
-              onCreate(t, category, priority);
+              if (needsCustom && !custom) return;
+
+              const effectiveCategory = needsCustom
+                ? (custom as any)
+                : category;
+
+              onCreate(t, effectiveCategory as any, priority);
               setText('');
+              if (needsCustom) setCustomCategory('');
             }}
-            disabled={!text.trim()}
+            disabled={!canSubmit}
             style={{
               width: '100%',
               padding: '8px 10px',
               borderRadius: 8,
               border: '1px solid transparent',
-              background: text.trim() ? '#3b82f6' : '#93c5fd',
+              background: canSubmit ? '#3b82f6' : '#93c5fd',
               color: '#fff',
-              cursor: text.trim() ? 'pointer' : 'not-allowed',
+              cursor: canSubmit ? 'pointer' : 'not-allowed',
             }}
           >
             Add review
@@ -231,8 +322,8 @@ export default function ReviewMenu({
                 marginBottom: 6,
               }}
             >
-              {r.category && <Chip>{r.category}</Chip>}
-              {r.priority && <Chip>{r.priority}</Chip>}
+              {r.category && <CategoryPill category={r.category} />}
+              {r.priority && <PriorityPill level={r.priority} />}
               <span
                 style={{ marginLeft: 'auto', fontSize: 10, color: '#64748b' }}
               >
