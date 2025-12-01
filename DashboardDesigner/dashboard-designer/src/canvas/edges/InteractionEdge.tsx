@@ -12,7 +12,7 @@ import { activationIcons, type ActivationKey } from '../../domain/icons';
 
 const ICON_SIZE = 25;
 const STROKE_DEFAULT = '#000';
-const STROKE_SELECTED = '#3b82f6'; // Bright blue for selection
+const STROKE_SELECTED = '#3b82f6'; // BLUE when selected
 
 export default function InteractionEdge(props: EdgeProps) {
   const {
@@ -27,32 +27,31 @@ export default function InteractionEdge(props: EdgeProps) {
     targetPosition = Position.Left,
     style,
     data,
-    selected, // <--- 1. React Flow passes this automatically
+    selected,
   } = props;
 
-  // 1. GET NODES
-  const allNodes = useNodes<Record<string, unknown>>() as unknown as Node[];
+  const reviewMode = Boolean((data as any)?.reviewMode);
+  const reviewUnresolved = Number((data as any)?.reviewUnresolvedCount ?? 0);
+  const shouldPulse = reviewMode && reviewUnresolved > 0 && !selected;
 
-  // 2. FILTER & TRANSFORM OBSTACLES
+  const allNodes = useNodes<Record<string, unknown>>() as unknown as Node[];
   const obstacles = allNodes
     .filter((n) => {
       if (n.id === source || n.id === target) return false;
       if (n.type === 'dashboard' || n.id.startsWith('D0')) return false;
-      if (n.hidden) return false;
+      if ((n as any).hidden) return false;
       return true;
     })
-    .map((n) => {
-      if (n.positionAbsolute) {
-        return { ...n, position: n.positionAbsolute };
-      }
-      return n;
-    });
+    .map((n) =>
+      (n as any).positionAbsolute
+        ? { ...n, position: (n as any).positionAbsolute }
+        : n
+    );
 
   const side: 'left' | 'right' =
     (data?.sourceSide as 'left' | 'right') ??
     (targetX >= sourceX ? 'right' : 'left');
 
-  // Fan-out alignment logic
   const siblings = Math.max(1, Number(data?.siblings ?? 1));
   const ordinal = Math.min(
     Math.max(0, Number(data?.ordinal ?? 0)),
@@ -61,7 +60,6 @@ export default function InteractionEdge(props: EdgeProps) {
   const centerOffset = (ordinal - (siblings - 1) / 2) * 18;
   const adjustedSourceY = sourceY + centerOffset;
 
-  // 3. CALCULATE SMART PATH
   const smartResponse = getSmartEdge({
     sourcePosition,
     targetPosition,
@@ -70,15 +68,10 @@ export default function InteractionEdge(props: EdgeProps) {
     targetX,
     targetY,
     nodes: obstacles as any,
-    options: {
-      nodePadding: 10,
-      gridRatio: 2,
-    },
+    options: { nodePadding: 10, gridRatio: 2 },
   });
 
-  // 4. FALLBACK
   let finalPath = '';
-
   if (smartResponse && 'svgPath' in smartResponse) {
     finalPath = smartResponse.svgPath as string;
   } else {
@@ -93,11 +86,9 @@ export default function InteractionEdge(props: EdgeProps) {
     finalPath = fallbackPath;
   }
 
-  // 5. ICON LOGIC
   const activation = (data?.activation ?? data?.trigger) as
     | ActivationKey
     | undefined;
-
   const key: ActivationKey =
     activation === 'click' || activation === 'hover' ? activation : 'hover';
   const src = activationIcons[key];
@@ -107,8 +98,6 @@ export default function InteractionEdge(props: EdgeProps) {
   const iconCy = adjustedSourceY;
 
   const markerId = `interaction-arrow-${id}`;
-
-  // 2. DETERMINE STROKE COLOR
   const currentStroke = selected ? STROKE_SELECTED : STROKE_DEFAULT;
 
   return (
@@ -123,29 +112,20 @@ export default function InteractionEdge(props: EdgeProps) {
           orient="auto"
           markerUnits="userSpaceOnUse"
         >
-          {/* 3. Apply color to arrow head */}
-          <path d="M 0 0 L 12 6 L 0 12 z" fill={currentStroke} />
+          <path d="M 0 0 L 12 6 L 0 12 z" fill="context-stroke" />
         </marker>
       </defs>
 
-      {/* HIT AREA */}
       <g
         onClick={() => {
-          //e.stopPropagation();
-          // Dispatch custom event AND let React Flow handle selection internally via prop
           window.dispatchEvent(
             new CustomEvent('designer:select-edge', {
-              detail: {
-                edgeId: id,
-                type: 'interaction',
-                data,
-              },
+              detail: { edgeId: id, type: 'interaction', data },
             })
           );
         }}
         style={{ cursor: 'pointer' }}
       >
-        {/* Invisible thick path for easier clicking */}
         <path
           d={finalPath}
           stroke="transparent"
@@ -154,27 +134,25 @@ export default function InteractionEdge(props: EdgeProps) {
           pointerEvents="stroke"
         />
 
-        {/* Visible path */}
         <path
           d={finalPath}
-          stroke={currentStroke} // 4. Apply dynamic color
-          strokeWidth={selected ? 2.5 : 1.5} // 5. Make thicker when selected
-          strokeDasharray="4 4"
+          stroke={currentStroke}
+          strokeWidth={selected ? 2.5 : 1.5}
+          strokeDasharray="6 3"
           fill="none"
           markerEnd={`url(#${markerId})`}
           pointerEvents="none"
+          className={shouldPulse ? 'edge-pulse-red' : undefined}
           style={{
             ...style,
-            // Add a subtle glow/shadow if selected
             filter: selected
-              ? 'drop-shadow(0 0 2px rgba(59, 130, 246, 0.5))'
-              : 'none',
+              ? 'drop-shadow(0 0 2px rgba(59, 130, 246, 0.6))'
+              : undefined,
             transition: 'stroke 0.2s, stroke-width 0.2s',
           }}
         />
       </g>
 
-      {/* ICON */}
       <EdgeLabelRenderer>
         <div
           style={{
@@ -192,7 +170,6 @@ export default function InteractionEdge(props: EdgeProps) {
               borderRadius: '50%',
               overflow: 'hidden',
               background: '#fff',
-              // Highlight icon border if selected
               boxShadow: selected
                 ? `0 0 0 2px ${STROKE_SELECTED}, 0 1px 4px rgba(0,0,0,0.2)`
                 : '0 1px 2px rgba(0,0,0,.25)',

@@ -275,12 +275,27 @@ export default function Editor() {
   // Keep interaction edges fully visible (no dimming)
   const visibleEdges = useMemo(
     () =>
-      edges.map((e) =>
-        e.type === 'interaction'
-          ? { ...e, hidden: false, style: { ...e.style, opacity: 1 } }
-          : e
-      ),
-    [edges]
+      edges.map((e) => {
+        const rs = reviewsByTarget[e.id] ?? [];
+        const unresolved = rs.filter((r) => !r.resolved).length;
+        const total = rs.length;
+
+        const base =
+          e.type === 'interaction'
+            ? { ...e, hidden: false, style: { ...e.style, opacity: 1 } }
+            : e;
+
+        return {
+          ...base,
+          data: {
+            ...(base.data || {}),
+            reviewMode,
+            reviewUnresolvedCount: unresolved,
+            reviewCount: total,
+          },
+        };
+      }),
+    [edges, reviewsByTarget, reviewMode]
   );
 
   // Currently selected node object
