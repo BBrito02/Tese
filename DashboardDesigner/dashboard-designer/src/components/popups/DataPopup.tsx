@@ -62,7 +62,13 @@ export default function DataPopup({ initial, onCancel, onSave }: Props) {
   const isNameEmpty = nameTrim.length === 0;
 
   const canAdd = !isNameEmpty && !isDuplicate;
-  const canSave = items.length > 0;
+
+  // ✅ Allow saving when the list changed (including being emptied)
+  const isDirty = useMemo(
+    () => JSON.stringify(items) !== JSON.stringify(initial ?? []),
+    [items, initial]
+  );
+  const canSave = isDirty;
 
   function add() {
     if (!canAdd) return;
@@ -164,7 +170,7 @@ export default function DataPopup({ initial, onCancel, onSave }: Props) {
           ))}
           {items.length === 0 && (
             <span style={{ fontSize: 12, opacity: 0.6 }}>
-              (no items yet — add one above)
+              (no items — saving will clear this component&apos;s data list)
             </span>
           )}
         </div>
