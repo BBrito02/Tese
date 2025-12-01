@@ -457,6 +457,31 @@ export default function Editor() {
     [reviewsByTarget]
   );
 
+  const countFor = useCallback(
+    (targetId: string) => {
+      const list = getReviews(targetId);
+      return {
+        total: list.length,
+        unresolved: list.reduce((acc, r) => acc + (r.resolved ? 0 : 1), 0),
+      };
+    },
+    [getReviews]
+  );
+
+  // render-time augmentation (non-destructive)
+  const nodesWithReviewMeta = useMemo(() => {
+    return nodes.map((n) => {
+      const { total, unresolved } = countFor(n.id);
+      const data = {
+        ...(n.data as any),
+        reviewMode, // so shell knows to show pill
+        reviewTotal: total,
+        reviewUnresolved: unresolved,
+      };
+      return { ...n, data };
+    });
+  }, [nodes, countFor, reviewMode]);
+
   const addReview = useCallback((targetId: string, review: Review) => {
     setReviewsByTarget((m) => ({
       ...m,
@@ -2445,7 +2470,7 @@ export default function Editor() {
             selectionOnDrag={lassoMode}
             selectionMode={SelectionMode.Partial}
             panOnDrag={!lassoMode && !isDraggingFromPalette}
-            nodes={nodes}
+            nodes={nodesWithReviewMeta as any}
             edges={visibleEdges}
             onNodesChange={(chs) => {
               onNodesChange(chs);

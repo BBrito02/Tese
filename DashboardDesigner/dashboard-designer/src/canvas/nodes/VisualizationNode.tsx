@@ -26,11 +26,14 @@ export default function VisualizationNode(p: NodeProps<NodeData>) {
   return (
     <BaseNodeShell
       {...p}
-      body={null} // Visualization has no body by itself (graphs are children)
-      footerItems={footerItems} // renders data pills with handles
-      visualVars={visualVars} // renders VV icons (clickable -> opens VV popup)
-      tooltipCount={tooltipCount} // shows T(n)
-      // optional per-kind card tweaks:
+      body={null}
+      footerItems={footerItems}
+      visualVars={visualVars}
+      tooltipCount={tooltipCount}
+      // ✅ use `d` here (not `data`)
+      reviewMode={(d as any).reviewMode ?? false}
+      reviewCount={(d as any).reviewTotal ?? 0}
+      reviewUnresolvedCount={(d as any).reviewUnresolved ?? 0}
       cardStyle={{
         background: '#deebf7',
       }}

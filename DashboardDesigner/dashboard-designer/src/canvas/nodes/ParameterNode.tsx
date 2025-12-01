@@ -4,11 +4,15 @@ import BaseNodeShell from './BaseNodeShell';
 
 export default function ParameterNode(p: NodeProps<NodeData>) {
   const opts: string[] = (p.data as any)?.options ?? [];
+  const d = p.data as any;
   return (
     <BaseNodeShell
       {...p}
       isParameter
       cardStyle={{ background: '#E6E6E6', borderRadius: 14 }}
+      reviewMode={(d as any).reviewMode ?? false}
+      reviewCount={(d as any).reviewTotal ?? 0}
+      reviewUnresolvedCount={(d as any).reviewUnresolved ?? 0}
       body={
         <select
           className="nodrag nopan"

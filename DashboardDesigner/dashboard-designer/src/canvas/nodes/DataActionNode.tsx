@@ -3,10 +3,14 @@ import type { NodeData } from '../../domain/types';
 import BaseNodeShell from './BaseNodeShell';
 
 export default function DataActionNode(p: NodeProps<NodeData>) {
+  const d = p.data as any;
   return (
     <BaseNodeShell
       {...p}
       cardStyle={{ borderRadius: 12, background: '#fff' }}
+      reviewMode={(d as any).reviewMode ?? false}
+      reviewCount={(d as any).reviewTotal ?? 0}
+      reviewUnresolvedCount={(d as any).reviewUnresolved ?? 0}
     />
   );
 }

@@ -15,6 +15,8 @@ import { VISUAL_VAR_ICONS } from '../../domain/icons';
 
 import ClickHoverPorts from '../nodes/ClickHoverPorts'; // adjust the path if needed
 
+import ReviewBadge from '../../components/ui/ReviewBadge';
+
 // Per-kind minimums (match your previous sizes)
 const MIN_SIZE: Record<string, { w: number; h: number }> = {
   Dashboard: { w: 260, h: 200 },
@@ -36,6 +38,10 @@ export type BaseNodeShellProps = NodeProps<NodeData> & {
   visualVars?: VisualVariable[];
   tooltipCount?: number;
 
+  reviewMode?: boolean;
+  reviewCount?: number;
+  reviewUnresolvedCount?: number;
+
   // style overrides
   cardStyle?: React.CSSProperties;
   headerStyle?: React.CSSProperties;
@@ -52,6 +58,8 @@ export type BaseNodeShellProps = NodeProps<NodeData> & {
   // border/highlight behavior
   highlightBorder?: boolean; // default true
   borderWidth?: number; // default 2
+
+  overlayTopRight?: React.ReactNode;
 };
 
 // helper to remove border-related props to avoid mixing shorthand/longhand
@@ -94,6 +102,10 @@ export default function BaseNodeShell({
   visualVars,
   tooltipCount = 0,
 
+  reviewMode = false,
+  reviewCount = 0,
+  reviewUnresolvedCount = 0,
+
   cardStyle,
   headerStyle,
   bodyStyle,
@@ -107,6 +119,7 @@ export default function BaseNodeShell({
 
   highlightBorder = true,
   borderWidth = 2,
+  overlayTopRight,
 }: BaseNodeShellProps) {
   const updateNodeInternals = useUpdateNodeInternals();
   const { setNodeRef, isOver } = useDroppable({ id });
@@ -423,6 +436,20 @@ export default function BaseNodeShell({
                   T({tooltipCount})
                 </span>
               )}
+
+              {/* NEW: Review badge — only show in reviewMode */}
+              {reviewMode && (
+                <div
+                  className="nodrag nopan"
+                  style={{ display: 'inline-flex' }}
+                >
+                  <ReviewBadge
+                    total={reviewCount}
+                    unresolved={reviewUnresolvedCount}
+                    title="Reviews"
+                  />
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -457,6 +484,21 @@ export default function BaseNodeShell({
             <div style={{ height: 0 }} />
           ))}
       </div>
+
+      {overlayTopRight && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            zIndex: 5,
+            pointerEvents: 'auto',
+          }}
+          className="nodrag nopan"
+        >
+          {overlayTopRight}
+        </div>
+      )}
 
       {leftHandle && (
         <Handle

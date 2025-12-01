@@ -1,18 +1,23 @@
+// src/canvas/nodes/GraphNode.tsx
 import { memo, useState, useEffect } from 'react';
 import { type NodeProps } from 'reactflow';
 import { GRAPH_TYPE_ICONS } from '../../domain/icons';
 import type { NodeData, GraphType } from '../../domain/types';
 import BaseNodeShell from './BaseNodeShell';
 import { getLocalImageSrc } from '../../utils/localStore';
+import ReviewBadge from '../../components/ui/ReviewBadge'; // <-- import
 
 function GraphNode(props: NodeProps<NodeData>) {
   const { data, selected } = props;
   const { graphType, previewImageId } = data as any;
 
-  // State to hold the resolved image URL
+  // review mode signals (provided via Editor when review mode toggles)
+  const reviewMode = !!(data as any)?.reviewMode;
+  const reviewTotal = Number((data as any)?.reviewTotal ?? 0);
+  const reviewUnresolved = Number((data as any)?.reviewUnresolved ?? 0);
+
   const [customImageSrc, setCustomImageSrc] = useState<string | null>(null);
 
-  // Effect: Load image from IndexedDB
   useEffect(() => {
     let active = true;
     if (previewImageId) {
@@ -27,11 +32,9 @@ function GraphNode(props: NodeProps<NodeData>) {
     };
   }, [previewImageId]);
 
-  // Fallback Icon
   const IconSrc =
     GRAPH_TYPE_ICONS[graphType as GraphType] || GRAPH_TYPE_ICONS.Line;
 
-  // The content inside the shell
   const bodyContent = (
     <div
       style={{
@@ -50,9 +53,9 @@ function GraphNode(props: NodeProps<NodeData>) {
           style={{
             width: '100%',
             height: '100%',
-            objectFit: 'cover', // Ensures image fills the resized node
+            objectFit: 'cover',
             display: 'block',
-            pointerEvents: 'none', // Prevents image dragging from interfering with node dragging
+            pointerEvents: 'none',
           }}
         />
       ) : (
@@ -75,20 +78,25 @@ function GraphNode(props: NodeProps<NodeData>) {
     <BaseNodeShell
       {...props}
       selected={selected}
-      // 1. HIDE THE HEADER (No "Graph" title)
-      hideHeader={true}
-      // 2. HIDE THE FOOTER (No data pills)
+      hideHeader={true} // keep header hidden
       hideFooter={true}
-      // 3. FILL THE CONTAINER
       body={bodyContent}
-      // Remove default padding and set background
       bodyStyle={{
         padding: 0,
         background: customImageSrc ? '#fff' : '#f8fafc',
       }}
-      // Keep connection logic
       leftHandle={true}
       rightHandle={true}
+      // show a floating review badge only in review mode
+      overlayTopRight={
+        reviewMode ? (
+          <ReviewBadge
+            total={reviewTotal}
+            unresolved={reviewUnresolved}
+            title="Reviews"
+          />
+        ) : undefined
+      }
     />
   );
 }

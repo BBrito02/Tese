@@ -12,6 +12,9 @@ export default function TooltipNode(p: NodeProps<NodeData>) {
       {...p}
       footerItems={footer}
       visualVars={vv}
+      reviewMode={(d as any).reviewMode ?? false}
+      reviewCount={(d as any).reviewTotal ?? 0}
+      reviewUnresolvedCount={(d as any).reviewUnresolved ?? 0}
       // neutral card + subtle border, no blue highlight
       cardStyle={{
         background: '#fffef7',

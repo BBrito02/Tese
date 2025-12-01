@@ -10,6 +10,9 @@ export default function FilterNode(p: NodeProps<NodeData>) {
       {...p}
       footerItems={footer}
       cardStyle={{ background: '#E6E6E6', borderRadius: 12 }}
+      reviewMode={(d as any).reviewMode ?? false}
+      reviewCount={(d as any).reviewTotal ?? 0}
+      reviewUnresolvedCount={(d as any).reviewUnresolved ?? 0}
     />
   );
 }

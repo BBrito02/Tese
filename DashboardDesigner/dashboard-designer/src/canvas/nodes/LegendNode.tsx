@@ -17,6 +17,9 @@ export default function LegendNode(p: NodeProps<NodeData>) {
       {...p}
       footerItems={footer}
       visualVars={visualVars}
+      reviewMode={(d as any).reviewMode ?? false}
+      reviewCount={(d as any).reviewTotal ?? 0}
+      reviewUnresolvedCount={(d as any).reviewUnresolved ?? 0}
       cardStyle={{
         borderRadius: 8,
         background: '#E6E6E6',
