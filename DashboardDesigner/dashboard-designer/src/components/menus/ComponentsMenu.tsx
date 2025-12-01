@@ -191,6 +191,7 @@ export default function ComponentsMenu(props: Props) {
             }
             onToggle={(id, next) => onReviewUpdate?.(id, { resolved: next })}
             onDelete={(id) => onReviewDelete?.(id)}
+            onUpdate={(id, patch) => onReviewUpdate?.(id, patch)}
           />
         ) : Menu ? (
           <Menu
