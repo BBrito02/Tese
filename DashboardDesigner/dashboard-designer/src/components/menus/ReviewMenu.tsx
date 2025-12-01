@@ -3,7 +3,7 @@ import type { Review } from '../../domain/types';
 import { SectionTitle, NameField } from '../menus/sections';
 import { LuCheck, LuTrash2, LuPencil, LuX, LuSave } from 'react-icons/lu';
 
-function Chip({ children }: { children: React.ReactNode }) {
+/*function Chip({ children }: { children: React.ReactNode }) {
   return (
     <span
       style={{
@@ -20,7 +20,7 @@ function Chip({ children }: { children: React.ReactNode }) {
       {children}
     </span>
   );
-}
+}*/
 
 function PriorityPill({ level }: { level: Review['priority'] }) {
   const norm = String(level || '').toLowerCase();
