@@ -49,12 +49,6 @@ export default function TooltipPopup({
   const canSave = attachRef.length > 0;
 
   const handleSave = () => {
-    console.log('Data to be saved inside Tooltip Popup:', {
-      mode: 'new',
-      attachRef,
-      activation,
-      newTooltip: { title: name || 'Tooltip' },
-    });
     if (!onSave || !canSave) return;
     onSave({
       mode: 'new',

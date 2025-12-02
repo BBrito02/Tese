@@ -337,12 +337,6 @@ export default function Editor() {
 
       const edge = (edges as AppEdge[]).find((ed) => ed.id === edgeId);
 
-      console.log('[Editor] edge selected', {
-        edgeId,
-        type,
-        edge,
-      });
-
       setSelectedId(null);
       setSelectedEdgeId(edgeId);
     };
@@ -546,7 +540,6 @@ export default function Editor() {
         );
 
         if (removedItems.length > 0) {
-          // console.log('Cleaning up removed items:', removedItems);
 
           const toSlug = (s: string) =>
             s
@@ -1179,7 +1172,6 @@ export default function Editor() {
 
   /** Expand parents to fit children, clamp children within parents, iterate until stable. */
   function applyConstraints(initial: AppNode[]): AppNode[] {
-    console.log('Inside Apply Constraints');
     let local = initial.map((n) => ({ ...n }));
 
     for (let pass = 0; pass < 5; pass++) {
@@ -1631,24 +1623,6 @@ export default function Editor() {
               sourceDataRef,
               targetDetails,
             }) => {
-              console.log('Begin of print onOpenInteractions');
-              console.log('Name:' + name);
-              console.log('Trigger:' + trigger);
-              console.log('Result:' + result);
-              console.log('Targets:' + targets);
-              console.log('SouceType:' + sourceType);
-              console.log('SourceDataRef:' + sourceDataRef);
-              console.log('TargetDetails:');
-              targetDetails.forEach((detail, index) => {
-                console.log(`Detail ${index + 1}:`);
-                console.log('  TargetId:', detail.targetId);
-                console.log('  TargetType:', detail.targetType);
-                if (detail.targetDataRef) {
-                  console.log('  TargetDataRef:', detail.targetDataRef);
-                }
-              });
-              console.log('End of print onOpenInteractions');
-
               // Create a stable interaction id
               const interactionId = nanoid();
 
