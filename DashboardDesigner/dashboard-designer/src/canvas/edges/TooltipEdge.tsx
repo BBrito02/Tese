@@ -1,24 +1,18 @@
-// src/canvas/edges/TooltipEdge.tsx
 import {
   EdgeLabelRenderer,
   type EdgeProps,
-  useNodes,
-  getSmoothStepPath,
+  getSmoothStepPath, // Optimized import
   Position,
-  type Node,
 } from 'reactflow';
-import { getSmartEdge } from '@tisoap/react-flow-smart-edge';
 import { activationIcons, type ActivationKey } from '../../domain/icons';
 
 const ICON_SIZE = 25;
 const STROKE_DEFAULT = '#000';
-const STROKE_SELECTED = '#3b82f6'; // BLUE when selected
+const STROKE_SELECTED = '#3b82f6';
 
 export default function TooltipEdge(props: EdgeProps) {
   const {
     id,
-    source,
-    target,
     sourceX,
     sourceY,
     targetX,
@@ -34,19 +28,7 @@ export default function TooltipEdge(props: EdgeProps) {
   const reviewUnresolved = Number((data as any)?.reviewUnresolvedCount ?? 0);
   const shouldPulse = reviewMode && reviewUnresolved > 0 && !selected;
 
-  const allNodes = useNodes<Record<string, unknown>>() as unknown as Node[];
-  const obstacles = allNodes
-    .filter((n) => {
-      if (n.id === source || n.id === target) return false;
-      if (n.type === 'dashboard' || n.id.startsWith('D0')) return false;
-      if ((n as any).hidden) return false;
-      return true;
-    })
-    .map((n) =>
-      (n as any).positionAbsolute
-        ? { ...n, position: (n as any).positionAbsolute }
-        : n
-    );
+  // 1. REMOVED: useNodes() and obstacles
 
   const side: 'left' | 'right' =
     (data?.sourceSide as 'left' | 'right') ??
@@ -60,31 +42,16 @@ export default function TooltipEdge(props: EdgeProps) {
   const centerOffset = (ordinal - (siblings - 1) / 2) * 18;
   const adjustedSourceY = sourceY + centerOffset;
 
-  const smartResponse = getSmartEdge({
-    sourcePosition,
-    targetPosition,
+  // 2. CHANGED: Use standard getSmoothStepPath
+  const [finalPath] = getSmoothStepPath({
     sourceX,
     sourceY: adjustedSourceY,
+    sourcePosition,
     targetX,
     targetY,
-    nodes: obstacles as any,
-    options: { nodePadding: 10, gridRatio: 2 },
+    targetPosition,
+    borderRadius: 12,
   });
-
-  let finalPath = '';
-  if (smartResponse && 'svgPath' in smartResponse) {
-    finalPath = smartResponse.svgPath as string;
-  } else {
-    const [fallbackPath] = getSmoothStepPath({
-      sourceX,
-      sourceY: adjustedSourceY,
-      sourcePosition,
-      targetX,
-      targetY,
-      targetPosition,
-    });
-    finalPath = fallbackPath;
-  }
 
   const key: ActivationKey =
     data?.activation === 'click' || data?.activation === 'hover'
@@ -111,7 +78,7 @@ export default function TooltipEdge(props: EdgeProps) {
           orient="auto"
           markerUnits="userSpaceOnUse"
         >
-          <path d="M 0 0 L 12 6 L 0 12 z" fill="context-stroke" />
+          <path d="M 0 0 L 12 6 L 0 12 z" fill={currentStroke} />
         </marker>
       </defs>
 
