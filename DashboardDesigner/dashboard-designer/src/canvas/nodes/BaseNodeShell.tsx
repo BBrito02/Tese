@@ -305,6 +305,9 @@ export default function BaseNodeShell({
         minHeight={minH}
         handleStyle={{ width: 12, height: 12, borderRadius: 4 }}
         lineStyle={{ strokeWidth: 1.5 }}
+        onResizeEnd={() => {
+          window.dispatchEvent(new Event('designer:node-resize-stop'));
+        }}
       />
 
       <div

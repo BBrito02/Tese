@@ -243,6 +243,8 @@ export default function Editor() {
     Record<string, Review[]>
   >({});
 
+  const [cachedContainers, setCachedContainers] = useState<AppNode[]>([]);
+
   // File save name
   const [saveNameBase, setSaveNameBase] = useState('dashboard-designer');
 
@@ -466,6 +468,14 @@ export default function Editor() {
   /* =====================================================
    *             Graph canvas helpers & behaviors
    * ===================================================== */
+
+  const handleLayoutReflow = useCallback(() => {
+    setNodes((nds) => {
+      const constrained = applyConstraints(nds as AppNode[]);
+      const synced = syncParentGraphTypes(constrained);
+      return synced as unknown as RFNode<NodeData>[];
+    });
+  }, [setNodes]);
 
   const getReviews = useCallback(
     (targetId: string) => reviewsByTarget[targetId] ?? [],
@@ -907,6 +917,8 @@ export default function Editor() {
     const p = getPointFromEvent(e.activatorEvent);
     setDragStartPoint(p);
     setCursorPoint(p);
+    const containers = nodes.filter((n) => isContainerKind(n.data?.kind));
+    setCachedContainers(containers as AppNode[]);
   };
 
   /** Track drag over canvas and compute deepest valid parent under cursor. */
@@ -925,12 +937,11 @@ export default function Editor() {
     });
 
     let best: { id: string; kind: NodeKind; depth: number } | null = null;
-    for (const n of nodes) {
-      const k = n.data?.kind as NodeKind | undefined;
-      if (!isContainerKind(k)) continue;
-      if (pointInsideContentAbs(flowPt, n as AppNode, nodes as AppNode[])) {
-        const d = depthOf(n as AppNode, nodes as AppNode[]);
-        if (!best || d > best.depth) best = { id: n.id, kind: k!, depth: d };
+    for (const n of cachedContainers) {
+      if (pointInsideContentAbs(flowPt, n, nodes as AppNode[])) {
+        const d = depthOf(n, nodes as AppNode[]);
+        if (!best || d > best.depth)
+          best = { id: n.id, kind: n.data.kind!, depth: d };
       }
     }
 
@@ -1169,8 +1180,19 @@ export default function Editor() {
 
   /* ---------- Layout/constraints ---------- */
 
+  useEffect(() => {
+    const onResizeStop = () => {
+      handleLayoutReflow();
+    };
+
+    window.addEventListener('designer:node-resize-stop', onResizeStop);
+    return () =>
+      window.removeEventListener('designer:node-resize-stop', onResizeStop);
+  }, [handleLayoutReflow]);
+
   /** Expand parents to fit children, clamp children within parents, iterate until stable. */
   function applyConstraints(initial: AppNode[]): AppNode[] {
+    console.log('Nigger');
     let local = initial.map((n) => ({ ...n }));
 
     for (let pass = 0; pass < 5; pass++) {
@@ -2490,25 +2512,18 @@ export default function Editor() {
             onNodesChange={(chs) => {
               onNodesChange(chs);
 
+              // Only handle REMOVAL immediately, as that changes the graph structure
               const removedIds = chs
                 .filter((c) => c.type === 'remove')
                 .map((c: any) => c.id as string);
+
               if (removedIds.length) {
                 pruneAfterRemoval(removedIds);
-              } else {
-                setNodes((nds) => {
-                  const constrained = applyConstraints(
-                    nds as AppNode[]
-                  ) as unknown as AppNode[];
-                  const synced = syncParentGraphTypes(constrained);
-                  return synced as unknown as RFNode<NodeData>[];
-                });
               }
-
-              if (selectedId && !nodes.find((n) => n.id === selectedId))
-                setSelectedId(null);
-              if (selectedEdgeId && !edges.find((e) => e.id === selectedEdgeId))
-                setSelectedEdgeId(null);
+            }}
+            // B. Trigger the heavy layout calc ONLY when dragging stops
+            onNodeDragStop={() => {
+              handleLayoutReflow();
             }}
             onEdgesChange={onEdgesChange}
             onConnectStart={() => setIsConnecting(true)}
