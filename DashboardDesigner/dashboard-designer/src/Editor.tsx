@@ -86,6 +86,7 @@ import { saveProjectAsZip, loadProjectFromZip } from './utils/fileUtils';
 
 import type { Review } from './domain/types';
 import ReviewToggle from './components/ui/ReviewToggle';
+import { ReviewContext } from './components/ui/ReviewContext';
 
 /* =========================
  *  Node/Edge component maps
@@ -492,20 +493,6 @@ export default function Editor() {
     },
     [getReviews]
   );
-
-  // render-time augmentation (non-destructive)
-  const nodesWithReviewMeta = useMemo(() => {
-    return nodes.map((n) => {
-      const { total, unresolved } = countFor(n.id);
-      const data = {
-        ...(n.data as any),
-        reviewMode, // so shell knows to show pill
-        reviewTotal: total,
-        reviewUnresolved: unresolved,
-      };
-      return { ...n, data };
-    });
-  }, [nodes, countFor, reviewMode]);
 
   const addReview = useCallback((targetId: string, review: Review) => {
     setReviewsByTarget((m) => ({
@@ -1192,7 +1179,7 @@ export default function Editor() {
 
   /** Expand parents to fit children, clamp children within parents, iterate until stable. */
   function applyConstraints(initial: AppNode[]): AppNode[] {
-    console.log('Nigger');
+    console.log('Inside Apply Constraints');
     let local = initial.map((n) => ({ ...n }));
 
     for (let pass = 0; pass < 5; pass++) {
@@ -2380,391 +2367,397 @@ export default function Editor() {
         overflow: 'hidden',
       }}
     >
-      <DndContext
-        sensors={sensors}
-        onDragStart={handleDragStart}
-        onDragMove={handleDragMove}
-        onDragCancel={handleDragCancel}
-        onDragEnd={handleDragEnd}
-      >
-        <SideMenu />
-        {/* Centered Review toggle (does not affect menu width/layout) */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 12,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 2000,
-            pointerEvents: 'auto',
-          }}
+      <ReviewContext.Provider value={{ reviewsByTarget, reviewMode }}>
+        <DndContext
+          sensors={sensors}
+          onDragStart={handleDragStart}
+          onDragMove={handleDragMove}
+          onDragCancel={handleDragCancel}
+          onDragEnd={handleDragEnd}
         >
-          <ReviewToggle
-            checked={reviewMode}
-            onChange={(v) => setReviewMode(v)}
-            leftLabel="Editor"
-            rightLabel="Review"
-          />
-        </div>
-        {/* Top-right Save/Load */}
-        <div
-          style={{
-            position: 'absolute',
-            right: 12,
-            top: 12,
-            zIndex: 10,
-            display: 'flex',
-            gap: 8,
-            transform: `translateX(${buttonsOffset}px)`,
-            transition: `transform ${PANEL_ANIM_MS}ms ease`,
-            willChange: 'transform',
-          }}
-        >
-          <button
-            onClick={openSaveModal}
-            style={{
-              padding: '6px 10px',
-              borderRadius: 8,
-              border: '1px solid #ddd',
-              background: '#fff',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              cursor: 'pointer',
-            }}
-            title="Save"
-          >
-            <FaCloudDownloadAlt size={16} aria-hidden="true" />
-            <span>Save</span>
-          </button>
-
-          <label
-            style={{
-              padding: '6px 10px',
-              borderRadius: 8,
-              border: '1px solid #ddd',
-              background: '#fff',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-            }}
-            title="Load"
-          >
-            <FaCloudUploadAlt size={16} aria-hidden="true" />
-            <span>Load</span>
-            {/* --- CHANGE START --- */}
-            <input
-              type="file"
-              accept=".json,.dashboard,.zip" // Allow new formats
-              style={{ display: 'none' }}
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                e.target.value = ''; // Reset
-                if (!file) return;
-
-                setSaveNameBase(baseFrom(file.name));
-
-                try {
-                  let data;
-
-                  // Check file type
-                  if (file.name.endsWith('.json')) {
-                    // Legacy Support (Old files)
-                    const text = await file.text();
-                    data = JSON.parse(text);
-                  } else {
-                    // New Bundle Support (Unpacks images to DB)
-                    data = await loadProjectFromZip(file);
-                  }
-
-                  // Validate version check
-                  if (!('version' in data)) {
-                    alert('Invalid file format');
-                    return;
-                  }
-
-                  loadSave(data);
-                } catch (err) {
-                  console.error(err);
-                  alert('Failed to load project.');
-                }
-              }}
-            />
-            {/* --- CHANGE END --- */}
-          </label>
-        </div>
-        {/* Canvas */}
-        <div
-          className={`canvas ${isConnecting ? 'rf-connecting' : ''}`}
-          ref={wrapperRef}
-          style={{ flex: 1, minWidth: 0, position: 'relative' }}
-        >
-          <ReactFlow
-            style={{ position: 'relative', zIndex: 0 }}
-            minZoom={0.1}
-            maxZoom={2}
-            selectionOnDrag={lassoMode}
-            selectionMode={SelectionMode.Partial}
-            panOnDrag={!lassoMode && !isDraggingFromPalette}
-            nodes={nodesWithReviewMeta as any}
-            edges={visibleEdges}
-            onNodesChange={(chs) => {
-              onNodesChange(chs);
-
-              // Only handle REMOVAL immediately, as that changes the graph structure
-              const removedIds = chs
-                .filter((c) => c.type === 'remove')
-                .map((c: any) => c.id as string);
-
-              if (removedIds.length) {
-                pruneAfterRemoval(removedIds);
-              }
-            }}
-            // B. Trigger the heavy layout calc ONLY when dragging stops
-            onNodeDragStop={() => {
-              handleLayoutReflow();
-            }}
-            onEdgesChange={onEdgesChange}
-            onConnectStart={() => setIsConnecting(true)}
-            onConnectEnd={() => setIsConnecting(false)}
-            onConnect={onConnect}
-            onInit={setRf}
-            nodeTypes={NODE_TYPES}
-            edgeTypes={EDGE_TYPES}
-            onSelectionChange={handleSelectionChange}
-            onMove={() => {
-              handleMove();
-            }}
-            onPaneClick={() => {
-              setSelectedId(null);
-              setSelectedEdgeId(null);
-            }}
-            fitView
-          >
-            <Background />
-            <Controls showInteractive>
-              <ControlButton
-                title={
-                  lassoMode
-                    ? 'Exit lasso (enable pan)'
-                    : 'Enter lasso (disable pan)'
-                }
-                onClick={() => setLassoMode((v) => !v)}
-              >
-                {lassoMode ? <FaRegSquare /> : <FaHand />}
-              </ControlButton>
-            </Controls>
-          </ReactFlow>
-
-          {/* Overlay: activation icons (tooltips) */}
+          <SideMenu />
+          {/* Centered Review toggle (does not affect menu width/layout) */}
           <div
             style={{
               position: 'absolute',
-              inset: 0,
-              pointerEvents: 'none',
-              zIndex: 100000,
+              top: 12,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 2000,
+              pointerEvents: 'auto',
             }}
           >
-            {markers.map((m) => (
-              <img
-                key={m.id}
-                src={m.src}
-                alt=""
-                style={{
-                  position: 'absolute',
-                  left: m.screenX,
-                  top: m.screenY,
-                  width: 20,
-                  height: 20,
-                  transform: 'translate(-50%, -50%)',
-                  borderRadius: '50%',
-                  background: '#fff',
-                  boxShadow: '0 2px 6px rgba(0,0,0,.25)',
-                  zIndex: m.isSelected ? 100001 : 100000,
-                  pointerEvents: 'none',
-                }}
-                draggable={false}
-              />
-            ))}
-          </div>
-        </div>
-        {/* --- NODE / EDGE MENUS (single ComponentsMenu in review mode) --- */}
-        {selectedNode && (
-          <ComponentsMenu
-            key={selectedNode.id}
-            node={selectedNode as RFNode<NodeData>}
-            onChange={updateSelectedNode}
-            onDelete={deleteSelectedNode}
-            onOpen={(t) =>
-              selectedNode && setModal({ type: t, nodeId: selectedNode.id })
-            }
-            parentData={parentDataForSelected}
-            /* review mode wiring */
-            reviewMode={reviewMode}
-            reviewTargetId={selectedNode.id}
-            reviews={getReviews(selectedNode.id)}
-            onReviewCreate={(r) => addReview(selectedNode.id, r)}
-            onReviewUpdate={(rid, patch) =>
-              updateReview(selectedNode.id, rid, patch)
-            }
-            onReviewDelete={(rid) => deleteReview(selectedNode.id, rid)}
-          />
-        )}
-        {!selectedNode &&
-          selectedEdge &&
-          (reviewMode ? (
-            /* Reuse ComponentsMenu chrome for edges by giving a tiny pseudo-node.
-       Menu chrome is identical; content is the review body because reviewMode=true. */
-            <ComponentsMenu
-              key={`edge-${selectedEdge.id}`}
-              node={
-                {
-                  id: selectedEdge.id,
-                  // Kind isn’t used while reviewMode=true, but must be a valid NodeData
-                  data: {
-                    kind: 'Visualization',
-                    title: `Edge ${selectedEdge.id}`,
-                  } as any,
-                  position: { x: 0, y: 0 },
-                  type: 'visualization',
-                } as RFNode<NodeData>
-              }
-              onChange={() => {}}
-              onOpen={undefined}
-              parentData={undefined}
-              /* no delete button for edges here */
-              /* review mode wiring */
-              reviewMode
-              reviewTargetId={selectedEdge.id}
-              reviews={getReviews(selectedEdge.id)}
-              onReviewCreate={(r) => addReview(selectedEdge.id, r)}
-              onReviewUpdate={(rid, patch) =>
-                updateReview(selectedEdge.id, rid, patch)
-              }
-              onReviewDelete={(rid) => deleteReview(selectedEdge.id, rid)}
+            <ReviewToggle
+              checked={reviewMode}
+              onChange={(v) => setReviewMode(v)}
+              leftLabel="Editor"
+              rightLabel="Review"
             />
-          ) : /* normal (non-review) edge menus */
-          selectedEdge.type === 'tooltip' ? (
-            <TooltipEdgeMenu
-              edge={selectedEdge as AppEdge}
-              sourceTitle={
-                (selectedEdgeSource?.data as any)?.title ?? selectedEdge.source
-              }
-              targetTitle={
-                (selectedEdgeTarget?.data as any)?.title ?? selectedEdge.target
-              }
-              onDelete={() => {
-                const tooltipNodeId = selectedEdge.target;
-                pruneAfterRemoval([tooltipNodeId]);
+          </div>
+          {/* Top-right Save/Load */}
+          <div
+            style={{
+              position: 'absolute',
+              right: 12,
+              top: 12,
+              zIndex: 10,
+              display: 'flex',
+              gap: 8,
+              transform: `translateX(${buttonsOffset}px)`,
+              transition: `transform ${PANEL_ANIM_MS}ms ease`,
+              willChange: 'transform',
+            }}
+          >
+            <button
+              onClick={openSaveModal}
+              style={{
+                padding: '6px 10px',
+                borderRadius: 8,
+                border: '1px solid #ddd',
+                background: '#fff',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                cursor: 'pointer',
+              }}
+              title="Save"
+            >
+              <FaCloudDownloadAlt size={16} aria-hidden="true" />
+              <span>Save</span>
+            </button>
+
+            <label
+              style={{
+                padding: '6px 10px',
+                borderRadius: 8,
+                border: '1px solid #ddd',
+                background: '#fff',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+              }}
+              title="Load"
+            >
+              <FaCloudUploadAlt size={16} aria-hidden="true" />
+              <span>Load</span>
+              {/* --- CHANGE START --- */}
+              <input
+                type="file"
+                accept=".json,.dashboard,.zip" // Allow new formats
+                style={{ display: 'none' }}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = ''; // Reset
+                  if (!file) return;
+
+                  setSaveNameBase(baseFrom(file.name));
+
+                  try {
+                    let data;
+
+                    // Check file type
+                    if (file.name.endsWith('.json')) {
+                      // Legacy Support (Old files)
+                      const text = await file.text();
+                      data = JSON.parse(text);
+                    } else {
+                      // New Bundle Support (Unpacks images to DB)
+                      data = await loadProjectFromZip(file);
+                    }
+
+                    // Validate version check
+                    if (!('version' in data)) {
+                      alert('Invalid file format');
+                      return;
+                    }
+
+                    loadSave(data);
+                  } catch (err) {
+                    console.error(err);
+                    alert('Failed to load project.');
+                  }
+                }}
+              />
+              {/* --- CHANGE END --- */}
+            </label>
+          </div>
+          {/* Canvas */}
+          <div
+            className={`canvas ${isConnecting ? 'rf-connecting' : ''}`}
+            ref={wrapperRef}
+            style={{ flex: 1, minWidth: 0, position: 'relative' }}
+          >
+            <ReactFlow
+              style={{ position: 'relative', zIndex: 0 }}
+              minZoom={0.1}
+              maxZoom={2}
+              selectionOnDrag={lassoMode}
+              selectionMode={SelectionMode.Partial}
+              panOnDrag={!lassoMode && !isDraggingFromPalette}
+              nodes={nodes}
+              edges={visibleEdges}
+              onNodesChange={(chs) => {
+                onNodesChange(chs);
+
+                // Only handle REMOVAL immediately, as that changes the graph structure
+                const removedIds = chs
+                  .filter((c) => c.type === 'remove')
+                  .map((c: any) => c.id as string);
+
+                if (removedIds.length) {
+                  pruneAfterRemoval(removedIds);
+                }
+              }}
+              // B. Trigger the heavy layout calc ONLY when dragging stops
+              onNodeDragStop={() => {
+                handleLayoutReflow();
+              }}
+              onEdgesChange={onEdgesChange}
+              onConnectStart={() => setIsConnecting(true)}
+              onConnectEnd={() => setIsConnecting(false)}
+              onConnect={onConnect}
+              onInit={setRf}
+              nodeTypes={NODE_TYPES}
+              edgeTypes={EDGE_TYPES}
+              onSelectionChange={handleSelectionChange}
+              onMove={() => {
+                handleMove();
+              }}
+              onPaneClick={() => {
+                setSelectedId(null);
                 setSelectedEdgeId(null);
               }}
+              fitView
+            >
+              <Background />
+              <Controls showInteractive>
+                <ControlButton
+                  title={
+                    lassoMode
+                      ? 'Exit lasso (enable pan)'
+                      : 'Enter lasso (disable pan)'
+                  }
+                  onClick={() => setLassoMode((v) => !v)}
+                >
+                  {lassoMode ? <FaRegSquare /> : <FaHand />}
+                </ControlButton>
+              </Controls>
+            </ReactFlow>
+
+            {/* Overlay: activation icons (tooltips) */}
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                pointerEvents: 'none',
+                zIndex: 100000,
+              }}
+            >
+              {markers.map((m) => (
+                <img
+                  key={m.id}
+                  src={m.src}
+                  alt=""
+                  style={{
+                    position: 'absolute',
+                    left: m.screenX,
+                    top: m.screenY,
+                    width: 20,
+                    height: 20,
+                    transform: 'translate(-50%, -50%)',
+                    borderRadius: '50%',
+                    background: '#fff',
+                    boxShadow: '0 2px 6px rgba(0,0,0,.25)',
+                    zIndex: m.isSelected ? 100001 : 100000,
+                    pointerEvents: 'none',
+                  }}
+                  draggable={false}
+                />
+              ))}
+            </div>
+          </div>
+          {/* --- NODE / EDGE MENUS (single ComponentsMenu in review mode) --- */}
+          {selectedNode && (
+            <ComponentsMenu
+              key={selectedNode.id}
+              node={selectedNode as RFNode<NodeData>}
+              onChange={updateSelectedNode}
+              onDelete={deleteSelectedNode}
+              onOpen={(t) =>
+                selectedNode && setModal({ type: t, nodeId: selectedNode.id })
+              }
+              parentData={parentDataForSelected}
+              /* review mode wiring */
+              reviewMode={reviewMode}
+              reviewTargetId={selectedNode.id}
+              reviews={getReviews(selectedNode.id)}
+              onReviewCreate={(r) => addReview(selectedNode.id, r)}
+              onReviewUpdate={(rid, patch) =>
+                updateReview(selectedNode.id, rid, patch)
+              }
+              onReviewDelete={(rid) => deleteReview(selectedNode.id, rid)}
             />
-          ) : (
-            <InteractionEdgeMenu
-              edge={selectedEdge as AppEdge}
-              sourceTitle={
-                (selectedEdgeSource?.data as any)?.title ?? selectedEdge.source
-              }
-              targetTitle={
-                (selectedEdgeTarget?.data as any)?.title ?? selectedEdge.target
-              }
-              onDelete={() => {
-                const edgeToRemove = selectedEdge as AppEdge;
-                const edgeData = (edgeToRemove.data || {}) as any;
-                const interactionId = edgeData.interactionId as
-                  | string
-                  | undefined;
-                const targetId =
-                  (edgeData.targetId as string | undefined) ??
-                  edgeToRemove.target;
-                const label = edgeData.label as string | undefined;
-                const sourceId = edgeToRemove.source;
+          )}
+          {!selectedNode &&
+            selectedEdge &&
+            (reviewMode ? (
+              /* Reuse ComponentsMenu chrome for edges by giving a tiny pseudo-node.
+       Menu chrome is identical; content is the review body because reviewMode=true. */
+              <ComponentsMenu
+                key={`edge-${selectedEdge.id}`}
+                node={
+                  {
+                    id: selectedEdge.id,
+                    // Kind isn’t used while reviewMode=true, but must be a valid NodeData
+                    data: {
+                      kind: 'Visualization',
+                      title: `Edge ${selectedEdge.id}`,
+                    } as any,
+                    position: { x: 0, y: 0 },
+                    type: 'visualization',
+                  } as RFNode<NodeData>
+                }
+                onChange={() => {}}
+                onOpen={undefined}
+                parentData={undefined}
+                /* no delete button for edges here */
+                /* review mode wiring */
+                reviewMode
+                reviewTargetId={selectedEdge.id}
+                reviews={getReviews(selectedEdge.id)}
+                onReviewCreate={(r) => addReview(selectedEdge.id, r)}
+                onReviewUpdate={(rid, patch) =>
+                  updateReview(selectedEdge.id, rid, patch)
+                }
+                onReviewDelete={(rid) => deleteReview(selectedEdge.id, rid)}
+              />
+            ) : /* normal (non-review) edge menus */
+            selectedEdge.type === 'tooltip' ? (
+              <TooltipEdgeMenu
+                edge={selectedEdge as AppEdge}
+                sourceTitle={
+                  (selectedEdgeSource?.data as any)?.title ??
+                  selectedEdge.source
+                }
+                targetTitle={
+                  (selectedEdgeTarget?.data as any)?.title ??
+                  selectedEdge.target
+                }
+                onDelete={() => {
+                  const tooltipNodeId = selectedEdge.target;
+                  pruneAfterRemoval([tooltipNodeId]);
+                  setSelectedEdgeId(null);
+                }}
+              />
+            ) : (
+              <InteractionEdgeMenu
+                edge={selectedEdge as AppEdge}
+                sourceTitle={
+                  (selectedEdgeSource?.data as any)?.title ??
+                  selectedEdge.source
+                }
+                targetTitle={
+                  (selectedEdgeTarget?.data as any)?.title ??
+                  selectedEdge.target
+                }
+                onDelete={() => {
+                  const edgeToRemove = selectedEdge as AppEdge;
+                  const edgeData = (edgeToRemove.data || {}) as any;
+                  const interactionId = edgeData.interactionId as
+                    | string
+                    | undefined;
+                  const targetId =
+                    (edgeData.targetId as string | undefined) ??
+                    edgeToRemove.target;
+                  const label = edgeData.label as string | undefined;
+                  const sourceId = edgeToRemove.source;
 
-                // 1) Remove edge
-                setEdges((eds) =>
-                  (eds as AppEdge[]).filter((e) => e.id !== edgeToRemove.id)
-                );
+                  // 1) Remove edge
+                  setEdges((eds) =>
+                    (eds as AppEdge[]).filter((e) => e.id !== edgeToRemove.id)
+                  );
 
-                // 2) Clean interaction on source
-                setNodes((nds) => {
-                  const all = nds as AppNode[];
-                  const next = all.map((n) => {
-                    if (n.id !== sourceId) return n;
-                    const d = n.data as any;
-                    if (!Array.isArray(d.interactions)) return n;
+                  // 2) Clean interaction on source
+                  setNodes((nds) => {
+                    const all = nds as AppNode[];
+                    const next = all.map((n) => {
+                      if (n.id !== sourceId) return n;
+                      const d = n.data as any;
+                      if (!Array.isArray(d.interactions)) return n;
 
-                    let changed = false;
-                    let interactions: any[] = d.interactions;
+                      let changed = false;
+                      let interactions: any[] = d.interactions;
 
-                    if (interactionId) {
-                      interactions = d.interactions
-                        .map((ix: any) => {
-                          if (ix.id !== interactionId) return ix;
+                      if (interactionId) {
+                        interactions = d.interactions
+                          .map((ix: any) => {
+                            if (ix.id !== interactionId) return ix;
+                            const currentTargets: string[] = Array.isArray(
+                              ix.targets
+                            )
+                              ? ix.targets
+                              : [];
+                            const newTargets = currentTargets.filter(
+                              (tid) => tid !== targetId
+                            );
+                            if (newTargets.length === 0) {
+                              changed = true;
+                              return null;
+                            }
+                            if (newTargets.length !== currentTargets.length) {
+                              changed = true;
+                              return { ...ix, targets: newTargets };
+                            }
+                            return ix;
+                          })
+                          .filter(Boolean);
+                      } else {
+                        interactions = d.interactions.filter((ix: any) => {
                           const currentTargets: string[] = Array.isArray(
                             ix.targets
                           )
                             ? ix.targets
                             : [];
-                          const newTargets = currentTargets.filter(
-                            (tid) => tid !== targetId
-                          );
-                          if (newTargets.length === 0) {
+                          const matchesLabel =
+                            label &&
+                            typeof ix.name === 'string' &&
+                            ix.name === label;
+                          const containsTarget =
+                            currentTargets.includes(targetId);
+                          if (matchesLabel && containsTarget) {
+                            const newTargets = currentTargets.filter(
+                              (tid) => tid !== targetId
+                            );
+                            if (newTargets.length === 0) {
+                              changed = true;
+                              return false;
+                            }
+                            ix.targets = newTargets;
                             changed = true;
-                            return null;
+                            return true;
                           }
-                          if (newTargets.length !== currentTargets.length) {
-                            changed = true;
-                            return { ...ix, targets: newTargets };
-                          }
-                          return ix;
-                        })
-                        .filter(Boolean);
-                    } else {
-                      interactions = d.interactions.filter((ix: any) => {
-                        const currentTargets: string[] = Array.isArray(
-                          ix.targets
-                        )
-                          ? ix.targets
-                          : [];
-                        const matchesLabel =
-                          label &&
-                          typeof ix.name === 'string' &&
-                          ix.name === label;
-                        const containsTarget =
-                          currentTargets.includes(targetId);
-                        if (matchesLabel && containsTarget) {
-                          const newTargets = currentTargets.filter(
-                            (tid) => tid !== targetId
-                          );
-                          if (newTargets.length === 0) {
-                            changed = true;
-                            return false;
-                          }
-                          ix.targets = newTargets;
-                          changed = true;
                           return true;
-                        }
-                        return true;
-                      });
-                    }
+                        });
+                      }
 
-                    if (!changed) return n;
-                    return { ...n, data: { ...d, interactions } } as AppNode;
+                      if (!changed) return n;
+                      return { ...n, data: { ...d, interactions } } as AppNode;
+                    });
+
+                    return next as unknown as RFNode<NodeData>[];
                   });
 
-                  return next as unknown as RFNode<NodeData>[];
-                });
-
-                // 3) Clear selection
-                setSelectedEdgeId(null);
-              }}
-            />
-          ))}
-        <DragOverlay dropAnimation={{ duration: 150 }}>
-          {dragPreview ? <NodeGhost payload={dragPreview} /> : null}
-        </DragOverlay>
-      </DndContext>
+                  // 3) Clear selection
+                  setSelectedEdgeId(null);
+                }}
+              />
+            ))}
+          <DragOverlay dropAnimation={{ duration: 150 }}>
+            {dragPreview ? <NodeGhost payload={dragPreview} /> : null}
+          </DragOverlay>
+        </DndContext>
+      </ReviewContext.Provider>
     </div>
   );
 }

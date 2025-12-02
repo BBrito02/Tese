@@ -16,6 +16,7 @@ import { VISUAL_VAR_ICONS } from '../../domain/icons';
 import ClickHoverPorts from '../nodes/ClickHoverPorts'; // adjust the path if needed
 
 import ReviewBadge from '../../components/ui/ReviewBadge';
+import { useReviews } from '../../components/ui/ReviewContext';
 
 // Per-kind minimums (match your previous sizes)
 const MIN_SIZE: Record<string, { w: number; h: number }> = {
@@ -102,10 +103,6 @@ export default function BaseNodeShell({
   visualVars,
   tooltipCount = 0,
 
-  reviewMode = false,
-  reviewCount = 0,
-  reviewUnresolvedCount = 0,
-
   cardStyle,
   headerStyle,
   bodyStyle,
@@ -126,6 +123,12 @@ export default function BaseNodeShell({
 
   const minW = MIN_SIZE[data.kind]?.w ?? 180;
   const minH = MIN_SIZE[data.kind]?.h ?? 100;
+
+  const {
+    reviewMode,
+    total: reviewCount,
+    unresolved: reviewUnresolvedCount,
+  } = useReviews(id);
 
   // Build pill handle ids so RF recomputes anchors when list changes
   const pillHandleIds = useMemo(
@@ -488,7 +491,7 @@ export default function BaseNodeShell({
           ))}
       </div>
 
-      {overlayTopRight && (
+      {(overlayTopRight || (reviewMode && hideHeader)) && (
         <div
           style={{
             position: 'absolute',
@@ -500,6 +503,14 @@ export default function BaseNodeShell({
           className="nodrag nopan"
         >
           {overlayTopRight}
+          {/* Automatically show badge if header is hidden */}
+          {reviewMode && hideHeader && (
+            <ReviewBadge
+              total={reviewCount}
+              unresolved={reviewUnresolvedCount}
+              title="Reviews"
+            />
+          )}
         </div>
       )}
 

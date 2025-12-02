@@ -5,16 +5,13 @@ import { GRAPH_TYPE_ICONS } from '../../domain/icons';
 import type { NodeData, GraphType } from '../../domain/types';
 import BaseNodeShell from './BaseNodeShell';
 import { getLocalImageSrc } from '../../utils/localStore';
-import ReviewBadge from '../../components/ui/ReviewBadge'; // <-- import
 
 const GraphNode = (props: NodeProps<NodeData>) => {
   const { data, selected } = props;
   const { graphType, previewImageId } = data as any;
 
-  // review mode signals (provided via Editor when review mode toggles)
-  const reviewMode = !!(data as any)?.reviewMode;
-  const reviewTotal = Number((data as any)?.reviewTotal ?? 0);
-  const reviewUnresolved = Number((data as any)?.reviewUnresolved ?? 0);
+  // 1. Removed manual review mode logic.
+  // BaseNodeShell now connects to ReviewContext automatically.
 
   const [customImageSrc, setCustomImageSrc] = useState<string | null>(null);
 
@@ -78,7 +75,7 @@ const GraphNode = (props: NodeProps<NodeData>) => {
     <BaseNodeShell
       {...props}
       selected={selected}
-      hideHeader={true} // keep header hidden
+      hideHeader={true} // BaseNodeShell will now auto-inject the badge for hidden headers
       hideFooter={true}
       body={bodyContent}
       bodyStyle={{
@@ -87,16 +84,6 @@ const GraphNode = (props: NodeProps<NodeData>) => {
       }}
       leftHandle={true}
       rightHandle={true}
-      // show a floating review badge only in review mode
-      overlayTopRight={
-        reviewMode ? (
-          <ReviewBadge
-            total={reviewTotal}
-            unresolved={reviewUnresolved}
-            title="Reviews"
-          />
-        ) : undefined
-      }
     />
   );
 };
