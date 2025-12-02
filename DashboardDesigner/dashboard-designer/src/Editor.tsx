@@ -325,17 +325,32 @@ export default function Editor() {
   const mergeUnique = <T,>(a: T[] = [], b: T[] = []) =>
     Array.from(new Set([...(a ?? []), ...(b ?? [])]));
 
+  const reviewContextValue = useMemo(
+    () => ({
+      reviewsByTarget,
+      reviewMode,
+    }),
+    [reviewsByTarget, reviewMode]
+  );
+
   /* ---------- Menu animation width sync ---------- */
+
+  const edgesRef = useRef(edges);
+
+  useEffect(() => {
+    edgesRef.current = edges;
+  }, [edges]);
 
   useEffect(() => {
     const onSelectEdge = (e: Event) => {
-      const { edgeId, type } =
-        (e as CustomEvent<{ edgeId: string; type: 'tooltip' | 'interaction' }>)
-          .detail || {};
-
+      const { edgeId } = (e as CustomEvent).detail || {};
       if (!edgeId) return;
 
-      const edge = (edges as AppEdge[]).find((ed) => ed.id === edgeId);
+      // Read from REF instead of state directly
+      const currentEdges = edgesRef.current;
+      const edge = currentEdges.find((ed) => ed.id === edgeId);
+
+      console.log('[Editor] edge selected', { edgeId, edge });
 
       setSelectedId(null);
       setSelectedEdgeId(edgeId);
@@ -350,7 +365,7 @@ export default function Editor() {
         'designer:select-edge',
         onSelectEdge as EventListener
       );
-  }, [edges]);
+  }, []);
 
   useEffect(() => {
     function onEnsureVV(e: Event) {
@@ -477,17 +492,6 @@ export default function Editor() {
     [reviewsByTarget]
   );
 
-  const countFor = useCallback(
-    (targetId: string) => {
-      const list = getReviews(targetId);
-      return {
-        total: list.length,
-        unresolved: list.reduce((acc, r) => acc + (r.resolved ? 0 : 1), 0),
-      };
-    },
-    [getReviews]
-  );
-
   const addReview = useCallback((targetId: string, review: Review) => {
     setReviewsByTarget((m) => ({
       ...m,
@@ -540,7 +544,6 @@ export default function Editor() {
         );
 
         if (removedItems.length > 0) {
-
           const toSlug = (s: string) =>
             s
               .toLowerCase()
@@ -2341,7 +2344,7 @@ export default function Editor() {
         overflow: 'hidden',
       }}
     >
-      <ReviewContext.Provider value={{ reviewsByTarget, reviewMode }}>
+      <ReviewContext.Provider value={reviewContextValue}>
         <DndContext
           sensors={sensors}
           onDragStart={handleDragStart}

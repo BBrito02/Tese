@@ -94,6 +94,122 @@ function stripBorderStyles(
   return rest;
 }
 
+function DataPills({
+  items,
+  onClick,
+}: {
+  items: (string | DataItem)[];
+  onClick?: (index: number) => void;
+}) {
+  const slug = (s: string) =>
+    s
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9_-]/g, '');
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 8,
+        width: '100%',
+      }}
+    >
+      {items.map((it, i) => {
+        const label = typeof it === 'string' ? it : it.name;
+        const title = typeof it === 'string' ? it : `${it.name} · ${it.dtype}`;
+        const handleId = `data:${slug(label)}`;
+
+        return (
+          <div
+            key={`${label}-${i}`}
+            style={{ position: 'relative', display: 'inline-block' }}
+          >
+            <button
+              title={title}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={() => onClick?.(i)}
+              style={{
+                padding: '6px 10px',
+                borderRadius: 5,
+                borderWidth: 1,
+                borderStyle: 'solid',
+                borderColor: '#e5e7eb',
+                background: '#f8fafc',
+                fontWeight: 700,
+                fontSize: 12,
+                cursor: onClick ? 'pointer' : 'default',
+                maxWidth: '100%',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {label}
+            </button>
+
+            {/* 🔹 target handle for this data attribute */}
+            <Handle
+              id={`${handleId}:target`}
+              type="target"
+              position={Position.Top}
+              className="nodrag nopan"
+              style={{
+                position: 'absolute',
+                left: '50%',
+                top: -3,
+                transform: 'translateX(-50%)',
+                borderWidth: 1,
+                borderStyle: 'solid',
+                borderColor: '#222',
+                background: '#111',
+              }}
+            />
+
+            {/* 🔹 two source handles under the pill */}
+            <Handle
+              id={`${handleId}:click`}
+              type="source"
+              position={Position.Bottom}
+              className="nodrag nopan"
+              style={{
+                position: 'absolute',
+                left: '70%',
+                bottom: -3,
+                transform: 'translateX(-50%)',
+                borderWidth: 1,
+                borderStyle: 'solid',
+                borderColor: '#222',
+                background: '#111',
+              }}
+            />
+            <Handle
+              id={`${handleId}:hover`}
+              type="source"
+              position={Position.Bottom}
+              className="nodrag nopan"
+              style={{
+                position: 'absolute',
+                left: '30%',
+                bottom: -3,
+                transform: 'translateX(-50%)',
+                borderWidth: 1,
+                borderStyle: 'solid',
+                borderColor: '#222',
+                background: '#111',
+              }}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function BaseNodeShell({
   id,
   data,
@@ -171,123 +287,6 @@ export default function BaseNodeShell({
 
   // sanitize incoming styles to avoid mixing border props
   const cardStyleClean = stripBorderStyles(cardStyle) || {};
-
-  function DataPills({
-    items,
-    onClick,
-  }: {
-    items: (string | DataItem)[];
-    onClick?: (index: number) => void;
-  }) {
-    const slug = (s: string) =>
-      s
-        .toLowerCase()
-        .trim()
-        .replace(/\s+/g, '-')
-        .replace(/[^a-z0-9_-]/g, '');
-
-    return (
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          justifyContent: 'center',
-          alignItems: 'center',
-          gap: 8,
-          width: '100%',
-        }}
-      >
-        {items.map((it, i) => {
-          const label = typeof it === 'string' ? it : it.name;
-          const title =
-            typeof it === 'string' ? it : `${it.name} · ${it.dtype}`;
-          const handleId = `data:${slug(label)}`;
-
-          return (
-            <div
-              key={`${label}-${i}`}
-              style={{ position: 'relative', display: 'inline-block' }}
-            >
-              <button
-                title={title}
-                onMouseDown={(e) => e.stopPropagation()}
-                onClick={() => onClick?.(i)}
-                style={{
-                  padding: '6px 10px',
-                  borderRadius: 5,
-                  borderWidth: 1,
-                  borderStyle: 'solid',
-                  borderColor: '#e5e7eb',
-                  background: '#f8fafc',
-                  fontWeight: 700,
-                  fontSize: 12,
-                  cursor: onClick ? 'pointer' : 'default',
-                  maxWidth: '100%',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {label}
-              </button>
-
-              {/* 🔹 target handle for this data attribute */}
-              <Handle
-                id={`${handleId}:target`}
-                type="target"
-                position={Position.Top}
-                className="nodrag nopan"
-                style={{
-                  position: 'absolute',
-                  left: '50%',
-                  top: -3,
-                  transform: 'translateX(-50%)',
-                  borderWidth: 1,
-                  borderStyle: 'solid',
-                  borderColor: '#222',
-                  background: '#111',
-                }}
-              />
-
-              {/* 🔹 two source handles under the pill */}
-              <Handle
-                id={`${handleId}:click`}
-                type="source"
-                position={Position.Bottom}
-                className="nodrag nopan"
-                style={{
-                  position: 'absolute',
-                  left: '70%',
-                  bottom: -3,
-                  transform: 'translateX(-50%)',
-                  borderWidth: 1,
-                  borderStyle: 'solid',
-                  borderColor: '#222',
-                  background: '#111',
-                }}
-              />
-              <Handle
-                id={`${handleId}:hover`}
-                type="source"
-                position={Position.Bottom}
-                className="nodrag nopan"
-                style={{
-                  position: 'absolute',
-                  left: '30%',
-                  bottom: -3,
-                  transform: 'translateX(-50%)',
-                  borderWidth: 1,
-                  borderStyle: 'solid',
-                  borderColor: '#222',
-                  background: '#111',
-                }}
-              />
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
 
   return (
     <div
