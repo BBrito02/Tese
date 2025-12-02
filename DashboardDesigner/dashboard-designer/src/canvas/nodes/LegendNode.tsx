@@ -1,8 +1,9 @@
 import type { NodeProps } from 'reactflow';
 import type { NodeData, DataItem, VisualVariable } from '../../domain/types';
 import BaseNodeShell from './BaseNodeShell';
+import { memo } from 'react';
 
-export default function LegendNode(p: NodeProps<NodeData>) {
+const LegendNode = (p: NodeProps<NodeData>) => {
   const d: any = p.data;
   const footer = d.data as (string | DataItem)[] | undefined;
 
@@ -28,4 +29,6 @@ export default function LegendNode(p: NodeProps<NodeData>) {
       headerStyle={{ padding: 6 }}
     />
   );
-}
+};
+
+export default memo(LegendNode);

@@ -1,4 +1,4 @@
-import type { NodeKind } from '../domain/types';
+import type { NodeKind } from '../../domain/types';
 
 export default function NodeGhost({
   payload,

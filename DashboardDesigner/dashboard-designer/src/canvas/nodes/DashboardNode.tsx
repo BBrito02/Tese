@@ -1,8 +1,9 @@
 import type { NodeProps } from 'reactflow';
 import type { NodeData } from '../../domain/types';
 import BaseNodeShell from './BaseNodeShell';
+import { memo } from 'react';
 
-export default function DashboardNode(p: NodeProps<NodeData>) {
+const DashboardNode = (p: NodeProps<NodeData>) => {
   const d = p.data as any;
   return (
     <BaseNodeShell
@@ -15,4 +16,6 @@ export default function DashboardNode(p: NodeProps<NodeData>) {
       reviewUnresolvedCount={(d as any).reviewUnresolved ?? 0}
     />
   );
-}
+};
+
+export default memo(DashboardNode);

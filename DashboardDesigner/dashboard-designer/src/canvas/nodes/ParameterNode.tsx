@@ -1,8 +1,9 @@
 import type { NodeProps } from 'reactflow';
 import type { NodeData } from '../../domain/types';
 import BaseNodeShell from './BaseNodeShell';
+import { memo } from 'react';
 
-export default function ParameterNode(p: NodeProps<NodeData>) {
+const ParameterNode = (p: NodeProps<NodeData>) => {
   const opts: string[] = (p.data as any)?.options ?? [];
   const d = p.data as any;
   return (
@@ -42,4 +43,6 @@ export default function ParameterNode(p: NodeProps<NodeData>) {
       }
     />
   );
-}
+};
+
+export default memo(ParameterNode);

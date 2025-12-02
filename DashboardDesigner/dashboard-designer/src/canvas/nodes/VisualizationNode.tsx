@@ -2,8 +2,9 @@
 import type { NodeProps } from 'reactflow';
 import BaseNodeShell from './BaseNodeShell';
 import type { NodeData, DataItem, VisualVariable } from '../../domain/types';
+import { memo } from 'react';
 
-export default function VisualizationNode(p: NodeProps<NodeData>) {
+const VisualizationNode = (p: NodeProps<NodeData>) => {
   const d = p.data as any;
 
   // footer "data" list (strings or DataItem objects)
@@ -47,4 +48,6 @@ export default function VisualizationNode(p: NodeProps<NodeData>) {
       rightHandle={true}
     />
   );
-}
+};
+
+export default memo(VisualizationNode);

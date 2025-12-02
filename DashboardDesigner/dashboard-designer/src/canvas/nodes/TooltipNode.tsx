@@ -1,8 +1,9 @@
 import type { NodeProps } from 'reactflow';
 import type { NodeData, DataItem, VisualVariable } from '../../domain/types';
 import BaseNodeShell from './BaseNodeShell';
+import { memo } from 'react';
 
-export default function TooltipNode(p: NodeProps<NodeData>) {
+const TooltipNode = (p: NodeProps<NodeData>) => {
   const d: any = p.data;
   const footer = d.data as (string | DataItem)[] | undefined;
   const vv = d.visualVars as VisualVariable[] | undefined;
@@ -23,4 +24,6 @@ export default function TooltipNode(p: NodeProps<NodeData>) {
       headerStyle={{ padding: 8 }}
     />
   );
-}
+};
+
+export default memo(TooltipNode);

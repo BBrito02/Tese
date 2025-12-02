@@ -7,7 +7,7 @@ import BaseNodeShell from './BaseNodeShell';
 import { getLocalImageSrc } from '../../utils/localStore';
 import ReviewBadge from '../../components/ui/ReviewBadge'; // <-- import
 
-function GraphNode(props: NodeProps<NodeData>) {
+const GraphNode = (props: NodeProps<NodeData>) => {
   const { data, selected } = props;
   const { graphType, previewImageId } = data as any;
 
@@ -99,6 +99,6 @@ function GraphNode(props: NodeProps<NodeData>) {
       }
     />
   );
-}
+};
 
 export default memo(GraphNode);

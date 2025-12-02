@@ -1,8 +1,9 @@
 import type { NodeProps } from 'reactflow';
 import type { NodeData, DataItem } from '../../domain/types';
 import BaseNodeShell from './BaseNodeShell';
+import { memo } from 'react';
 
-export default function FilterNode(p: NodeProps<NodeData>) {
+const FilterNode = (p: NodeProps<NodeData>) => {
   const d: any = p.data;
   const footer = d.data as (string | DataItem)[] | undefined;
   return (
@@ -16,3 +17,5 @@ export default function FilterNode(p: NodeProps<NodeData>) {
     />
   );
 }
+
+export default memo(FilterNode);
