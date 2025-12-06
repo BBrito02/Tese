@@ -31,6 +31,8 @@ type Props = {
   onReviewCreate?: (r: Review) => void;
   onReviewUpdate?: (id: string, patch: Partial<Review>) => void;
   onReviewDelete?: (id: string) => void;
+  onReply?: (reviewId: string, text: string, author: string) => void;
+  onDeleteReply?: (reviewId: string, replyId: string) => void;
 };
 
 export default function ComponentsMenu(props: Props) {
@@ -178,7 +180,7 @@ export default function ComponentsMenu(props: Props) {
             }
             sourceLabel={reviewSourceLabel}
             reviews={reviews}
-            onCreate={(text, category, priority) =>
+            onCreate={(text, category, priority, author) =>
               onReviewCreate?.({
                 id: nanoid(),
                 targetId: reviewTargetId ?? panelNode.id,
@@ -187,11 +189,17 @@ export default function ComponentsMenu(props: Props) {
                 priority,
                 createdAt: Date.now(),
                 resolved: false,
+                author: author,
+                replies: [],
               })
             }
             onToggle={(id, next) => onReviewUpdate?.(id, { resolved: next })}
             onDelete={(id) => onReviewDelete?.(id)}
             onUpdate={(id, patch) => onReviewUpdate?.(id, patch)}
+            onReply={(reviewId, text, author) =>
+              props.onReply?.(reviewId, text, author)
+            }
+            onDeleteReply={props.onDeleteReply!}
           />
         ) : Menu ? (
           <Menu

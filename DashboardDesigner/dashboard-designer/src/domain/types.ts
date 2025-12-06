@@ -1,6 +1,13 @@
 export type InteractionType = 'click' | 'hover';
 export type InteractionResult = 'filter' | 'highlight' | 'dashboard' | 'link';
 
+export type Reply = {
+  id: string;
+  text: string;
+  createdAt: number;
+  author?: string; // Optional
+};
+
 // add near your other domain types
 export type Review = {
   id: string;
@@ -11,6 +18,7 @@ export type Review = {
   resolved: boolean;
   author?: string;
   createdAt: number; // Date.now()
+  replies: Reply[];
 };
 
 export type Interaction = {

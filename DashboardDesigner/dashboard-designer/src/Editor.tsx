@@ -24,6 +24,7 @@ import type {
   VisualVariable,
   Interaction,
   DataItem,
+  Reply,
 } from './domain/types';
 import { canConnect, allowedChildKinds } from './domain/rules';
 
@@ -499,6 +500,28 @@ export default function Editor() {
     }));
   }, []);
 
+  const addReply = useCallback(
+    (targetId: string, reviewId: string, text: string, author: string) => {
+      setReviewsByTarget((m) => {
+        const list = m[targetId] || [];
+        return {
+          ...m,
+          [targetId]: list.map((r) => {
+            if (r.id !== reviewId) return r;
+            const newReply: Reply = {
+              id: nanoid(),
+              text,
+              createdAt: Date.now(),
+              author: author, // ✅ Store the author name
+            };
+            return { ...r, replies: [...(r.replies || []), newReply] };
+          }),
+        };
+      });
+    },
+    []
+  );
+
   const updateReview = useCallback(
     (targetId: string, id: string, patch: Partial<Review>) => {
       setReviewsByTarget((m) => ({
@@ -517,6 +540,25 @@ export default function Editor() {
       [targetId]: (m[targetId] ?? []).filter((r) => r.id !== id),
     }));
   }, []);
+
+  const deleteReply = useCallback(
+    (targetId: string, reviewId: string, replyId: string) => {
+      setReviewsByTarget((m) => {
+        const list = m[targetId] || [];
+        return {
+          ...m,
+          [targetId]: list.map((r) => {
+            if (r.id !== reviewId) return r;
+            return {
+              ...r,
+              replies: (r.replies || []).filter((rep) => rep.id !== replyId),
+            };
+          }),
+        };
+      });
+    },
+    []
+  );
 
   /** Patch a node's data by id. */
   const updateNodeById = useCallback(
@@ -2574,6 +2616,12 @@ export default function Editor() {
                 updateReview(selectedNode.id, rid, patch)
               }
               onReviewDelete={(rid) => deleteReview(selectedNode.id, rid)}
+              onReply={(rid, text, author) =>
+                addReply(selectedNode.id, rid, text, author)
+              }
+              onDeleteReply={(rid, replyId) =>
+                deleteReply(selectedNode.id, rid, replyId)
+              }
             />
           )}
           {!selectedNode &&
@@ -2608,6 +2656,12 @@ export default function Editor() {
                   updateReview(selectedEdge.id, rid, patch)
                 }
                 onReviewDelete={(rid) => deleteReview(selectedEdge.id, rid)}
+                onReply={(rid, text, author) =>
+                  addReply(selectedEdge.id, rid, text, author)
+                }
+                onDeleteReply={(rid, replyId) =>
+                  deleteReply(selectedEdge.id, rid, replyId)
+                }
               />
             ) : /* normal (non-review) edge menus */
             selectedEdge.type === 'tooltip' ? (
