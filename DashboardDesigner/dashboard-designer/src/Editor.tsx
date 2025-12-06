@@ -78,6 +78,8 @@ import {
   FaCloudDownloadAlt,
   FaCloudUploadAlt,
   FaRegSquare,
+  FaUndo,
+  FaRedo,
 } from 'react-icons/fa';
 import { FaHand } from 'react-icons/fa6';
 import InteractionEdgeMenu from './components/menus/InteractionEdgeMenu';
@@ -88,6 +90,7 @@ import { saveProjectAsZip, loadProjectFromZip } from './utils/fileUtils';
 import type { Review } from './domain/types';
 import ReviewToggle from './components/ui/ReviewToggle';
 import { ReviewContext } from './components/ui/ReviewContext';
+import { useUndoRedo } from './hooks/useUndoRedo';
 
 /* =========================
  *  Node/Edge component maps
@@ -232,6 +235,13 @@ export default function Editor() {
   const [edges, setEdges, onEdgesChange] = useEdgesState<AppEdge>([]);
   const [rf, setRf] = useState<ReactFlowInstance | null>(null);
 
+  const { takeSnapshot, undo, redo, canUndo, canRedo } = useUndoRedo(
+    nodes as any, // Cast to any or RFNode[] to satisfy types
+    edges,
+    setNodes as any,
+    setEdges
+  );
+
   // UI state
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -374,6 +384,8 @@ export default function Editor() {
         e as CustomEvent<{ parentId: string; vars: VisualVariable[] }>
       ).detail;
 
+      takeSnapshot();
+
       setNodes((nodes) =>
         nodes.map((n) => {
           if (n.id !== parentId) return n;
@@ -481,6 +493,7 @@ export default function Editor() {
    * ===================================================== */
 
   const handleLayoutReflow = useCallback(() => {
+    takeSnapshot();
     setNodes((nds) => {
       const constrained = applyConstraints(nds as AppNode[]);
       const synced = syncParentGraphTypes(constrained);
@@ -563,6 +576,7 @@ export default function Editor() {
   /** Patch a node's data by id. */
   const updateNodeById = useCallback(
     async (id: string, patch: Partial<NodeData>) => {
+      takeSnapshot();
       const patchAny = patch as any;
 
       // --- 1. DETECT DATA REMOVAL ---
@@ -801,6 +815,8 @@ export default function Editor() {
 
       if (!canConnect(sourceKind, targetKind)) return;
 
+      takeSnapshot();
+
       const sh = c.sourceHandle ?? '';
       const trigger: 'click' | 'hover' = sh.endsWith(':hover')
         ? 'hover'
@@ -1030,6 +1046,8 @@ export default function Editor() {
     setDragStartPoint(null);
     setCursorPoint(null);
     if (!viewportPt) return;
+
+    takeSnapshot();
 
     const flowCenter = rf.screenToFlowPosition({
       x: viewportPt.x,
@@ -1301,6 +1319,7 @@ export default function Editor() {
             graphType: GraphType;
           }
     ) => {
+      takeSnapshot();
       setNodes((nds) => {
         const all = nds as AppNode[];
         const parent = all.find((n) => n.id === parentId);
@@ -1415,9 +1434,9 @@ export default function Editor() {
     });
   }
 
-  /** Centralized cleanup: delete nodes (plus descendants), clean edges and related labels. */
   /** Centralized cleanup: delete nodes (plus descendants), clean edges and related labels + interactions. */
   function pruneAfterRemoval(initialIds: string[]) {
+    takeSnapshot();
     setNodes((nds) => {
       const all = nds as AppNode[];
       const base = new Set<string>(initialIds);
@@ -2100,6 +2119,8 @@ export default function Editor() {
       if (!parentId || !Array.isArray(graphTypes) || graphTypes.length === 0)
         return;
 
+      takeSnapshot();
+
       setNodes((nds) => {
         const all = (nds as AppNode[]).map((n) => ({ ...n }));
         const parent = all.find((n) => n.id === parentId);
@@ -2167,6 +2188,8 @@ export default function Editor() {
         (e as CustomEvent<{ parentId: string; graphTypes: GraphType[] }>)
           .detail || {};
       if (!parentId || !Array.isArray(graphTypes)) return;
+
+      takeSnapshot();
 
       setNodes((nds) => {
         let all = (nds as AppNode[]).map((n) => ({ ...n }));
@@ -2253,6 +2276,8 @@ export default function Editor() {
         (e as CustomEvent<{ nodeId: string; graphType: GraphType }>).detail ||
         {};
       if (!nodeId || !graphType) return;
+
+      takeSnapshot();
 
       setNodes((nds) => {
         const all = nds as AppNode[];
@@ -2427,6 +2452,43 @@ export default function Editor() {
               willChange: 'transform',
             }}
           >
+            <button
+              onClick={undo}
+              disabled={!canUndo}
+              title="Undo (Ctrl+Z)"
+              style={{
+                padding: '6px 10px',
+                borderRadius: 8,
+                border: '1px solid #ddd',
+                background: canUndo ? '#fff' : '#f0f0f0',
+                color: canUndo ? 'inherit' : '#ccc',
+                cursor: canUndo ? 'pointer' : 'default',
+                display: 'inline-flex',
+                alignItems: 'center',
+                marginRight: 8,
+              }}
+            >
+              <FaUndo size={14} />
+            </button>
+
+            <button
+              onClick={redo}
+              disabled={!canRedo}
+              title="Redo (Ctrl+Shift+Z)"
+              style={{
+                padding: '6px 10px',
+                borderRadius: 8,
+                border: '1px solid #ddd',
+                background: canRedo ? '#fff' : '#f0f0f0',
+                color: canRedo ? 'inherit' : '#ccc',
+                cursor: canRedo ? 'pointer' : 'default',
+                display: 'inline-flex',
+                alignItems: 'center',
+                marginRight: 8,
+              }}
+            >
+              <FaRedo size={14} />
+            </button>
             <button
               onClick={openSaveModal}
               style={{
