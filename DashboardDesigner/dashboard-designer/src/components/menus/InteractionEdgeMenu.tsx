@@ -1,7 +1,7 @@
 // src/components/menus/InteractionEdgeMenu.tsx
 import type { Edge as RFEdge } from 'reactflow';
 import EdgesMenu from './EdgesMenu';
-import { NameField, TypeField, SectionTitle } from './sections';
+import { TypeField, SectionTitle } from './sections';
 import type { IconType } from 'react-icons';
 import {
   // Visualization
@@ -108,12 +108,12 @@ export default function InteractionEdgeMenu({
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <SectionTitle>Properties</SectionTitle>
 
-        <NameField
+        {/* <NameField
           value={label || `${fromLabel} → ${toLabel}`}
           placeholder="Interaction name"
           disabled={true}
           onChange={() => {}}
-        />
+        /> */}
 
         {/* General type icon */}
         <TypeField value="Interaction" label="Edge type" icon={LuZap} />

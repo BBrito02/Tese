@@ -22,7 +22,7 @@ export type DragData = { kind: NodeKind; title?: string };
 // ---- layout constants ----
 const SIDEBAR_W = 260;
 const TILE_H = 80;
-const MARGIN = 12;
+const MARGIN = 7;
 const LS_KEY = 'designer:sidemenu:collapsed'; // Key for local storage
 
 type Section = {
