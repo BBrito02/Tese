@@ -2407,8 +2407,10 @@ export default function Editor() {
       style={{
         display: 'flex',
         height: '100vh',
+        width: '100vw',
         backgroundColor: '#aedbe6ff',
         overflow: 'hidden',
+        position: 'relative',
       }}
     >
       <ReviewContext.Provider value={reviewContextValue}>
@@ -2419,7 +2421,17 @@ export default function Editor() {
           onDragCancel={handleDragCancel}
           onDragEnd={handleDragEnd}
         >
-          <SideMenu />
+          <div
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              bottom: 0,
+              zIndex: 10,
+            }}
+          >
+            <SideMenu />
+          </div>
           {/* Centered Review toggle (does not affect menu width/layout) */}
           <div
             style={{
@@ -2567,7 +2579,11 @@ export default function Editor() {
           <div
             className={`canvas ${isConnecting ? 'rf-connecting' : ''}`}
             ref={wrapperRef}
-            style={{ flex: 1, minWidth: 0, position: 'relative' }}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 0,
+            }}
           >
             <ReactFlow
               style={{ position: 'relative', zIndex: 0 }}
@@ -2660,192 +2676,205 @@ export default function Editor() {
           </div>
           {/* --- NODE / EDGE MENUS (single ComponentsMenu in review mode) --- */}
           {selectedNode && (
-            <ComponentsMenu
-              key={selectedNode.id}
-              node={selectedNode as RFNode<NodeData>}
-              onChange={updateSelectedNode}
-              onDelete={deleteSelectedNode}
-              onOpen={(t) =>
-                selectedNode && setModal({ type: t, nodeId: selectedNode.id })
-              }
-              parentData={parentDataForSelected}
-              /* review mode wiring */
-              reviewMode={reviewMode}
-              reviewTargetId={selectedNode.id}
-              reviews={getReviews(selectedNode.id)}
-              onReviewCreate={(r) => addReview(selectedNode.id, r)}
-              onReviewUpdate={(rid, patch) =>
-                updateReview(selectedNode.id, rid, patch)
-              }
-              onReviewDelete={(rid) => deleteReview(selectedNode.id, rid)}
-              onReply={(rid, text, author) =>
-                addReply(selectedNode.id, rid, text, author)
-              }
-              onDeleteReply={(rid, replyId) =>
-                deleteReply(selectedNode.id, rid, replyId)
-              }
-            />
-          )}
-          {!selectedNode &&
-            selectedEdge &&
-            (reviewMode ? (
-              /* Reuse ComponentsMenu chrome for edges by giving a tiny pseudo-node.
-       Menu chrome is identical; content is the review body because reviewMode=true. */
+            <div
+              style={{
+                position: 'absolute',
+                right: 0,
+                top: 0,
+                bottom: 0,
+                zIndex: 10,
+              }}
+            >
               <ComponentsMenu
-                key={`edge-${selectedEdge.id}`}
-                node={
-                  {
-                    id: selectedEdge.id,
-                    // Kind isn’t used while reviewMode=true, but must be a valid NodeData
-                    data: {
-                      kind: 'Visualization',
-                      title: `Edge ${selectedEdge.id}`,
-                    } as any,
-                    position: { x: 0, y: 0 },
-                    type: 'visualization',
-                  } as RFNode<NodeData>
+                key={selectedNode.id}
+                node={selectedNode as RFNode<NodeData>}
+                onChange={updateSelectedNode}
+                onDelete={deleteSelectedNode}
+                onOpen={(t) =>
+                  selectedNode && setModal({ type: t, nodeId: selectedNode.id })
                 }
-                onChange={() => {}}
-                onOpen={undefined}
-                parentData={undefined}
-                /* no delete button for edges here */
+                parentData={parentDataForSelected}
                 /* review mode wiring */
-                reviewMode
-                reviewTargetId={selectedEdge.id}
-                reviews={getReviews(selectedEdge.id)}
-                onReviewCreate={(r) => addReview(selectedEdge.id, r)}
+                reviewMode={reviewMode}
+                reviewTargetId={selectedNode.id}
+                reviews={getReviews(selectedNode.id)}
+                onReviewCreate={(r) => addReview(selectedNode.id, r)}
                 onReviewUpdate={(rid, patch) =>
-                  updateReview(selectedEdge.id, rid, patch)
+                  updateReview(selectedNode.id, rid, patch)
                 }
-                onReviewDelete={(rid) => deleteReview(selectedEdge.id, rid)}
+                onReviewDelete={(rid) => deleteReview(selectedNode.id, rid)}
                 onReply={(rid, text, author) =>
-                  addReply(selectedEdge.id, rid, text, author)
+                  addReply(selectedNode.id, rid, text, author)
                 }
                 onDeleteReply={(rid, replyId) =>
-                  deleteReply(selectedEdge.id, rid, replyId)
+                  deleteReply(selectedNode.id, rid, replyId)
                 }
               />
-            ) : /* normal (non-review) edge menus */
-            selectedEdge.type === 'tooltip' ? (
-              <TooltipEdgeMenu
-                edge={selectedEdge as AppEdge}
-                sourceTitle={
-                  (selectedEdgeSource?.data as any)?.title ??
-                  selectedEdge.source
-                }
-                targetTitle={
-                  (selectedEdgeTarget?.data as any)?.title ??
-                  selectedEdge.target
-                }
-                onDelete={() => {
-                  const tooltipNodeId = selectedEdge.target;
-                  pruneAfterRemoval([tooltipNodeId]);
-                  setSelectedEdgeId(null);
-                }}
-              />
-            ) : (
-              <InteractionEdgeMenu
-                edge={selectedEdge as AppEdge}
-                sourceTitle={
-                  (selectedEdgeSource?.data as any)?.title ??
-                  selectedEdge.source
-                }
-                targetTitle={
-                  (selectedEdgeTarget?.data as any)?.title ??
-                  selectedEdge.target
-                }
-                onDelete={() => {
-                  const edgeToRemove = selectedEdge as AppEdge;
-                  const edgeData = (edgeToRemove.data || {}) as any;
-                  const interactionId = edgeData.interactionId as
-                    | string
-                    | undefined;
-                  const targetId =
-                    (edgeData.targetId as string | undefined) ??
-                    edgeToRemove.target;
-                  const label = edgeData.label as string | undefined;
-                  const sourceId = edgeToRemove.source;
+            </div>
+          )}
+          {/* Edge Menu Wrapper (Floating Right) */}
+          {!selectedNode && selectedEdge && (
+            <div
+              style={{
+                position: 'absolute',
+                right: 0,
+                top: 0,
+                bottom: 0,
+                zIndex: 10,
+              }}
+            >
+              {/* 1. Review Mode Edge Menu */}
+              {reviewMode ? (
+                <ComponentsMenu
+                  key={`edge-${selectedEdge.id}`}
+                  node={
+                    {
+                      id: selectedEdge.id,
+                      data: {
+                        kind: 'Visualization',
+                        title: `Edge ${selectedEdge.id}`,
+                      },
+                      position: { x: 0, y: 0 },
+                      type: 'visualization',
+                    } as any
+                  }
+                  onChange={() => {}}
+                  onOpen={undefined}
+                  parentData={undefined}
+                  reviewMode
+                  reviewTargetId={selectedEdge.id}
+                  reviews={getReviews(selectedEdge.id)}
+                  onReviewCreate={(r) => addReview(selectedEdge.id, r)}
+                  onReviewUpdate={(rid, patch) =>
+                    updateReview(selectedEdge.id, rid, patch)
+                  }
+                  onReviewDelete={(rid) => deleteReview(selectedEdge.id, rid)}
+                  onReply={(rid, text, author) =>
+                    addReply(selectedEdge.id, rid, text, author)
+                  }
+                  onDeleteReply={(rid, replyId) =>
+                    deleteReply(selectedEdge.id, rid, replyId)
+                  }
+                />
+              ) : selectedEdge.type === 'tooltip' ? (
+                /* 2. Tooltip Edge Menu */
+                <TooltipEdgeMenu
+                  edge={selectedEdge as AppEdge}
+                  sourceTitle={
+                    (selectedEdgeSource?.data as any)?.title ??
+                    selectedEdge.source
+                  }
+                  targetTitle={
+                    (selectedEdgeTarget?.data as any)?.title ??
+                    selectedEdge.target
+                  }
+                  onDelete={() => {
+                    const tooltipNodeId = selectedEdge.target;
+                    pruneAfterRemoval([tooltipNodeId]);
+                    setSelectedEdgeId(null);
+                  }}
+                />
+              ) : (
+                /* 3. Interaction Edge Menu */
+                <InteractionEdgeMenu
+                  edge={selectedEdge as AppEdge}
+                  sourceTitle={
+                    (selectedEdgeSource?.data as any)?.title ??
+                    selectedEdge.source
+                  }
+                  targetTitle={
+                    (selectedEdgeTarget?.data as any)?.title ??
+                    selectedEdge.target
+                  }
+                  onDelete={() => {
+                    const edgeToRemove = selectedEdge as AppEdge;
+                    const edgeData = (edgeToRemove.data || {}) as any;
+                    const interactionId = edgeData.interactionId;
+                    const targetId = edgeData.targetId ?? edgeToRemove.target;
+                    const label = edgeData.label;
+                    const sourceId = edgeToRemove.source;
 
-                  // 1) Remove edge
-                  setEdges((eds) =>
-                    (eds as AppEdge[]).filter((e) => e.id !== edgeToRemove.id)
-                  );
+                    // 1) Remove edge
+                    setEdges((eds) =>
+                      eds.filter((e) => e.id !== edgeToRemove.id)
+                    );
 
-                  // 2) Clean interaction on source
-                  setNodes((nds) => {
-                    const all = nds as AppNode[];
-                    const next = all.map((n) => {
-                      if (n.id !== sourceId) return n;
-                      const d = n.data as any;
-                      if (!Array.isArray(d.interactions)) return n;
+                    // 2) Clean interaction on source
+                    setNodes((nds) => {
+                      const all = nds as AppNode[];
+                      const next = all.map((n) => {
+                        if (n.id !== sourceId) return n;
+                        const d = n.data as any;
+                        if (!Array.isArray(d.interactions)) return n;
 
-                      let changed = false;
-                      let interactions: any[] = d.interactions;
+                        let changed = false;
+                        let interactions: any[] = d.interactions;
 
-                      if (interactionId) {
-                        interactions = d.interactions
-                          .map((ix: any) => {
-                            if (ix.id !== interactionId) return ix;
-                            const currentTargets: string[] = Array.isArray(
-                              ix.targets
-                            )
+                        if (interactionId) {
+                          // Remove by ID
+                          interactions = d.interactions
+                            .map((ix: any) => {
+                              if (ix.id !== interactionId) return ix;
+                              const currentTargets = Array.isArray(ix.targets)
+                                ? ix.targets
+                                : [];
+                              const newTargets = currentTargets.filter(
+                                (tid: string) => tid !== targetId
+                              );
+
+                              if (newTargets.length === 0) {
+                                changed = true;
+                                return null; // Delete interaction if empty
+                              }
+                              if (newTargets.length !== currentTargets.length) {
+                                changed = true;
+                                return { ...ix, targets: newTargets };
+                              }
+                              return ix;
+                            })
+                            .filter(Boolean);
+                        } else {
+                          // Fallback: Remove by label match (legacy)
+                          interactions = d.interactions.filter((ix: any) => {
+                            const currentTargets = Array.isArray(ix.targets)
                               ? ix.targets
                               : [];
-                            const newTargets = currentTargets.filter(
-                              (tid) => tid !== targetId
-                            );
-                            if (newTargets.length === 0) {
-                              changed = true;
-                              return null;
-                            }
-                            if (newTargets.length !== currentTargets.length) {
-                              changed = true;
-                              return { ...ix, targets: newTargets };
-                            }
-                            return ix;
-                          })
-                          .filter(Boolean);
-                      } else {
-                        interactions = d.interactions.filter((ix: any) => {
-                          const currentTargets: string[] = Array.isArray(
-                            ix.targets
-                          )
-                            ? ix.targets
-                            : [];
-                          const matchesLabel =
-                            label &&
-                            typeof ix.name === 'string' &&
-                            ix.name === label;
-                          const containsTarget =
-                            currentTargets.includes(targetId);
-                          if (matchesLabel && containsTarget) {
-                            const newTargets = currentTargets.filter(
-                              (tid) => tid !== targetId
-                            );
-                            if (newTargets.length === 0) {
-                              changed = true;
-                              return false;
-                            }
-                            ix.targets = newTargets;
-                            changed = true;
-                            return true;
-                          }
-                          return true;
-                        });
-                      }
+                            const matchesLabel = label && ix.name === label;
+                            const containsTarget =
+                              currentTargets.includes(targetId);
 
-                      if (!changed) return n;
-                      return { ...n, data: { ...d, interactions } } as AppNode;
+                            if (matchesLabel && containsTarget) {
+                              const newTargets = currentTargets.filter(
+                                (tid: string) => tid !== targetId
+                              );
+                              if (newTargets.length === 0) {
+                                changed = true;
+                                return false;
+                              }
+                              ix.targets = newTargets;
+                              changed = true;
+                              return true;
+                            }
+                            return true;
+                          });
+                        }
+
+                        if (!changed) return n;
+                        return {
+                          ...n,
+                          data: { ...d, interactions },
+                        } as AppNode;
+                      });
+
+                      return next as unknown as RFNode<NodeData>[];
                     });
 
-                    return next as unknown as RFNode<NodeData>[];
-                  });
-
-                  // 3) Clear selection
-                  setSelectedEdgeId(null);
-                }}
-              />
-            ))}
+                    setSelectedEdgeId(null);
+                  }}
+                />
+              )}
+            </div>
+          )}
           <DragOverlay dropAnimation={{ duration: 150 }}>
             {dragPreview ? <NodeGhost payload={dragPreview} /> : null}
           </DragOverlay>
