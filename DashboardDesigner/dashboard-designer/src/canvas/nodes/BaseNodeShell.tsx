@@ -13,7 +13,7 @@ import { supportsInteractions } from '../../domain/rules';
 import type { NodeData, DataItem, VisualVariable } from '../../domain/types';
 import { VISUAL_VAR_ICONS } from '../../domain/icons';
 
-import ClickHoverPorts from '../nodes/ClickHoverPorts'; // adjust the path if needed
+import ClickHoverPorts from '../nodes/ClickHoverPorts';
 
 import ReviewBadge from '../../components/ui/ReviewBadge';
 import { useReviews } from '../../components/ui/ReviewContext';
@@ -38,6 +38,7 @@ export type BaseNodeShellProps = NodeProps<NodeData> & {
   footerItems?: (string | DataItem)[];
   visualVars?: VisualVariable[];
   tooltipCount?: number;
+  perspectiveCount?: number;
 
   reviewMode?: boolean;
   reviewCount?: number;
@@ -218,6 +219,7 @@ export default function BaseNodeShell({
   footerItems,
   visualVars,
   tooltipCount = 0,
+  perspectiveCount = 0,
 
   cardStyle,
   headerStyle,
@@ -366,7 +368,7 @@ export default function BaseNodeShell({
               <div style={{ fontWeight: 700 }}>{data.title}</div>
             </div>
 
-            {/* right side: visual variables + tooltip counter */}
+            {/* right side: visual variables + tooltip counter + perspective counter */}
             <div
               style={{
                 marginLeft: 'auto',
@@ -439,6 +441,31 @@ export default function BaseNodeShell({
                   }}
                 >
                   T({tooltipCount})
+                </span>
+              )}
+
+              {/* MODIFIED: Hide if only 1 perspective */}
+              {perspectiveCount > 1 && (
+                <span
+                  title={`${perspectiveCount} perspectives`}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: 22,
+                    minWidth: 22,
+                    padding: '0 6px',
+                    borderRadius: 999,
+                    fontWeight: 800,
+                    fontSize: 11,
+                    background: '#e2e8f0',
+                    color: '#0f172a',
+                    borderWidth: 1,
+                    borderStyle: 'solid',
+                    borderColor: '#cbd5e1',
+                  }}
+                >
+                  P({perspectiveCount})
                 </span>
               )}
 

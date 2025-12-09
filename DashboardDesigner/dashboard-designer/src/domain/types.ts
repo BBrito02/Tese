@@ -83,6 +83,7 @@ interface NodeDataBase {
   visualVars?: VisualVariable[];
   graphType?: GraphType | null;
   interactions?: Interaction[];
+  perspectives?: string[]; // <--- ADDED: List of node IDs in this perspective group
 }
 
 const KIND_PREFIX = {

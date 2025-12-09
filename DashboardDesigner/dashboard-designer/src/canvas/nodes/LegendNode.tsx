@@ -13,11 +13,16 @@ const LegendNode = (p: NodeProps<NodeData>) => {
     ? (d.visualVars as VisualVariable[])
     : [];
 
+  const perspectiveCount = Array.isArray(d.perspectives)
+    ? (d.perspectives as string[]).length
+    : 0;
+
   return (
     <BaseNodeShell
       {...p}
       footerItems={footer}
       visualVars={visualVars}
+      perspectiveCount={perspectiveCount}
       reviewMode={(d as any).reviewMode ?? false}
       reviewCount={(d as any).reviewTotal ?? 0}
       reviewUnresolvedCount={(d as any).reviewUnresolved ?? 0}

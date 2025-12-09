@@ -5,10 +5,15 @@ import type { DataItem, NodeData, NodeKind } from '../../domain/types';
 import type { Review } from '../../domain/types';
 import { MENUS } from '.';
 import { BaseMenu } from './common';
-import { LuPanelRightClose, LuPanelLeftClose } from 'react-icons/lu';
+import {
+  LuPanelRightClose,
+  LuPanelLeftClose,
+  LuChevronLeft,
+  LuChevronRight,
+  LuPlus,
+} from 'react-icons/lu';
 import { nanoid } from 'nanoid';
 import ReviewMenu from './ReviewMenu';
-// (keep SectionTitle/NameField imports only if you still use them elsewhere)
 
 const PANEL_W = 280;
 const COLLAPSED_W = 0;
@@ -33,6 +38,9 @@ type Props = {
   onReviewDelete?: (id: string) => void;
   onReply?: (reviewId: string, text: string, author: string) => void;
   onDeleteReply?: (reviewId: string, replyId: string) => void;
+
+  onNavigate?: (nodeId: string) => void;
+  onCreatePerspective?: (sourceNodeId: string) => void;
 };
 
 export default function ComponentsMenu(props: Props) {
@@ -50,6 +58,8 @@ export default function ComponentsMenu(props: Props) {
     onReviewCreate,
     onReviewUpdate,
     onReviewDelete,
+    onNavigate,
+    onCreatePerspective,
   } = props;
 
   const [shouldRender, setShouldRender] = useState(!!node);
@@ -99,6 +109,11 @@ export default function ComponentsMenu(props: Props) {
   const panelNode = node ?? lastNode!;
   const disabled = !node;
   const Menu = MENUS[panelNode.data.kind as NodeKind];
+
+  // Perspective logic
+  const perspectiveIds = panelNode.data.perspectives ?? [];
+  const currentIndex = perspectiveIds.indexOf(panelNode.id);
+  const hasPerspectives = perspectiveIds.length > 0;
 
   return (
     <aside
@@ -173,6 +188,114 @@ export default function ComponentsMenu(props: Props) {
           height: '100%',
         }}
       >
+        {!reviewMode && !disabled && (
+          <div
+            style={{
+              marginBottom: 16,
+              borderBottom: '1px solid #e5e7eb',
+              paddingBottom: 12,
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: 6,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: '#0f172a',
+                  marginLeft: 35,
+                }}
+              >
+                Perspective{' '}
+                {hasPerspectives
+                  ? `${currentIndex + 1} / ${perspectiveIds.length}`
+                  : ''}
+              </span>
+
+              {/* --- CHANGED: Only render "New" if handler is provided --- */}
+              {onCreatePerspective && (
+                <button
+                  onClick={() => onCreatePerspective(panelNode.id)}
+                  title="Create new perspective"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    fontSize: 11,
+                    padding: '4px 8px',
+                    borderRadius: 6,
+                    border: '1px solid #e5e7eb',
+                    background: '#fff',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                  }}
+                >
+                  <LuPlus size={12} /> New
+                </button>
+              )}
+              {/* -------------------------------------------------------- */}
+            </div>
+
+            {hasPerspectives && (
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button
+                  disabled={currentIndex <= 0}
+                  onClick={() => onNavigate?.(perspectiveIds[currentIndex - 1])}
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 6,
+                    borderRadius: 6,
+                    border: '1px solid #e5e7eb',
+                    background: '#fff',
+                    cursor: currentIndex <= 0 ? 'not-allowed' : 'pointer',
+                    opacity: currentIndex <= 0 ? 0.5 : 1,
+                  }}
+                >
+                  <LuChevronLeft size={16} />
+                </button>
+                <button
+                  disabled={
+                    currentIndex < 0 ||
+                    currentIndex >= perspectiveIds.length - 1
+                  }
+                  onClick={() => onNavigate?.(perspectiveIds[currentIndex + 1])}
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 6,
+                    borderRadius: 6,
+                    border: '1px solid #e5e7eb',
+                    background: '#fff',
+                    cursor:
+                      currentIndex < 0 ||
+                      currentIndex >= perspectiveIds.length - 1
+                        ? 'not-allowed'
+                        : 'pointer',
+                    opacity:
+                      currentIndex < 0 ||
+                      currentIndex >= perspectiveIds.length - 1
+                        ? 0.5
+                        : 1,
+                  }}
+                >
+                  <LuChevronRight size={16} />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         {reviewMode ? (
           <ReviewMenu
             targetLabel={

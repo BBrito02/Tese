@@ -26,7 +26,7 @@ import {
 } from 'react-icons/fa';
 import { FaHand } from 'react-icons/fa6';
 
-import type { NodeData, NodeKind, Review, Reply } from './domain/types'; // Removed unused types
+import type { NodeData, NodeKind, Review, Reply } from './domain/types';
 import { canConnect } from './domain/rules';
 import { nextBadgeFor } from './domain/types';
 import {
@@ -43,7 +43,7 @@ import {
   HEADER_H,
   PAD_TOP,
   GRID_GAP,
-} from './domain/layoutUtils'; // Removed unused utils
+} from './domain/layoutUtils';
 import { activationIcons, type ActivationKey } from './domain/icons';
 
 import SideMenu from './components/menus/SideMenu';
@@ -132,7 +132,6 @@ const PANEL_ANIM_MS = 200;
 const COLLAPSED_W = 28;
 const EXTRA_COLLAPSED_GAP = 18;
 
-// Handy aliases
 type AppNode = RFNode<NodeData>;
 type AppEdge = RFEdge<any>;
 const baseFrom = (name: string) => name.replace(/\.[^.]+$/, '');
@@ -176,7 +175,6 @@ export default function Editor() {
     setEdges
   );
 
-  // UI state
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
@@ -191,14 +189,13 @@ export default function Editor() {
   const { openModal, closeModal } = useModal();
   const [isConnecting, setIsConnecting] = useState(false);
 
-  // --- 1. Custom Hooks: Layout ---
   const { applyConstraints, handleLayoutReflow, syncParentGraphTypes } =
     useLayoutConstraints(
       setNodes as React.Dispatch<React.SetStateAction<AppNode[]>>,
       takeSnapshot
     );
 
-  // --- Logic: Prune Logic (Restored from oldEditor) ---
+  // --- Logic: Prune Logic ---
   const pruneAfterRemoval = useCallback(
     (initialIds: string[]) => {
       takeSnapshot();
@@ -206,7 +203,6 @@ export default function Editor() {
         const all = nds as AppNode[];
         const base = new Set<string>(initialIds);
 
-        // 1. If Visualization deleted, delete Tooltips
         for (const id of Array.from(base)) {
           const n = all.find((x) => x.id === id);
           if (n?.data?.kind === 'Visualization') {
@@ -221,10 +217,21 @@ export default function Editor() {
           }
         }
 
-        // 2. Collect descendants
         const toDelete = collectDescendants(all, base);
 
-        // 3. Track tooltip labels to remove
+        const deletedActiveNodes = new Map<string, { x: number; y: number }>();
+        all.forEach((n) => {
+          if (toDelete.has(n.id) && !n.hidden && n.data?.perspectives?.length) {
+            const survivors = n.data.perspectives.filter(
+              (pid) => !toDelete.has(pid)
+            );
+            if (survivors.length > 0) {
+              const key = survivors.sort().join('|');
+              deletedActiveNodes.set(key, { ...n.position });
+            }
+          }
+        });
+
         const labelsByViz = new Map<string, Set<string>>();
         for (const tip of all) {
           if (!toDelete.has(tip.id)) continue;
@@ -242,10 +249,58 @@ export default function Editor() {
           labelsByViz.get(attachedTo)!.add(label);
         }
 
-        // 4. Filter nodes
         let kept = all.filter((n) => !toDelete.has(n.id));
 
-        // 5. Prune labels inside Visualizations
+        kept = kept.map((n) => {
+          if (n.data?.perspectives) {
+            const newPerspectives = n.data.perspectives.filter(
+              (pid) => !toDelete.has(pid)
+            );
+            if (newPerspectives.length !== n.data.perspectives.length) {
+              return {
+                ...n,
+                data: { ...n.data, perspectives: newPerspectives },
+              };
+            }
+          }
+          return n;
+        });
+
+        const groups = new Map<string, AppNode[]>();
+        kept.forEach((n) => {
+          if (n.data?.perspectives?.length) {
+            const key = [...n.data.perspectives].sort().join('|');
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key)!.push(n);
+          }
+        });
+
+        groups.forEach((groupNodes, key) => {
+          const anyVisible = groupNodes.some((n) => !n.hidden);
+          if (!anyVisible && groupNodes.length > 0) {
+            const candidate = groupNodes[groupNodes.length - 1];
+            const newPos = deletedActiveNodes.get(key) ?? candidate.position;
+
+            const survivorSubtree = collectDescendants(
+              kept,
+              new Set([candidate.id])
+            );
+
+            kept = kept.map((n) => {
+              if (survivorSubtree.has(n.id)) {
+                const isRoot = n.id === candidate.id;
+                return {
+                  ...n,
+                  hidden: false,
+                  position: isRoot ? newPos : n.position,
+                  selected: isRoot,
+                };
+              }
+              return n;
+            });
+          }
+        });
+
         kept = kept.map((n) => {
           if (n.data?.kind !== 'Visualization') return n;
           const pruneSet = labelsByViz.get(n.id);
@@ -261,7 +316,6 @@ export default function Editor() {
           } as AppNode;
         });
 
-        // 6. Remove Interactions
         kept = kept.map((n) => {
           const d = n.data as any;
           if (!d?.interactions) return n;
@@ -285,28 +339,159 @@ export default function Editor() {
           return { ...n, data: { ...d, interactions: cleaned } } as AppNode;
         });
 
-        // 7. Edge cleanup
         setEdges((eds) =>
           eds.filter((e) => !toDelete.has(e.source) && !toDelete.has(e.target))
         );
 
-        // 8. Selection reset
-        if (selectedId && toDelete.has(selectedId)) setSelectedId(null);
-
-        // 9. Sync graph types
         return syncParentGraphTypes(kept) as AppNode[];
       });
     },
-    [setNodes, setEdges, takeSnapshot, selectedId, syncParentGraphTypes]
+    [setNodes, setEdges, takeSnapshot, syncParentGraphTypes]
   );
 
-  // --- Logic: Update Logic (Restored from oldEditor) ---
+  // --- Logic: Perspective Handlers (With attachedTo copy) ---
+  const handleCreatePerspective = useCallback(
+    (sourceId: string) => {
+      takeSnapshot();
+      const newId = nanoid();
+
+      setNodes((nds) => {
+        // ... (existing node creation logic)
+        const all = nds as AppNode[];
+        const sourceNode = all.find((n) => n.id === sourceId);
+        if (!sourceNode) return nds;
+
+        const currentPerspectives = sourceNode.data.perspectives || [sourceId];
+        const nextPerspectives = [...currentPerspectives, newId];
+
+        const rootsToHide = new Set(currentPerspectives);
+        const allNodesToHide = collectDescendants(all, rootsToHide);
+
+        const currentTitle = sourceNode.data.title || 'Component';
+        const baseTitle = currentTitle.replace(/\s\(Perspective\s\d+\)$/, '');
+        const newTitle = `${baseTitle} (Perspective ${nextPerspectives.length})`;
+
+        const newNode: AppNode = {
+          id: newId,
+          type: sourceNode.type,
+          position: { ...sourceNode.position },
+          data: {
+            kind: sourceNode.data.kind,
+            title: newTitle,
+            badge: nextBadgeFor(sourceNode.data.kind, all),
+            perspectives: nextPerspectives,
+            visualVars: [],
+            graphType: undefined,
+            data: [],
+            interactions: [],
+            tooltips: [],
+            attachedTo: (sourceNode.data as any).attachedTo,
+          } as NodeData,
+          style: sourceNode.style,
+          parentNode: sourceNode.parentNode,
+          extent: sourceNode.extent,
+          hidden: false,
+          selected: true,
+        };
+
+        const updatedNodes = all.map((n) => {
+          let newData = n.data;
+          if (rootsToHide.has(n.id)) {
+            newData = { ...n.data, perspectives: nextPerspectives };
+          }
+          if (allNodesToHide.has(n.id)) {
+            return {
+              ...n,
+              hidden: true,
+              selected: false,
+              data: newData,
+            };
+          }
+          if (newData !== n.data) {
+            return { ...n, data: newData };
+          }
+          return n;
+        });
+
+        return [...updatedNodes, newNode];
+      });
+
+      // --- FIX: Duplicate incoming edges AND update handle IDs ---
+      setEdges((eds) => {
+        const newEdges: AppEdge[] = [];
+        eds.forEach((e) => {
+          if (e.target === sourceId) {
+            newEdges.push({
+              ...e,
+              id: nanoid(),
+              target: newId,
+              // Update the targetHandle to point to the new node's handle
+              // (Replaces "oldId:target" with "newId:target")
+              targetHandle: e.targetHandle
+                ? e.targetHandle.replace(sourceId, newId)
+                : null,
+              hidden: false,
+            });
+          }
+        });
+        return [...eds, ...newEdges];
+      });
+      // ---------------------------------------------------------
+
+      requestAnimationFrame(() => setSelectedId(newId));
+    },
+    [setNodes, setEdges, takeSnapshot]
+  );
+
+  const handleNavigate = useCallback(
+    (targetNodeId: string) => {
+      setNodes((nds) => {
+        const all = nds as AppNode[];
+        const targetNode = all.find((n) => n.id === targetNodeId);
+        if (!targetNode) return nds;
+
+        const groupIds = targetNode.data.perspectives || [targetNodeId];
+        const currentActive = all.find(
+          (n) => groupIds.includes(n.id) && !n.hidden
+        );
+        const positionToUse = currentActive
+          ? { ...currentActive.position }
+          : targetNode.position;
+
+        const idsToHide = new Set(groupIds.filter((id) => id !== targetNodeId));
+        const allNodesToHide = collectDescendants(all, idsToHide);
+
+        const idsToShow = new Set([targetNodeId]);
+        const allNodesToShow = collectDescendants(all, idsToShow);
+
+        return all.map((n) => {
+          if (allNodesToHide.has(n.id)) {
+            return { ...n, hidden: true, selected: false };
+          }
+          if (allNodesToShow.has(n.id)) {
+            const isRoot = n.id === targetNodeId;
+            return {
+              ...n,
+              hidden: false,
+              selected: isRoot,
+              position: isRoot ? positionToUse : n.position,
+            };
+          }
+          return n;
+        });
+      });
+
+      setSelectedId(targetNodeId);
+    },
+    [setNodes, setSelectedId]
+  );
+
+  // --- Logic: Update Logic ---
   const updateNodeById = useCallback(
     async (id: string, patch: Partial<NodeData>) => {
       takeSnapshot();
       const patchAny = patch as any;
 
-      // Detect Data Removal
       if (patchAny.data && Array.isArray(patchAny.data)) {
         const node = nodes.find((n) => n.id === id);
         const rawOld = (node?.data as any)?.data;
@@ -335,7 +520,6 @@ export default function Editor() {
           const interactionsToRemove = new Set<string>();
           const tooltipLabelsToRemove = new Set<string>();
 
-          // Find Edges
           edges.forEach((e) => {
             let isMatch = false;
             if (e.source === id && e.sourceHandle) {
@@ -363,7 +547,6 @@ export default function Editor() {
             }
           });
 
-          // Identify Interactions
           const currentInteractions = (node?.data as any)?.interactions || [];
           currentInteractions.forEach((ix: any) => {
             if (
@@ -375,7 +558,6 @@ export default function Editor() {
             }
           });
 
-          // Identify Tooltips
           if (nodeIdsToDelete.length > 0) {
             const nodesToDeleteSet = new Set(nodeIdsToDelete);
             const tooltipNodes = nodes.filter((n) =>
@@ -388,7 +570,6 @@ export default function Editor() {
             });
           }
 
-          // Execute Cleanup
           if (
             rf &&
             (edgeIdsToDelete.length > 0 || nodeIdsToDelete.length > 0)
@@ -456,7 +637,6 @@ export default function Editor() {
     [nodes, edges, rf, setNodes, takeSnapshot]
   );
 
-  // Helper to create a child node
   const createChildInParent = useCallback(
     (parentId: string, payload: any) => {
       takeSnapshot();
@@ -508,7 +688,6 @@ export default function Editor() {
     [setNodes, takeSnapshot, applyConstraints]
   );
 
-  // --- 2. Custom Hooks: Drag ---
   const [modal, setModal] = useState<{
     type: 'add-component';
     nodeId: string;
@@ -533,7 +712,6 @@ export default function Editor() {
       setModal({ type: 'add-component', nodeId: parentId, presetKind: kind })
   );
 
-  // --- 3. Custom Hooks: Global Events ---
   useGlobalEvents({
     nodes: nodes as AppNode[],
     setNodes: setNodes as any,
@@ -549,7 +727,6 @@ export default function Editor() {
     createChildInParent,
   });
 
-  // --- 4. Load/Save Logic ---
   const buildSave = useCallback((): SaveFile => {
     const vp = (rf && (rf as any).getViewport?.()) || { x: 0, y: 0, zoom: 1 };
     const allReviews = Object.values(reviewsByTarget).flat();
@@ -630,13 +807,11 @@ export default function Editor() {
     });
   }, [buildSave, openModal, closeModal, saveNameBase]);
 
-  // Derived state
   const selectedEdge = useMemo(
     () => edges.find((e) => e.id === selectedEdgeId) ?? null,
     [edges, selectedEdgeId]
   );
 
-  // Handlers
   const onConnect = useCallback(
     (c: Connection) => {
       setIsConnecting(false);
@@ -666,11 +841,21 @@ export default function Editor() {
 
   const deleteSelectedNode = useCallback(() => {
     if (!selectedId) return;
-    pruneAfterRemoval([selectedId]);
-    setSelectedId(null);
-  }, [selectedId, pruneAfterRemoval]);
 
-  // Modal Wiring
+    let fallbackId: string | null = null;
+    const node = nodes.find((n) => n.id === selectedId);
+
+    if (node?.data?.perspectives && node.data.perspectives.length > 1) {
+      const p = node.data.perspectives;
+      const idx = p.indexOf(selectedId);
+      if (idx > 0) fallbackId = p[idx - 1];
+      else if (idx + 1 < p.length) fallbackId = p[idx + 1];
+    }
+
+    pruneAfterRemoval([selectedId]);
+    setSelectedId(fallbackId);
+  }, [selectedId, nodes, pruneAfterRemoval]);
+
   useEffect(() => {
     if (modal?.type !== 'add-component') return;
     const { nodeId, presetKind } = modal;
@@ -695,7 +880,6 @@ export default function Editor() {
     });
   }, [modal, createChildInParent, openModal, closeModal]);
 
-  // Menu Animation
   useEffect(() => {
     const onWidth = (e: Event) =>
       setMenuWidth((e as CustomEvent).detail?.width ?? PANEL_WIDTH);
@@ -707,7 +891,6 @@ export default function Editor() {
       );
   }, []);
 
-  // Track last selected
   const lastSelectedIdRef = useRef<string | null>(null);
   useEffect(() => {
     let t: number | undefined;
@@ -731,21 +914,40 @@ export default function Editor() {
       )
     : 0;
 
-  // Tooltip Visibility logic (Restored to match original logic)
+  // --- TOOLTIP VISIBILITY LOGIC (Refined for Perspectives) ---
   useEffect(() => {
     setNodes((nds) => {
       const next = nds.map((n) => ({ ...n }));
       const selected = selectedId
         ? next.find((n) => n.id === selectedId)
         : null;
+
       let vizIdFromEdge: string | null = null;
+      let targetIdFromEdge: string | null = null;
       if (selectedEdgeId) {
         const edge = edges.find((e) => e.id === selectedEdgeId);
-        if (edge?.type === 'tooltip') vizIdFromEdge = edge.source;
+        if (edge?.type === 'tooltip') {
+          vizIdFromEdge = edge.source;
+          targetIdFromEdge = edge.target;
+        }
       }
+
+      // Group tooltips by perspective set
+      const groups = new Map<string, AppNode[]>();
+
+      // Calculate "raw" visibility requests
+      const rawVisibility = new Set<string>();
 
       for (const tip of next) {
         if (tip.data?.kind !== 'Tooltip') continue;
+
+        // Add to group
+        const pKey = tip.data.perspectives
+          ? [...tip.data.perspectives].sort().join('|')
+          : tip.id;
+        if (!groups.has(pKey)) groups.set(pKey, []);
+        groups.get(pKey)!.push(tip);
+
         const attachedTo = (tip.data as any)?.attachedTo as string | undefined;
         if (!attachedTo) continue;
 
@@ -760,24 +962,47 @@ export default function Editor() {
             ? isDescendant(selected, attachedTo, next)
             : false;
 
-        const visible =
-          vizSelected || tipSelected || tipChildSelected || vizChildSelected;
-        (tip as any).hidden = !visible;
-
-        for (let i = 0; i < next.length; i++) {
-          const child = next[i];
-          if (isDescendant(child, tip.id, next)) {
-            if ((child as any).hidden !== !visible) {
-              next[i] = { ...child, hidden: !visible } as any;
-            }
-          }
+        if (
+          vizSelected ||
+          tipSelected ||
+          tipChildSelected ||
+          vizChildSelected
+        ) {
+          rawVisibility.add(tip.id);
         }
       }
+
+      // Resolve conflicts: Only 1 perspective visible per group
+      groups.forEach((groupNodes) => {
+        const candidates = groupNodes.filter((n) => rawVisibility.has(n.id));
+
+        if (candidates.length === 0) {
+          groupNodes.forEach((n) => {
+            (n as any).hidden = true;
+          });
+          return;
+        }
+
+        // Pick best: Selected > Edge Target > Already Visible > Last
+        let best = candidates[candidates.length - 1];
+
+        const directlySelected = candidates.find((n) => n.id === selectedId);
+        const edgeTarget = candidates.find((n) => n.id === targetIdFromEdge);
+        const previouslyVisible = candidates.find((n) => !n.hidden);
+
+        if (directlySelected) best = directlySelected;
+        else if (edgeTarget) best = edgeTarget;
+        else if (previouslyVisible) best = previouslyVisible;
+
+        groupNodes.forEach((n) => {
+          (n as any).hidden = n.id !== best.id;
+        });
+      });
+
       return next as AppNode[];
     });
   }, [selectedId, selectedEdgeId, edges, setNodes]);
 
-  // Markers Logic (Restored)
   const [markers, setMarkers] = useState<
     {
       id: string;
@@ -820,7 +1045,6 @@ export default function Editor() {
 
   const handleMove = useCallback(() => recomputeMarkers(), [recomputeMarkers]);
 
-  // Visible Edges Logic (Review Mode)
   const visibleEdges = useMemo(
     () =>
       edges.map((e) => {
@@ -860,7 +1084,6 @@ export default function Editor() {
     [selectedEdge, nodes]
   );
 
-  // Parent Data for Node Menu
   const parentDataForSelected = useMemo(() => {
     if (!selectedNode || (selectedNode.data as any)?.kind !== 'Graph')
       return undefined;
@@ -1047,10 +1270,13 @@ export default function Editor() {
               onNodeDragStop={() => handleLayoutReflow()}
               onSelectionChange={(p) => {
                 if (!lassoMode) {
-                  if (p.nodes.length === 1) setSelectedId(p.nodes[0].id);
-                  else if (p.edges.length === 1)
+                  if (p.nodes.length === 1) {
+                    setSelectedId(p.nodes[0].id);
+                    setSelectedEdgeId(null);
+                  } else if (p.edges.length === 1) {
                     setSelectedEdgeId(p.edges[0].id);
-                  else {
+                    setSelectedId(null);
+                  } else {
                     setSelectedId(null);
                     setSelectedEdgeId(null);
                   }
@@ -1071,7 +1297,6 @@ export default function Editor() {
                 </ControlButton>
               </Controls>
             </ReactFlow>
-            {/* Markers Overlay - Restored */}
             <div
               style={{
                 position: 'absolute',
@@ -1180,6 +1405,12 @@ export default function Editor() {
                   if (selectedNode)
                     setModal({ type, nodeId: selectedNode.id } as any);
                 }}
+                onCreatePerspective={
+                  (selectedNode.data as any).kind !== 'Graph'
+                    ? handleCreatePerspective
+                    : undefined
+                }
+                onNavigate={handleNavigate}
               />
             </div>
           )}
@@ -1296,7 +1527,6 @@ export default function Editor() {
                     selectedEdge.target
                   }
                   onDelete={() => {
-                    // Logic for deleting interaction edges + cleaning source interaction list
                     const edgeToRemove = selectedEdge as AppEdge;
                     const edgeData = (edgeToRemove.data || {}) as any;
                     const interactionId = edgeData.interactionId;
@@ -1339,7 +1569,6 @@ export default function Editor() {
                             })
                             .filter(Boolean);
                         } else {
-                          // Fallback
                           interactions = d.interactions.filter((ix: any) => {
                             const currentTargets = Array.isArray(ix.targets)
                               ? ix.targets

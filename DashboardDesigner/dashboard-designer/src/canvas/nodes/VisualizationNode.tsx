@@ -24,6 +24,11 @@ const VisualizationNode = (p: NodeProps<NodeData>) => {
     ? (d.tooltips as string[]).length
     : 0;
 
+  // --- ADDED: Perspective counter ---
+  const perspectiveCount = Array.isArray(d.perspectives)
+    ? (d.perspectives as string[]).length
+    : 0;
+
   return (
     <BaseNodeShell
       {...p}
@@ -31,6 +36,7 @@ const VisualizationNode = (p: NodeProps<NodeData>) => {
       footerItems={footerItems}
       visualVars={visualVars}
       tooltipCount={tooltipCount}
+      perspectiveCount={perspectiveCount} // <--- PASS PROP HERE
       // ✅ use `d` here (not `data`)
       reviewMode={(d as any).reviewMode ?? false}
       reviewCount={(d as any).reviewTotal ?? 0}
