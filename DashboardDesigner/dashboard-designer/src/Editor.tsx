@@ -652,16 +652,27 @@ export default function Editor() {
           return { width: 180, height: 100 };
         };
         const size = defaultSizeFor(payload.kind);
-        const cols = Math.max(
-          1,
-          Math.floor((innerWidth + GRID_GAP) / (size.width + GRID_GAP))
-        );
-        const children = all.filter((n) => n.parentNode === parentId);
-        const idx = children.length;
-        const col = idx % cols;
-        const row = Math.floor(idx / cols);
-        const x = PAD_X + col * (size.width + GRID_GAP);
-        const y = HEADER_H + PAD_TOP + row * (size.height + GRID_GAP);
+
+        let x: number, y: number;
+
+        // --- NEW: Use specific position if provided (Center it) ---
+        if (payload.position) {
+          x = payload.position.x - size.width / 2;
+          y = payload.position.y - size.height / 2;
+        } else {
+          // Fallback to Grid Logic
+          const cols = Math.max(
+            1,
+            Math.floor((innerWidth + GRID_GAP) / (size.width + GRID_GAP))
+          );
+          const children = all.filter((n) => n.parentNode === parentId);
+          const idx = children.length;
+          const col = idx % cols;
+          const row = Math.floor(idx / cols);
+          x = PAD_X + col * (size.width + GRID_GAP);
+          y = HEADER_H + PAD_TOP + row * (size.height + GRID_GAP);
+        }
+        // ---------------------------------------------------------
 
         let data: NodeData = {
           kind: payload.kind,
@@ -692,6 +703,7 @@ export default function Editor() {
     type: 'add-component';
     nodeId: string;
     presetKind?: NodeKind;
+    position?: { x: number; y: number };
   } | null>(null);
 
   const {
@@ -708,8 +720,13 @@ export default function Editor() {
     takeSnapshot,
     rf,
     wrapperRef,
-    (parentId, kind) =>
-      setModal({ type: 'add-component', nodeId: parentId, presetKind: kind })
+    (parentId, kind, position) =>
+      setModal({
+        type: 'add-component',
+        nodeId: parentId,
+        presetKind: kind,
+        position,
+      })
   );
 
   useGlobalEvents({
@@ -858,7 +875,7 @@ export default function Editor() {
 
   useEffect(() => {
     if (modal?.type !== 'add-component') return;
-    const { nodeId, presetKind } = modal;
+    const { nodeId, presetKind, position } = modal; // <--- destructure position
     const closeAndClear = () => {
       closeModal();
       setModal(null);
@@ -871,7 +888,7 @@ export default function Editor() {
             kinds={[presetKind] as any}
             onCancel={closeAndClear}
             onSave={(payload: any) => {
-              createChildInParent(nodeId, payload);
+              createChildInParent(nodeId, { ...payload, position });
               closeAndClear();
             }}
           />

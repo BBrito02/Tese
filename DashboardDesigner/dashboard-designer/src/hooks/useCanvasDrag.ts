@@ -19,6 +19,7 @@ import {
   pointInsideContentAbs,
   depthOf,
   isContainerKind,
+  getAbsolutePosition, // <--- ADD IMPORT
 } from '../domain/layoutUtils';
 
 type AppNode = RFNode<NodeData>;
@@ -56,8 +57,13 @@ export function useCanvasDrag(
   setNodes: Dispatch<SetStateAction<AppNode[]>>,
   takeSnapshot: () => void,
   rf: ReactFlowInstance | null,
-  wrapperRef: RefObject<HTMLDivElement | null>, // <--- FIXED TYPE HERE
-  onDropInParent: (parentId: string, kind: NodeKind) => void
+  wrapperRef: RefObject<HTMLDivElement | null>,
+  // Updated signature to accept position
+  onDropInParent: (
+    parentId: string,
+    kind: NodeKind,
+    position?: { x: number; y: number }
+  ) => void
 ) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } })
@@ -113,7 +119,6 @@ export function useCanvasDrag(
     const p = getPointFromEvent(e.activatorEvent);
     setDragStartPoint(p);
     setCursorPoint(p);
-    // Cache containers at start of drag
     const containers = nodes.filter((n) => isContainerKind(n.data?.kind));
     setCachedContainers(containers);
   };
@@ -184,22 +189,37 @@ export function useCanvasDrag(
 
     if (!payload || !rf || !wrapperRef.current) return;
 
-    if (allowed && parentId) {
-      onDropInParent(parentId, payload.kind as NodeKind);
-      return;
-    }
-
+    // --- CHANGED: Calculate drop point early ---
     const viewportPt = cursorPoint ?? getDragCenter(e);
-    setDragStartPoint(null);
-    setCursorPoint(null);
     if (!viewportPt) return;
-
-    takeSnapshot();
 
     const flowCenter = rf.screenToFlowPosition({
       x: viewportPt.x,
       y: viewportPt.y,
     });
+
+    if (allowed && parentId) {
+      // --- CHANGED: Calculate relative position ---
+      const parentNode = nodes.find((n) => n.id === parentId);
+      if (parentNode) {
+        const abs = getAbsolutePosition(parentNode, nodes);
+        const relX = flowCenter.x - abs.x;
+        const relY = flowCenter.y - abs.y;
+        onDropInParent(parentId, payload.kind as NodeKind, {
+          x: relX,
+          y: relY,
+        });
+      } else {
+        onDropInParent(parentId, payload.kind as NodeKind);
+      }
+      return;
+    }
+
+    // Root Drop Logic
+    setDragStartPoint(null);
+    setCursorPoint(null);
+
+    takeSnapshot();
 
     let data: NodeData;
     if (payload.kind === 'Graph') {

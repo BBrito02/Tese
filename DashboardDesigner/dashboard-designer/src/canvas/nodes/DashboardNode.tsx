@@ -14,7 +14,7 @@ const DashboardNode = (p: NodeProps<NodeData>) => {
   return (
     <BaseNodeShell
       {...p}
-      cardStyle={{ borderRadius: 18, background: '#f5f5f5' }}
+      cardStyle={{ borderRadius: 18, background: '#fafafa' }}
       leftHandle={true}
       rightHandle={false}
       perspectiveCount={perspectiveCount} // <--- PASS PROP HERE

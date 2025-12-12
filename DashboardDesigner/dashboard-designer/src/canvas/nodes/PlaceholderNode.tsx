@@ -13,7 +13,7 @@ const PlaceholderNode = (p: NodeProps<NodeData>) => {
       {...p}
       cardStyle={{
         borderRadius: 12,
-        background: '#fafafa',
+        background: '#eeeeeeff',
         borderStyle: 'dashed',
         borderColor: '#e5e7eb',
       }}
