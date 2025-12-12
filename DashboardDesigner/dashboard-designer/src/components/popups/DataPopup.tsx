@@ -6,6 +6,7 @@ type Props = {
   onCancel: () => void;
   // Update signature to pass back the rename map
   onSave: (items: DataItem[], renames: Record<string, string>) => void;
+  initialSelectedIndex?: number;
 };
 
 // Extend DataItem locally to track history
@@ -58,14 +59,34 @@ function norm(s: string) {
   return s.trim().toLowerCase();
 }
 
-export default function DataPopup({ initial, onCancel, onSave }: Props) {
+export default function DataPopup({
+  initial,
+  onCancel,
+  onSave,
+  initialSelectedIndex,
+}: Props) {
   // Initialize items with their original names to track changes
   const [items, setItems] = useState<LocalDataItem[]>(
     initial?.map((i) => ({ ...i, originalName: i.name })) ?? []
   );
-  const [name, setName] = useState('');
-  const [dtype, setDtype] = useState<DataItem['dtype']>('Other');
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+
+  // Initialize state based on initialSelectedIndex
+  const [editingIndex, setEditingIndex] = useState<number | null>(
+    typeof initialSelectedIndex === 'number' && initialSelectedIndex >= 0
+      ? initialSelectedIndex
+      : null
+  );
+
+  const [name, setName] = useState(
+    typeof initialSelectedIndex === 'number' && initial?.[initialSelectedIndex]
+      ? initial[initialSelectedIndex].name
+      : ''
+  );
+  const [dtype, setDtype] = useState<DataItem['dtype']>(
+    typeof initialSelectedIndex === 'number' && initial?.[initialSelectedIndex]
+      ? initial[initialSelectedIndex].dtype
+      : 'Other'
+  );
 
   const names = useMemo(() => {
     const set = new Set<string>();
@@ -110,6 +131,13 @@ export default function DataPopup({ initial, onCancel, onSave }: Props) {
   }
 
   function startEdit(i: number) {
+    // --- FIX: Toggle off if clicking the same item ---
+    if (editingIndex === i) {
+      cancelEdit();
+      return;
+    }
+    // -------------------------------------------------
+
     const item = items[i];
     setName(item.name);
     setDtype(item.dtype);
@@ -124,11 +152,18 @@ export default function DataPopup({ initial, onCancel, onSave }: Props) {
 
   function removeAt(i: number) {
     setItems((xs) => xs.filter((_, idx) => idx !== i));
-    if (editingIndex === i) cancelEdit();
+    if (editingIndex === i) {
+      cancelEdit();
+    } else if (editingIndex !== null && i < editingIndex) {
+      setEditingIndex(editingIndex - 1);
+    }
   }
 
   function handleSave() {
-    if (!isDirty) return;
+    // Allow saving even if not dirty to confirm "no changes" state if desired,
+    // but usually we check isDirty. For now keeping isDirty check if you prefer,
+    // or removing it to allow "save" to simply close with current state.
+    // if (!isDirty) return;
 
     // Calculate renames: { "Old Name": "New Name" }
     const renames: Record<string, string> = {};
@@ -158,6 +193,7 @@ export default function DataPopup({ initial, onCancel, onSave }: Props) {
               }
             }}
             placeholder="e.g., Country"
+            autoFocus // Auto focus for better UX when opening directly
             style={{
               ...field,
               borderColor: isDuplicate ? '#ef4444' : '#e5e7eb',
@@ -273,14 +309,13 @@ export default function DataPopup({ initial, onCancel, onSave }: Props) {
         </button>
         <button
           onClick={handleSave}
-          disabled={!isDirty}
           style={{
             padding: '8px 12px',
             borderRadius: 8,
             border: '1px solid #38bdf8',
-            background: isDirty ? '#38bdf8' : '#93c5fd',
+            background: '#38bdf8', // Enable save always so user can close and confirm changes
             color: '#fff',
-            cursor: isDirty ? 'pointer' : 'not-allowed',
+            cursor: 'pointer',
           }}
         >
           Save changes

@@ -18,7 +18,7 @@ import ClickHoverPorts from '../nodes/ClickHoverPorts';
 import ReviewBadge from '../../components/ui/ReviewBadge';
 import { useReviews } from '../../components/ui/ReviewContext';
 
-// Per-kind minimums (match your previous sizes)
+// Per-kind minimums
 const MIN_SIZE: Record<string, { w: number; h: number }> = {
   Dashboard: { w: 260, h: 200 },
   Visualization: { w: 260, h: 100 },
@@ -33,7 +33,6 @@ const MIN_SIZE: Record<string, { w: number; h: number }> = {
 };
 
 export type BaseNodeShellProps = NodeProps<NodeData> & {
-  // renderables
   body?: React.ReactNode;
   footerItems?: (string | DataItem)[];
   visualVars?: VisualVariable[];
@@ -44,27 +43,23 @@ export type BaseNodeShellProps = NodeProps<NodeData> & {
   reviewCount?: number;
   reviewUnresolvedCount?: number;
 
-  // style overrides
   cardStyle?: React.CSSProperties;
   headerStyle?: React.CSSProperties;
   bodyStyle?: React.CSSProperties;
   footerStyle?: React.CSSProperties;
 
-  // layout toggles
   hideHeader?: boolean;
   hideFooter?: boolean;
   isParameter?: boolean;
   leftHandle?: boolean;
   rightHandle?: boolean;
 
-  // border/highlight behavior
-  highlightBorder?: boolean; // default true
-  borderWidth?: number; // default 2
+  highlightBorder?: boolean;
+  borderWidth?: number;
 
   overlayTopRight?: React.ReactNode;
 };
 
-// helper to remove border-related props to avoid mixing shorthand/longhand
 function stripBorderStyles(
   s?: React.CSSProperties
 ): React.CSSProperties | undefined {
@@ -132,8 +127,11 @@ function DataPills({
           >
             <button
               title={title}
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={() => onClick?.(i)}
+              className="nodrag"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onClick) onClick(i);
+              }}
               style={{
                 padding: '6px 10px',
                 borderRadius: 5,
@@ -153,7 +151,7 @@ function DataPills({
               {label}
             </button>
 
-            {/* 🔹 target handle for this data attribute */}
+            {/* Ports */}
             <Handle
               id={`${handleId}:target`}
               type="target"
@@ -170,8 +168,6 @@ function DataPills({
                 background: '#111',
               }}
             />
-
-            {/* 🔹 two source handles under the pill */}
             <Handle
               id={`${handleId}:click`}
               type="source"
@@ -248,7 +244,6 @@ export default function BaseNodeShell({
     unresolved: reviewUnresolvedCount,
   } = useReviews(id);
 
-  // Build pill handle ids so RF recomputes anchors when list changes
   const pillHandleIds = useMemo(
     () =>
       (footerItems ?? []).map((it) => {
@@ -270,15 +265,12 @@ export default function BaseNodeShell({
 
   const canInteract = supportsInteractions(data.kind);
 
-  // ensure node anchors refresh when this changes
   useEffect(() => {
     const t = setTimeout(() => updateNodeInternals(id), 0);
     return () => clearTimeout(t);
   }, [id, updateNodeInternals, canInteract]);
 
   const hasFooter = Array.isArray(footerItems) && footerItems.length > 0;
-
-  // compute border color based on state, but allow disabling highlight
   const dynamicBorderColor = isOver
     ? '#38bdf8'
     : selected
@@ -286,9 +278,15 @@ export default function BaseNodeShell({
     : 'transparent';
 
   const borderColor = highlightBorder ? dynamicBorderColor : '#e5e7eb';
-
-  // sanitize incoming styles to avoid mixing border props
   const cardStyleClean = stripBorderStyles(cardStyle) || {};
+
+  const handlePillClick = (index: number) => {
+    window.dispatchEvent(
+      new CustomEvent('designer:edit-data', {
+        detail: { nodeId: id, index },
+      })
+    );
+  };
 
   return (
     <div
@@ -323,7 +321,6 @@ export default function BaseNodeShell({
           minHeight: 0,
           borderRadius: 12,
           background: '#fff',
-          // Use only longhand border props
           borderWidth,
           borderStyle: 'solid',
           borderColor,
@@ -368,7 +365,6 @@ export default function BaseNodeShell({
               <div style={{ fontWeight: 700 }}>{data.title}</div>
             </div>
 
-            {/* right side: visual variables + tooltip counter + perspective counter */}
             <div
               style={{
                 marginLeft: 'auto',
@@ -383,8 +379,6 @@ export default function BaseNodeShell({
                     key={`${vv}-${i}`}
                     className="nodrag nopan"
                     title={`${vv} — click to manage`}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onMouseDown={(e) => e.stopPropagation()}
                     onClick={(e) => {
                       e.stopPropagation();
                       window.dispatchEvent(
@@ -444,7 +438,6 @@ export default function BaseNodeShell({
                 </span>
               )}
 
-              {/* MODIFIED: Hide if only 1 perspective */}
               {perspectiveCount > 1 && (
                 <span
                   title={`${perspectiveCount} perspectives`}
@@ -469,7 +462,6 @@ export default function BaseNodeShell({
                 </span>
               )}
 
-              {/* NEW: Review badge — only show in reviewMode */}
               {reviewMode && (
                 <div
                   className="nodrag nopan"
@@ -510,7 +502,7 @@ export default function BaseNodeShell({
                 ...footerStyle,
               }}
             >
-              <DataPills items={footerItems!} />
+              <DataPills items={footerItems!} onClick={handlePillClick} />
             </div>
           ) : (
             <div style={{ height: 0 }} />
@@ -529,7 +521,6 @@ export default function BaseNodeShell({
           className="nodrag nopan"
         >
           {overlayTopRight}
-          {/* Automatically show badge if header is hidden */}
           {reviewMode && hideHeader && (
             <ReviewBadge
               total={reviewCount}
@@ -542,7 +533,7 @@ export default function BaseNodeShell({
 
       {leftHandle && (
         <Handle
-          id={`${id}:target`} // 🔹 stable id for “whole component”
+          id={`${id}:target`}
           type="target"
           position={Position.Left}
           className="nodrag nopan"
@@ -550,7 +541,6 @@ export default function BaseNodeShell({
       )}
 
       {rightHandle && canInteract && (
-        // two interaction ports on the right: "<id>:act:hover" / "<id>:act:click"
         <ClickHoverPorts position={Position.Right} idPrefix={`${id}:act`} />
       )}
     </div>

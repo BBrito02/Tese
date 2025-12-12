@@ -26,7 +26,13 @@ import {
 } from 'react-icons/fa';
 import { FaHand } from 'react-icons/fa6';
 
-import type { NodeData, NodeKind, Review, Reply } from './domain/types';
+import type {
+  NodeData,
+  NodeKind,
+  Review,
+  Reply,
+  DataItem,
+} from './domain/types';
 import { canConnect } from './domain/rules';
 import { nextBadgeFor } from './domain/types';
 import { slug } from './domain/utils';
@@ -50,6 +56,7 @@ import { activationIcons, type ActivationKey } from './domain/icons';
 import SideMenu from './components/menus/SideMenu';
 import ComponentsMenu from './components/menus/ComponentsMenu';
 import AddComponentPopup from './components/popups/ComponentPopup';
+import DataPopup from './components/popups/DataPopup'; // <--- ADDED IMPORT
 import SavePopup from './components/popups/SavePopup';
 import NodeGhost from './canvas/nodes/NodeGhost';
 import InteractionEdgeMenu from './components/menus/InteractionEdgeMenu';
@@ -1018,6 +1025,44 @@ export default function Editor() {
       ),
     });
   }, [modal, createChildInParent, openModal, closeModal]);
+
+  // --- NEW: Global Listener for Data Edit ---
+  useEffect(() => {
+    const onEditData = (e: Event) => {
+      const { nodeId, index } = (e as CustomEvent).detail;
+      const node = nodes.find((n) => n.id === nodeId);
+      if (!node) return;
+
+      const rawData = (node.data as any).data;
+      const toDataItems = (list: any[]): DataItem[] =>
+        Array.isArray(list)
+          ? list.map((v) =>
+              typeof v === 'string' ? { name: v, dtype: 'Other' } : v
+            )
+          : [];
+
+      openModal({
+        title: 'Data fields',
+        node: (
+          <DataPopup
+            initial={toDataItems(rawData)}
+            initialSelectedIndex={index} // Select the item directly
+            onCancel={closeModal}
+            onSave={(items, renames) => {
+              updateNodeById(nodeId, {
+                data: items,
+                _dataRenames: renames,
+              } as any);
+              closeModal();
+            }}
+          />
+        ),
+      });
+    };
+
+    window.addEventListener('designer:edit-data', onEditData);
+    return () => window.removeEventListener('designer:edit-data', onEditData);
+  }, [nodes, openModal, closeModal, updateNodeById]);
 
   // Menu Animation
   useEffect(() => {
