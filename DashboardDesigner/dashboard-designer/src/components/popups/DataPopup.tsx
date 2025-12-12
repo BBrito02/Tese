@@ -4,8 +4,14 @@ import type { DataItem } from '../../domain/types';
 type Props = {
   initial: DataItem[];
   onCancel: () => void;
-  onSave: (items: DataItem[]) => void;
+  // Update signature to pass back the rename map
+  onSave: (items: DataItem[], renames: Record<string, string>) => void;
 };
+
+// Extend DataItem locally to track history
+interface LocalDataItem extends DataItem {
+  originalName?: string;
+}
 
 const pill: React.CSSProperties = {
   display: 'inline-flex',
@@ -16,6 +22,8 @@ const pill: React.CSSProperties = {
   background: '#e2e8f0',
   color: '#0f172a',
   fontWeight: 700,
+  cursor: 'pointer',
+  userSelect: 'none',
 };
 
 const labelCell: React.CSSProperties = {
@@ -51,33 +59,88 @@ function norm(s: string) {
 }
 
 export default function DataPopup({ initial, onCancel, onSave }: Props) {
-  const [items, setItems] = useState<DataItem[]>(initial ?? []);
+  // Initialize items with their original names to track changes
+  const [items, setItems] = useState<LocalDataItem[]>(
+    initial?.map((i) => ({ ...i, originalName: i.name })) ?? []
+  );
   const [name, setName] = useState('');
   const [dtype, setDtype] = useState<DataItem['dtype']>('Other');
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
-  const names = useMemo(() => new Set(items.map((d) => norm(d.name))), [items]);
+  const names = useMemo(() => {
+    const set = new Set<string>();
+    items.forEach((d, i) => {
+      // Don't count the item currently being edited against itself
+      if (i !== editingIndex) {
+        set.add(norm(d.name));
+      }
+    });
+    return set;
+  }, [items, editingIndex]);
 
   const nameTrim = name.trim();
   const isDuplicate = nameTrim.length > 0 && names.has(norm(nameTrim));
   const isNameEmpty = nameTrim.length === 0;
+  const canSubmit = !isNameEmpty && !isDuplicate;
 
-  const canAdd = !isNameEmpty && !isDuplicate;
-
-  // ✅ Allow saving when the list changed (including being emptied)
   const isDirty = useMemo(
-    () => JSON.stringify(items) !== JSON.stringify(initial ?? []),
+    () =>
+      JSON.stringify(items.map((i) => ({ name: i.name, dtype: i.dtype }))) !==
+      JSON.stringify(initial ?? []),
     [items, initial]
   );
-  const canSave = isDirty;
 
-  function add() {
-    if (!canAdd) return;
-    setItems((xs) => xs.concat({ name: nameTrim, dtype }));
+  function handleSubmit() {
+    if (!canSubmit) return;
+
+    if (editingIndex !== null) {
+      // Update existing: Keep originalName, update current name
+      setItems((prev) =>
+        prev.map((item, i) =>
+          i === editingIndex ? { ...item, name: nameTrim, dtype } : item
+        )
+      );
+      setEditingIndex(null);
+    } else {
+      // Add new: No originalName
+      setItems((prev) => prev.concat({ name: nameTrim, dtype }));
+    }
     setName('');
+    setDtype('Other');
+  }
+
+  function startEdit(i: number) {
+    const item = items[i];
+    setName(item.name);
+    setDtype(item.dtype);
+    setEditingIndex(i);
+  }
+
+  function cancelEdit() {
+    setName('');
+    setDtype('Other');
+    setEditingIndex(null);
   }
 
   function removeAt(i: number) {
     setItems((xs) => xs.filter((_, idx) => idx !== i));
+    if (editingIndex === i) cancelEdit();
+  }
+
+  function handleSave() {
+    if (!isDirty) return;
+
+    // Calculate renames: { "Old Name": "New Name" }
+    const renames: Record<string, string> = {};
+    items.forEach((item) => {
+      if (item.originalName && item.originalName !== item.name) {
+        renames[item.originalName] = item.name;
+      }
+    });
+
+    // Strip internal properties before saving
+    const cleanItems = items.map(({ name, dtype }) => ({ name, dtype }));
+    onSave(cleanItems, renames);
   }
 
   return (
@@ -91,21 +154,18 @@ export default function DataPopup({ initial, onCancel, onSave }: Props) {
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
-                if (canAdd) add();
+                if (canSubmit) handleSubmit();
               }
             }}
             placeholder="e.g., Country"
-            aria-invalid={isDuplicate}
             style={{
               ...field,
               borderColor: isDuplicate ? '#ef4444' : '#e5e7eb',
-              outline: 'none',
-              boxShadow: isDuplicate ? '0 0 0 3px rgba(239,68,68,.15)' : 'none',
             }}
           />
           {isDuplicate && (
             <div style={{ color: '#ef4444', fontSize: 12, marginTop: 6 }}>
-              A data attribute with this name already exists in this component.
+              Name already exists.
             </div>
           )}
         </div>
@@ -125,36 +185,64 @@ export default function DataPopup({ initial, onCancel, onSave }: Props) {
         </select>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 10 }}>
+        {editingIndex !== null && (
+          <button
+            onClick={cancelEdit}
+            style={{
+              padding: '8px 16px',
+              borderRadius: 999,
+              border: '1px solid #cbd5e1',
+              background: '#f1f5f9',
+              cursor: 'pointer',
+              fontWeight: 700,
+            }}
+          >
+            Cancel
+          </button>
+        )}
         <button
-          onClick={add}
-          disabled={!canAdd}
+          onClick={handleSubmit}
+          disabled={!canSubmit}
           style={{
-            padding: '10px 18px',
+            padding: '8px 16px',
             borderRadius: 999,
             border: '1px solid #7cc1d1',
-            background: canAdd ? '#63b3c3' : '#b8dbe3',
+            background: canSubmit ? '#63b3c3' : '#b8dbe3',
             color: '#fff',
             fontWeight: 800,
-            cursor: canAdd ? 'pointer' : 'not-allowed',
-            minWidth: 180,
+            cursor: canSubmit ? 'pointer' : 'not-allowed',
+            minWidth: 120,
           }}
         >
-          Add to list
+          {editingIndex !== null ? 'Update' : 'Add'}
         </button>
       </div>
 
       <div>
         <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 6 }}>
-          Current data
+          Current data <span style={{ opacity: 0.5 }}>(Click to edit)</span>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {items.map((d, i) => (
-            <span key={`${d.name}-${i}`} style={pill}>
+            <span
+              key={`${d.name}-${i}`}
+              style={{
+                ...pill,
+                border:
+                  editingIndex === i
+                    ? '2px solid #38bdf8'
+                    : '2px solid transparent',
+                background: editingIndex === i ? '#fff' : pill.background,
+              }}
+              onClick={() => startEdit(i)}
+            >
               {d.name} · {d.dtype}
               <button
-                onClick={() => removeAt(i)}
-                aria-label={`Remove ${d.name}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeAt(i);
+                }}
                 style={{
                   marginLeft: 6,
                   border: 'none',
@@ -162,17 +250,11 @@ export default function DataPopup({ initial, onCancel, onSave }: Props) {
                   cursor: 'pointer',
                   fontWeight: 900,
                 }}
-                title="Remove"
               >
                 ×
               </button>
             </span>
           ))}
-          {items.length === 0 && (
-            <span style={{ fontSize: 12, opacity: 0.6 }}>
-              (no items — saving will clear this component&apos;s data list)
-            </span>
-          )}
         </div>
       </div>
 
@@ -190,15 +272,15 @@ export default function DataPopup({ initial, onCancel, onSave }: Props) {
           Cancel
         </button>
         <button
-          onClick={() => canSave && onSave(items)}
-          disabled={!canSave}
+          onClick={handleSave}
+          disabled={!isDirty}
           style={{
             padding: '8px 12px',
             borderRadius: 8,
             border: '1px solid #38bdf8',
-            background: canSave ? '#38bdf8' : '#93c5fd',
+            background: isDirty ? '#38bdf8' : '#93c5fd',
             color: '#fff',
-            cursor: canSave ? 'pointer' : 'not-allowed',
+            cursor: isDirty ? 'pointer' : 'not-allowed',
           }}
         >
           Save changes

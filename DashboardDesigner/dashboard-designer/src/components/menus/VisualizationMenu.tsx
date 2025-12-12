@@ -115,11 +115,19 @@ export default function VisualizationMenu(p: KindProps) {
               <DataPopup
                 initial={toDataItems(dataList)}
                 onCancel={closeModal}
-                onSave={(items: DataItem[]) => {
-                  // If you’re standardizing on DataItem[], keep as-is:
-                  p.onChange({ data: items } as any);
+                // --- UPDATE THIS HANDLER ---
+                onSave={(
+                  items: DataItem[],
+                  renames: Record<string, string>
+                ) => {
+                  p.onChange({
+                    data: items,
+                    // Pass the rename map as a special property to Editor
+                    _dataRenames: renames,
+                  } as any);
                   closeModal();
                 }}
+                // ---------------------------
               />
             ),
           })

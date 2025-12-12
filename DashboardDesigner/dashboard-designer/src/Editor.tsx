@@ -29,6 +29,7 @@ import { FaHand } from 'react-icons/fa6';
 import type { NodeData, NodeKind, Review, Reply } from './domain/types';
 import { canConnect } from './domain/rules';
 import { nextBadgeFor } from './domain/types';
+import { slug } from './domain/utils';
 import {
   SAVE_VERSION,
   type SaveFile,
@@ -132,6 +133,7 @@ const PANEL_ANIM_MS = 200;
 const COLLAPSED_W = 28;
 const EXTRA_COLLAPSED_GAP = 18;
 
+// Handy aliases
 type AppNode = RFNode<NodeData>;
 type AppEdge = RFEdge<any>;
 const baseFrom = (name: string) => name.replace(/\.[^.]+$/, '');
@@ -175,6 +177,7 @@ export default function Editor() {
     setEdges
   );
 
+  // UI state
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
@@ -189,13 +192,14 @@ export default function Editor() {
   const { openModal, closeModal } = useModal();
   const [isConnecting, setIsConnecting] = useState(false);
 
+  // --- 1. Custom Hooks: Layout ---
   const { applyConstraints, handleLayoutReflow, syncParentGraphTypes } =
     useLayoutConstraints(
       setNodes as React.Dispatch<React.SetStateAction<AppNode[]>>,
       takeSnapshot
     );
 
-  // --- Logic: Prune Logic ---
+  // --- Logic: Prune Logic (Perspectives Aware) ---
   const pruneAfterRemoval = useCallback(
     (initialIds: string[]) => {
       takeSnapshot();
@@ -203,6 +207,7 @@ export default function Editor() {
         const all = nds as AppNode[];
         const base = new Set<string>(initialIds);
 
+        // 1. If Visualization deleted, delete Tooltips
         for (const id of Array.from(base)) {
           const n = all.find((x) => x.id === id);
           if (n?.data?.kind === 'Visualization') {
@@ -217,8 +222,10 @@ export default function Editor() {
           }
         }
 
+        // 2. Collect descendants
         const toDelete = collectDescendants(all, base);
 
+        // --- Perspective Visibility Failover Prep ---
         const deletedActiveNodes = new Map<string, { x: number; y: number }>();
         all.forEach((n) => {
           if (toDelete.has(n.id) && !n.hidden && n.data?.perspectives?.length) {
@@ -232,6 +239,7 @@ export default function Editor() {
           }
         });
 
+        // 3. Track tooltip labels to remove
         const labelsByViz = new Map<string, Set<string>>();
         for (const tip of all) {
           if (!toDelete.has(tip.id)) continue;
@@ -249,8 +257,10 @@ export default function Editor() {
           labelsByViz.get(attachedTo)!.add(label);
         }
 
+        // 4. Filter nodes
         let kept = all.filter((n) => !toDelete.has(n.id));
 
+        // --- Clean perspective lists in remaining nodes ---
         kept = kept.map((n) => {
           if (n.data?.perspectives) {
             const newPerspectives = n.data.perspectives.filter(
@@ -266,6 +276,7 @@ export default function Editor() {
           return n;
         });
 
+        // --- Ensure at least one perspective is visible per group ---
         const groups = new Map<string, AppNode[]>();
         kept.forEach((n) => {
           if (n.data?.perspectives?.length) {
@@ -278,9 +289,11 @@ export default function Editor() {
         groups.forEach((groupNodes, key) => {
           const anyVisible = groupNodes.some((n) => !n.hidden);
           if (!anyVisible && groupNodes.length > 0) {
+            // Failover candidate
             const candidate = groupNodes[groupNodes.length - 1];
             const newPos = deletedActiveNodes.get(key) ?? candidate.position;
 
+            // Unhide candidate AND its subtree
             const survivorSubtree = collectDescendants(
               kept,
               new Set([candidate.id])
@@ -301,6 +314,7 @@ export default function Editor() {
           }
         });
 
+        // 5. Prune labels inside Visualizations
         kept = kept.map((n) => {
           if (n.data?.kind !== 'Visualization') return n;
           const pruneSet = labelsByViz.get(n.id);
@@ -316,6 +330,7 @@ export default function Editor() {
           } as AppNode;
         });
 
+        // 6. Remove Interactions
         kept = kept.map((n) => {
           const d = n.data as any;
           if (!d?.interactions) return n;
@@ -339,24 +354,25 @@ export default function Editor() {
           return { ...n, data: { ...d, interactions: cleaned } } as AppNode;
         });
 
+        // 7. Edge cleanup
         setEdges((eds) =>
           eds.filter((e) => !toDelete.has(e.source) && !toDelete.has(e.target))
         );
 
+        // 9. Sync graph types
         return syncParentGraphTypes(kept) as AppNode[];
       });
     },
     [setNodes, setEdges, takeSnapshot, syncParentGraphTypes]
   );
 
-  // --- Logic: Perspective Handlers (With attachedTo copy) ---
+  // --- Logic: Perspective Handlers ---
   const handleCreatePerspective = useCallback(
     (sourceId: string) => {
       takeSnapshot();
       const newId = nanoid();
 
       setNodes((nds) => {
-        // ... (existing node creation logic)
         const all = nds as AppNode[];
         const sourceNode = all.find((n) => n.id === sourceId);
         if (!sourceNode) return nds;
@@ -416,7 +432,7 @@ export default function Editor() {
         return [...updatedNodes, newNode];
       });
 
-      // --- FIX: Duplicate incoming edges AND update handle IDs ---
+      // Duplicate incoming edges and fix handle IDs
       setEdges((eds) => {
         const newEdges: AppEdge[] = [];
         eds.forEach((e) => {
@@ -425,8 +441,6 @@ export default function Editor() {
               ...e,
               id: nanoid(),
               target: newId,
-              // Update the targetHandle to point to the new node's handle
-              // (Replaces "oldId:target" with "newId:target")
               targetHandle: e.targetHandle
                 ? e.targetHandle.replace(sourceId, newId)
                 : null,
@@ -436,7 +450,6 @@ export default function Editor() {
         });
         return [...eds, ...newEdges];
       });
-      // ---------------------------------------------------------
 
       requestAnimationFrame(() => setSelectedId(newId));
     },
@@ -486,33 +499,86 @@ export default function Editor() {
     [setNodes, setSelectedId]
   );
 
-  // --- Logic: Update Logic ---
+  // --- Logic: Update Logic (Fixed for Renaming) ---
   const updateNodeById = useCallback(
     async (id: string, patch: Partial<NodeData>) => {
       takeSnapshot();
       const patchAny = patch as any;
 
+      // 1. Capture Renames (Important: do this before deleting the property)
+      const renames = patchAny._dataRenames as
+        | Record<string, string>
+        | undefined;
+
+      // 2. Handle Data Attribute Renames (Update Edges)
+      if (renames) {
+        const toHandle = (name: string) => `data:${slug(name)}`;
+
+        setEdges((eds) =>
+          eds.map((e) => {
+            let next = e;
+            // Update Source Handle
+            if (e.source === id && e.sourceHandle) {
+              for (const [oldName, newName] of Object.entries(renames)) {
+                const oldPrefix = toHandle(oldName);
+                if (e.sourceHandle.startsWith(oldPrefix)) {
+                  const newPrefix = toHandle(newName);
+                  const newHandle = e.sourceHandle.replace(
+                    oldPrefix,
+                    newPrefix
+                  );
+                  next = { ...next, sourceHandle: newHandle };
+                  break;
+                }
+              }
+            }
+            // Update Target Handle
+            if (e.target === id && e.targetHandle) {
+              for (const [oldName, newName] of Object.entries(renames)) {
+                const oldPrefix = toHandle(oldName);
+                if (e.targetHandle.startsWith(oldPrefix)) {
+                  const newPrefix = toHandle(newName);
+                  const newHandle = e.targetHandle.replace(
+                    oldPrefix,
+                    newPrefix
+                  );
+                  next = { ...next, targetHandle: newHandle };
+                  break;
+                }
+              }
+            }
+            return next;
+          })
+        );
+        delete patchAny._dataRenames;
+      }
+
+      // 3. Detect Data Removal
       if (patchAny.data && Array.isArray(patchAny.data)) {
         const node = nodes.find((n) => n.id === id);
         const rawOld = (node?.data as any)?.data;
         const oldItems = Array.isArray(rawOld) ? rawOld : [];
         const newItems = patchAny.data;
+
         const toName = (i: any) =>
           !i ? '' : typeof i === 'string' ? i.trim() : (i.name || '').trim();
         const newNamesSet = new Set(newItems.map(toName));
+
         const removedItems = oldItems.filter(
           (i: any) => !newNamesSet.has(toName(i))
         );
 
-        if (removedItems.length > 0) {
-          const toSlug = (s: string) =>
-            s
-              .toLowerCase()
-              .trim()
-              .replace(/\s+/g, '-')
-              .replace(/[^a-z0-9_-]/g, '');
+        // --- FILTER: Exclude Renamed Items ---
+        const realRemovedItems = removedItems.filter((i) => {
+          const n = toName(i);
+          // If present in renames map, it wasn't removed, just renamed
+          return !renames || !renames[n];
+        });
+
+        if (realRemovedItems.length > 0) {
+          const toSlug = (s: string) => slug(s);
           const removedPrefixes = new Set(
-            removedItems.map((i: any) => `data:${toSlug(toName(i))}`)
+            realRemovedItems.map((i: any) => `data:${toSlug(toName(i))}`)
           );
 
           const edgeIdsToDelete: string[] = [];
@@ -522,6 +588,7 @@ export default function Editor() {
 
           edges.forEach((e) => {
             let isMatch = false;
+
             if (e.source === id && e.sourceHandle) {
               for (const prefix of removedPrefixes)
                 if (e.sourceHandle.startsWith(prefix)) {
@@ -552,7 +619,9 @@ export default function Editor() {
             if (
               ix.sourceType === 'data' &&
               ix.sourceDataRef &&
-              removedItems.some((rm: any) => toName(rm) === ix.sourceDataRef)
+              realRemovedItems.some(
+                (rm: any) => toName(rm) === ix.sourceDataRef
+              )
             ) {
               interactionsToRemove.add(ix.id);
             }
@@ -637,6 +706,7 @@ export default function Editor() {
     [nodes, edges, rf, setNodes, takeSnapshot]
   );
 
+  // Helper to create a child node
   const createChildInParent = useCallback(
     (parentId: string, payload: any) => {
       takeSnapshot();
@@ -655,12 +725,11 @@ export default function Editor() {
 
         let x: number, y: number;
 
-        // --- NEW: Use specific position if provided (Center it) ---
+        // Use precise position if provided, else grid
         if (payload.position) {
           x = payload.position.x - size.width / 2;
           y = payload.position.y - size.height / 2;
         } else {
-          // Fallback to Grid Logic
           const cols = Math.max(
             1,
             Math.floor((innerWidth + GRID_GAP) / (size.width + GRID_GAP))
@@ -672,7 +741,6 @@ export default function Editor() {
           x = PAD_X + col * (size.width + GRID_GAP);
           y = HEADER_H + PAD_TOP + row * (size.height + GRID_GAP);
         }
-        // ---------------------------------------------------------
 
         let data: NodeData = {
           kind: payload.kind,
@@ -699,6 +767,7 @@ export default function Editor() {
     [setNodes, takeSnapshot, applyConstraints]
   );
 
+  // --- 2. Custom Hooks: Drag ---
   const [modal, setModal] = useState<{
     type: 'add-component';
     nodeId: string;
@@ -729,6 +798,7 @@ export default function Editor() {
       })
   );
 
+  // --- 3. Custom Hooks: Global Events ---
   useGlobalEvents({
     nodes: nodes as AppNode[],
     setNodes: setNodes as any,
@@ -744,6 +814,7 @@ export default function Editor() {
     createChildInParent,
   });
 
+  // --- 4. Load/Save Logic ---
   const buildSave = useCallback((): SaveFile => {
     const vp = (rf && (rf as any).getViewport?.()) || { x: 0, y: 0, zoom: 1 };
     const allReviews = Object.values(reviewsByTarget).flat();
@@ -761,6 +832,8 @@ export default function Editor() {
         },
         ...(n.parentNode ? { parentNode: n.parentNode } : {}),
         ...(n.extent === 'parent' ? { extent: 'parent' as const } : {}),
+        // --- ADDED: Persist hidden state ---
+        hidden: n.hidden,
       };
     });
     return {
@@ -775,7 +848,7 @@ export default function Editor() {
 
   const loadSave = useCallback(
     (save: SaveFile) => {
-      const restored: AppNode[] = save.nodes.map((n) => {
+      let restored: AppNode[] = save.nodes.map((n) => {
         const kind = (n.data as any)?.kind as NodeKind | undefined;
         const fallbackType = kind ? nodeTypeFor(kind) : 'visualization';
         const finalType = (n.type as keyof typeof NODE_TYPES) ?? fallbackType;
@@ -787,8 +860,54 @@ export default function Editor() {
           style: { width: n.style?.width, height: n.style?.height },
           parentNode: n.parentNode as any,
           extent: n.extent as any,
+          // Restore hidden state
+          hidden: (n as any).hidden,
         };
       });
+
+      // --- Fix Perspective Visibility (Legacy/Broken State) ---
+      // If loading a file where multiple perspectives are visible (e.g. from before hidden was saved),
+      // we must enforce only one visible per group.
+
+      const groups = new Map<string, string[]>();
+      restored.forEach((n) => {
+        const p = n.data?.perspectives;
+        if (Array.isArray(p) && p.length > 1) {
+          const key = [...p].sort().join('|');
+          groups.set(key, p);
+        }
+      });
+
+      const rootsToHide = new Set<string>();
+
+      groups.forEach((groupIDs) => {
+        const groupNodes = restored.filter((n) => groupIDs.includes(n.id));
+        const visibleNodes = groupNodes.filter((n) => !n.hidden);
+
+        if (visibleNodes.length === 0) {
+          // If all hidden, show the first one
+          const winner = groupNodes[0];
+          if (winner) winner.hidden = false;
+        } else if (visibleNodes.length > 1) {
+          // If multiple visible, pick first and hide others
+          const winner = visibleNodes[0];
+          visibleNodes.slice(1).forEach((loser) => {
+            rootsToHide.add(loser.id);
+          });
+        }
+      });
+
+      // Cascading Hide
+      if (rootsToHide.size > 0) {
+        const allHidden = collectDescendants(restored, rootsToHide);
+        restored = restored.map((n) => {
+          if (allHidden.has(n.id)) {
+            return { ...n, hidden: true };
+          }
+          return n;
+        });
+      }
+
       setNodes(restored as any);
       setEdges(save.edges as AppEdge[]);
       const reviewsMap: Record<string, Review[]> = {};
@@ -824,11 +943,13 @@ export default function Editor() {
     });
   }, [buildSave, openModal, closeModal, saveNameBase]);
 
+  // Derived state
   const selectedEdge = useMemo(
     () => edges.find((e) => e.id === selectedEdgeId) ?? null,
     [edges, selectedEdgeId]
   );
 
+  // Handlers
   const onConnect = useCallback(
     (c: Connection) => {
       setIsConnecting(false);
@@ -873,9 +994,10 @@ export default function Editor() {
     setSelectedId(fallbackId);
   }, [selectedId, nodes, pruneAfterRemoval]);
 
+  // Modal Wiring
   useEffect(() => {
     if (modal?.type !== 'add-component') return;
-    const { nodeId, presetKind, position } = modal; // <--- destructure position
+    const { nodeId, presetKind, position } = modal;
     const closeAndClear = () => {
       closeModal();
       setModal(null);
@@ -897,6 +1019,7 @@ export default function Editor() {
     });
   }, [modal, createChildInParent, openModal, closeModal]);
 
+  // Menu Animation
   useEffect(() => {
     const onWidth = (e: Event) =>
       setMenuWidth((e as CustomEvent).detail?.width ?? PANEL_WIDTH);
@@ -908,6 +1031,7 @@ export default function Editor() {
       );
   }, []);
 
+  // Track last selected
   const lastSelectedIdRef = useRef<string | null>(null);
   useEffect(() => {
     let t: number | undefined;
@@ -931,7 +1055,7 @@ export default function Editor() {
       )
     : 0;
 
-  // --- TOOLTIP VISIBILITY LOGIC (Refined for Perspectives) ---
+  // Tooltip Visibility logic
   useEffect(() => {
     setNodes((nds) => {
       const next = nds.map((n) => ({ ...n }));
@@ -951,14 +1075,11 @@ export default function Editor() {
 
       // Group tooltips by perspective set
       const groups = new Map<string, AppNode[]>();
-
-      // Calculate "raw" visibility requests
       const rawVisibility = new Set<string>();
 
       for (const tip of next) {
         if (tip.data?.kind !== 'Tooltip') continue;
 
-        // Add to group
         const pKey = tip.data.perspectives
           ? [...tip.data.perspectives].sort().join('|')
           : tip.id;
@@ -1314,6 +1435,7 @@ export default function Editor() {
                 </ControlButton>
               </Controls>
             </ReactFlow>
+            {/* Markers Overlay - Restored */}
             <div
               style={{
                 position: 'absolute',
@@ -1586,6 +1708,7 @@ export default function Editor() {
                             })
                             .filter(Boolean);
                         } else {
+                          // Fallback
                           interactions = d.interactions.filter((ix: any) => {
                             const currentTargets = Array.isArray(ix.targets)
                               ? ix.targets
