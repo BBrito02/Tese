@@ -6,7 +6,7 @@ import {
   ListSection,
   AddComponentSection,
   SectionTitle,
-  type ListItem, // Import ListItem to support object structure
+  type ListItem,
 } from './sections';
 import { useModal } from '../ui/ModalHost';
 import { allowedChildKinds } from '../../domain/rules';
@@ -18,6 +18,7 @@ export default function VisualizationMenu(p: KindProps) {
   const disabled = p.disabled;
   const { openModal, closeModal } = useModal();
 
+  // Helper to normalize data items
   const toDataItems = (list?: (string | DataItem)[]): DataItem[] =>
     Array.isArray(list)
       ? list.map((v) =>
@@ -29,8 +30,7 @@ export default function VisualizationMenu(p: KindProps) {
     ? (d.interactions as Interaction[])
     : [];
 
-  // --- CHANGED: Map interactions to { name, badge } objects ---
-  // This ensures they render with the same chip style as Data List (Title + Result Badge)
+  // Map interactions to objects with { name, badge } for styling
   const interactionItems: ListItem[] = interactions.map((ix) => ({
     name: ix.name,
     badge: ix.result,
@@ -127,22 +127,43 @@ export default function VisualizationMenu(p: KindProps) {
             ),
           })
         }
+        // --- ADDED: Click handler to edit specific data item ---
+        onItemClick={(index) => {
+          openModal({
+            title: 'Data fields',
+            node: (
+              <DataPopup
+                initial={toDataItems(dataList)}
+                initialSelectedIndex={index}
+                onCancel={closeModal}
+                onSave={(
+                  items: DataItem[],
+                  renames: Record<string, string>
+                ) => {
+                  p.onChange({
+                    data: items,
+                    _dataRenames: renames,
+                  } as any);
+                  closeModal();
+                }}
+              />
+            ),
+          });
+        }}
         addTooltip="Associate data"
         disabled={disabled}
       />
 
       <ListSection
         title="Interaction list"
-        items={interactionItems} // Pass the object list here
+        items={interactionItems}
         onAdd={() => {
-          // "Add" opens the popup to create a new interaction (no ID passed)
           window.dispatchEvent(
             new CustomEvent('designer:open-interactions', {
               detail: { nodeId: p.node.id },
             })
           );
         }}
-        // --- CHANGED: Clicking an item selects the edge on the canvas ---
         onItemClick={(i) => {
           const ix = interactions[i];
           if (ix) {

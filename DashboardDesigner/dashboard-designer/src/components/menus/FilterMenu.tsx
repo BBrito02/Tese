@@ -4,7 +4,7 @@ import {
   TypeField,
   ListSection,
   SectionTitle,
-  type ListItem, // Import ListItem
+  type ListItem,
 } from './sections';
 import type { DataItem, Interaction } from '../../domain/types';
 
@@ -30,7 +30,7 @@ export default function FilterMenu(p: KindProps) {
     ? (d.interactions as Interaction[])
     : [];
 
-  // --- CHANGED: Map to objects with { name, badge } ---
+  // Map interactions to { name, badge }
   const interactionItems: ListItem[] = interactions.map((ix) => ({
     name: ix.name,
     badge: ix.result,
@@ -38,24 +38,20 @@ export default function FilterMenu(p: KindProps) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {/* Header */}
       <div style={{ fontWeight: 700, textAlign: 'center' }}>MENU</div>
 
       <SectionTitle>Properties</SectionTitle>
 
-      {/* Component name */}
       <NameField
         value={d.title ?? ''}
         onChange={(val) => p.onChange({ title: val })}
         disabled={disabled}
       />
 
-      {/* Component type */}
       <TypeField value="Filter" />
 
       <SectionTitle>Actions</SectionTitle>
 
-      {/* Data list */}
       <ListSection
         title="Data list"
         items={dataList ?? []}
@@ -66,22 +62,44 @@ export default function FilterMenu(p: KindProps) {
               <DataPopup
                 initial={toDataItems(dataList)}
                 onCancel={closeModal}
-                onSave={(items: DataItem[]) => {
-                  p.onChange({ data: items } as any);
+                onSave={(
+                  items: DataItem[],
+                  renames: Record<string, string>
+                ) => {
+                  p.onChange({ data: items, _dataRenames: renames } as any);
                   closeModal();
                 }}
               />
             ),
           })
         }
+        // --- Click to edit data ---
+        onItemClick={(index) => {
+          openModal({
+            title: 'Data fields',
+            node: (
+              <DataPopup
+                initial={toDataItems(dataList)}
+                initialSelectedIndex={index}
+                onCancel={closeModal}
+                onSave={(
+                  items: DataItem[],
+                  renames: Record<string, string>
+                ) => {
+                  p.onChange({ data: items, _dataRenames: renames } as any);
+                  closeModal();
+                }}
+              />
+            ),
+          });
+        }}
         addTooltip="Associate data"
         disabled={disabled}
       />
 
-      {/* Interaction list */}
       <ListSection
         title="Interaction list"
-        items={interactionItems} // Use mapped items
+        items={interactionItems}
         onAdd={() => {
           window.dispatchEvent(
             new CustomEvent('designer:open-interactions', {
@@ -89,7 +107,7 @@ export default function FilterMenu(p: KindProps) {
             })
           );
         }}
-        // --- CHANGED: Add click handler ---
+        // --- Click to select interaction edge ---
         onItemClick={(i) => {
           const ix = interactions[i];
           if (ix) {
