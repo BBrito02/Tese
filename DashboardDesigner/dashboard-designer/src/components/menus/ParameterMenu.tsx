@@ -5,6 +5,7 @@ import {
   ListSection,
   OptionsSection,
   SectionTitle,
+  type ListItem, // Import ListItem
 } from './sections';
 import type { Interaction } from '../../domain/types';
 
@@ -14,16 +15,15 @@ export default function ParameterMenu(p: KindProps) {
 
   const options: string[] = d.options ?? [];
 
-  // store is Interaction[], ListSection wants strings -> format them
   const interactions: Interaction[] = Array.isArray(d.interactions)
     ? (d.interactions as Interaction[])
     : [];
-  const interactionLabels: string[] = interactions.map((ix) => {
-    const tgtCount = Array.isArray(ix.targets) ? ix.targets.length : 0;
-    return `${ix.name} · ${ix.trigger}/${ix.result} · ${tgtCount} target${
-      tgtCount === 1 ? '' : 's'
-    }`;
-  });
+
+  // --- CHANGED: Map to objects with { name, badge } ---
+  const interactionItems: ListItem[] = interactions.map((ix) => ({
+    name: ix.name,
+    badge: ix.result,
+  }));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -44,7 +44,7 @@ export default function ParameterMenu(p: KindProps) {
 
       <SectionTitle>Actions</SectionTitle>
 
-      {/* Options (reusable section) */}
+      {/* Options */}
       <OptionsSection
         title="Options"
         placeholder="Enter option"
@@ -54,18 +54,28 @@ export default function ParameterMenu(p: KindProps) {
         onChange={(next) => p.onChange({ options: next })}
       />
 
-      {/* Interaction list (hook up later with a popup or action) */}
+      {/* Interaction list */}
       <ListSection
         title="Interaction list"
-        items={interactionLabels}
-         onAdd={() => {
-           window.dispatchEvent(
-             new CustomEvent('designer:open-interactions', {
-               detail: { nodeId: p.node.id },
-             })
-           );
-         }}
-        //onAdd={() => {}}
+        items={interactionItems} // Use mapped items
+        onAdd={() => {
+          window.dispatchEvent(
+            new CustomEvent('designer:open-interactions', {
+              detail: { nodeId: p.node.id },
+            })
+          );
+        }}
+        // --- CHANGED: Add click handler ---
+        onItemClick={(i) => {
+          const ix = interactions[i];
+          if (ix) {
+            window.dispatchEvent(
+              new CustomEvent('designer:select-interaction', {
+                detail: { interactionId: ix.id },
+              })
+            );
+          }
+        }}
         addTooltip="Add interaction"
         disabled={disabled}
       />

@@ -4,15 +4,21 @@ import { LuPlus, LuPencil, LuTag } from 'react-icons/lu';
 import type { DataItem } from '../../domain/types';
 import { WhiteField, GhostLine } from './common';
 
-export type ListItem = string | DataItem;
+// --- CHANGED: Unified ListItem type to support objects with badges ---
+export interface StyledListItem {
+  name: string;
+  badge?: string; // renders in the pill like a Data Type
+}
+
+export type ListItem = string | DataItem | StyledListItem;
 
 interface TypeFieldProps {
   value: string;
   label?: string;
-  icon?: ElementType; // Accepts a React Icon component (e.g., LuUser, LuSettings)
+  icon?: ElementType;
 }
 
-// badge css
+// Badge style (Used for Data Types and Interaction Results)
 const dtypeBadge: React.CSSProperties = {
   marginLeft: 6,
   padding: '2px 6px',
@@ -25,7 +31,6 @@ const dtypeBadge: React.CSSProperties = {
   letterSpacing: 0.3,
 };
 
-// react-icons css
 const smallIconRight: React.CSSProperties = {
   position: 'absolute',
   right: 10,
@@ -35,7 +40,6 @@ const smallIconRight: React.CSSProperties = {
   pointerEvents: 'none',
 };
 
-// popup activation button css
 const roundIconBtn: React.CSSProperties = {
   width: 28,
   height: 28,
@@ -55,12 +59,12 @@ const headerRow: React.CSSProperties = {
   justifyContent: 'space-between',
 };
 
-// --- New styles for tooltip pills ---
+// Tooltip specific styles
 const tooltipPill: React.CSSProperties = {
   fontSize: 12,
   padding: '4px 8px',
   borderRadius: 999,
-  background: '#eef2ff', // light blue background
+  background: '#eef2ff',
   border: '1px solid #c7d2fe',
   display: 'inline-flex',
   alignItems: 'center',
@@ -72,19 +76,18 @@ const tooltipBadge: React.CSSProperties = {
   width: 20,
   height: 20,
   borderRadius: 999,
-  background: '#fff', // white badge now
+  background: '#fff',
   border: '1px solid #cbd5e1',
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
   fontSize: 11,
   fontWeight: 700,
-  color: '#000000ff', // dark blue text inside the badge
+  color: '#000000ff',
 };
 
-// helper to detect tooltip strings
 const parseTooltip = (s: string) => {
-  const m = s.match(/^(\w+\d+)\s+(.*)$/); // e.g., "T0 Tester-Tooltip"
+  const m = s.match(/^(\w+\d+)\s+(.*)$/);
   if (!m) return null;
   return { badge: m[1], title: m[2] };
 };
@@ -96,9 +99,9 @@ export function SectionTitle({ children }: { children: string }) {
         marginTop: 18,
         marginBottom: 6,
         fontSize: 14,
-        fontWeight: 600, // ← bold
-        color: '#0f172a', // slate-900 (strong, readable)
-        borderBottom: '1px solid #e5e7eb', // subtle divider
+        fontWeight: 600,
+        color: '#0f172a',
+        borderBottom: '1px solid #e5e7eb',
         paddingBottom: 3,
       }}
     >
@@ -107,14 +110,16 @@ export function SectionTitle({ children }: { children: string }) {
   );
 }
 
-// function that prints the data attributes + tooltips
+// --- UPDATED: Chips component ---
 export function Chips({
   items,
-  onRemove, // <-- optional remove handler
-  disabled, // <-- optional disabled flag for remove buttons
+  onRemove,
+  onItemClick,
+  disabled,
 }: {
   items: ListItem[];
   onRemove?: (index: number) => void;
+  onItemClick?: (index: number) => void;
   disabled?: boolean;
 }) {
   if (!items?.length) {
@@ -128,13 +133,26 @@ export function Chips({
   return (
     <div style={{ marginTop: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
       {items.map((it, i) => {
-        // Data items (name + dtype badge)
+        const isClickable = !!onItemClick && !disabled;
+        const clickProps = isClickable
+          ? {
+              onClick: () => onItemClick(i),
+              style: { cursor: 'pointer' },
+            }
+          : { style: { cursor: 'default' } };
+
+        // 1. Handle Objects (Data Items OR Interactions)
         if (typeof it !== 'string') {
           const label = it.name;
-          const dtype = it.dtype;
+          // Use 'dtype' for DataItem or 'badge' for StyledListItem
+          // This ensures interactions render the badge exactly like data types
+          const badgeText =
+            'dtype' in it ? it.dtype : (it as StyledListItem).badge;
+
           return (
             <span
-              key={`data-${label}-${dtype}-${i}`}
+              key={`obj-${label}-${i}`}
+              {...clickProps}
               style={{
                 fontSize: 12,
                 padding: '4px 8px',
@@ -144,15 +162,19 @@ export function Chips({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 6,
+                ...clickProps.style,
               }}
-              title={`${label}${dtype ? ` · ${dtype}` : ''}`}
+              title={`${label}${badgeText ? ` · ${badgeText}` : ''}`}
             >
               {label}
-              {dtype && <span style={dtypeBadge}>{dtype}</span>}
+              {badgeText && <span style={dtypeBadge}>{badgeText}</span>}
               {onRemove && (
                 <button
                   type="button"
-                  onClick={() => onRemove(i)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemove(i);
+                  }}
                   disabled={disabled}
                   style={{
                     border: 'none',
@@ -171,13 +193,14 @@ export function Chips({
           );
         }
 
-        // Tooltip entries (badge + title)
+        // 2. Handle Tooltip Strings
         const parsed = parseTooltip(it);
         if (parsed) {
           return (
             <span
               key={`tip-${it}-${i}`}
-              style={tooltipPill}
+              {...clickProps}
+              style={{ ...tooltipPill, ...clickProps.style }}
               title={parsed.title}
             >
               <span style={tooltipBadge}>{parsed.badge}</span>
@@ -187,7 +210,10 @@ export function Chips({
               {onRemove && (
                 <button
                   type="button"
-                  onClick={() => onRemove(i)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemove(i);
+                  }}
                   disabled={disabled}
                   style={{
                     border: 'none',
@@ -207,10 +233,11 @@ export function Chips({
           );
         }
 
-        // Plain strings
+        // 3. Handle Plain Strings
         return (
           <span
             key={`str-${it}-${i}`}
+            {...clickProps}
             style={{
               fontSize: 12,
               padding: '4px 8px',
@@ -220,6 +247,7 @@ export function Chips({
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
+              ...clickProps.style,
             }}
             title={it}
           >
@@ -227,7 +255,10 @@ export function Chips({
             {onRemove && (
               <button
                 type="button"
-                onClick={() => onRemove(i)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemove(i);
+                }}
                 disabled={disabled}
                 style={{
                   border: 'none',
@@ -249,23 +280,19 @@ export function Chips({
   );
 }
 
-// name field section
-// src/components/menus/sections.tsx
-
-// name field section
 export function NameField(props: {
   value: string;
   placeholder?: string;
   disabled?: boolean;
   onChange: (val: string) => void;
-  label?: string; // ⬅️ NEW
+  label?: string;
 }) {
   const {
     value,
     onChange,
     disabled,
     placeholder = 'Component name',
-    label = 'Component name', // ⬅️ NEW
+    label = 'Component name',
   } = props;
 
   return (
@@ -279,7 +306,7 @@ export function NameField(props: {
           paddingLeft: 6,
         }}
       >
-        {label} {/* ⬅️ use prop */}
+        {label}
       </label>
       <div style={{ position: 'relative' }}>
         <input
@@ -295,11 +322,8 @@ export function NameField(props: {
   );
 }
 
-// type field section
 export function TypeField({ value, label, icon }: TypeFieldProps) {
   const title = label ?? 'Component type';
-
-  // 2. Determine which icon to use: The passed prop OR the default LuTag
   const IconComponent = icon ?? LuTag;
 
   return (
@@ -322,13 +346,12 @@ export function TypeField({ value, label, icon }: TypeFieldProps) {
           readOnly
           disabled
           style={{
-            ...WhiteField, // Assuming this is defined elsewhere in your file
+            ...WhiteField,
             paddingRight: 34,
             opacity: 1,
             color: '#0f172a',
           }}
         />
-        {/* 3. Render the dynamic icon */}
         <IconComponent size={16} style={smallIconRight} />
       </div>
     </div>
@@ -346,7 +369,7 @@ export function SubTypeField(props: { value: string }) {
           marginBottom: 6,
         }}
       >
-        Grpah type
+        Graph type
       </label>
       <div style={{ position: 'relative' }}>
         <input
@@ -366,18 +389,16 @@ export function SubTypeField(props: { value: string }) {
   );
 }
 
-/**
- * Generic section that shows a title, optional (+) button, and a chip list.
- * Use `items` as string[] or DataItem[]. If the list is empty, shows GhostLine.
- */
+// --- UPDATED: ListSection passes onItemClick to Chips ---
 export function ListSection(props: {
   title: string;
   items: ListItem[];
   onAdd?: () => void;
+  onItemClick?: (index: number) => void;
   addTooltip?: string;
   disabled?: boolean;
 }) {
-  const { title, items, onAdd, addTooltip, disabled } = props;
+  const { title, items, onAdd, onItemClick, addTooltip, disabled } = props;
   return (
     <div>
       <div style={headerRow}>
@@ -396,21 +417,18 @@ export function ListSection(props: {
           </button>
         )}
       </div>
-      <Chips items={items} />
+      <Chips items={items} onItemClick={onItemClick} disabled={disabled} />
     </div>
   );
 }
 
-// sections.tsx
-// ⬇ change the props to include `icon?: React.ReactNode`
-// ⬇️ Drop-in replacement for ListAttributesSection in sections.tsx
 export function ListAttributesSection(props: {
   title: string;
-  items: ListItem[]; // use the same ListItem type (string | DataItem)
+  items: ListItem[];
   onAdd?: () => void;
   addTooltip?: string;
   disabled?: boolean;
-  onRemove?: (index: number) => void; // forwarded to Chips
+  onRemove?: (index: number) => void;
   icon?: React.ReactNode;
 }) {
   const { title, items, onAdd, addTooltip, disabled, onRemove, icon } = props;
@@ -451,13 +469,11 @@ export function ListAttributesSection(props: {
         )}
       </div>
 
-      {/* Use Chips for consistent rendering; pass onRemove/disabled */}
       <Chips items={items} onRemove={onRemove} disabled={disabled} />
     </div>
   );
 }
 
-// sections.tsx (unchanged)
 export function DescriptionSection({
   label = 'Description',
   placeholder = 'Describe this component',
@@ -498,7 +514,6 @@ export function DescriptionSection({
   );
 }
 
-/** Reusable add/remove string list with chips */
 export function OptionsSection({
   title = 'Options',
   placeholder = 'Enter option',
@@ -609,13 +624,11 @@ export function OptionsSection({
   );
 }
 
-// Add new component section
 export function AddComponentSection({
   title = 'Add component',
   onAdd,
   disabled,
 }: {
-  // arguments it receives
   title?: string;
   onAdd: () => void;
   disabled?: boolean;
@@ -640,7 +653,6 @@ export function AddComponentSection({
   );
 }
 
-// --- NEW: FieldPickerSection (click-to-select chips) ---
 export function FieldPickerSection({
   title,
   available,
@@ -649,8 +661,8 @@ export function FieldPickerSection({
   disabled,
 }: {
   title: string;
-  available: string[]; // fields you can pick from (e.g., from parent viz)
-  selected: string[]; // current chosen fields
+  available: string[];
+  selected: string[];
   onChange: (next: string[]) => void;
   disabled?: boolean;
 }) {
@@ -678,7 +690,6 @@ export function FieldPickerSection({
         {title}
       </label>
 
-      {/* Available chips */}
       <div style={{ marginTop: 4 }}>
         {available.length === 0 ? (
           <div style={GhostLine} />
@@ -712,7 +723,6 @@ export function FieldPickerSection({
         )}
       </div>
 
-      {/* Selected chips */}
       <div style={{ marginTop: 8 }}>
         {selected.length === 0 ? (
           <div style={GhostLine} />

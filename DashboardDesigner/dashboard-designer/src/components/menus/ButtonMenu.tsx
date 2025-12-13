@@ -1,21 +1,26 @@
 import type { Interaction } from '../../domain/types';
 import type { KindProps } from './common';
-import { NameField, TypeField, ListSection, SectionTitle } from './sections';
+import {
+  NameField,
+  TypeField,
+  ListSection,
+  SectionTitle,
+  type ListItem, // Import ListItem type
+} from './sections';
 
 export default function ButtonMenu(p: KindProps) {
   const d: any = p.node.data;
   const disabled = p.disabled;
 
-  // store is Interaction[], ListSection wants strings -> format them
   const interactions: Interaction[] = Array.isArray(d.interactions)
     ? (d.interactions as Interaction[])
     : [];
-  const interactionLabels: string[] = interactions.map((ix) => {
-    const tgtCount = Array.isArray(ix.targets) ? ix.targets.length : 0;
-    return `${ix.name} · ${ix.trigger}/${ix.result} · ${tgtCount} target${
-      tgtCount === 1 ? '' : 's'
-    }`;
-  });
+
+  // --- CHANGED: Map to objects with { name, badge } for styling ---
+  const interactionItems: ListItem[] = interactions.map((ix) => ({
+    name: ix.name,
+    badge: ix.result,
+  }));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -39,7 +44,7 @@ export default function ButtonMenu(p: KindProps) {
       {/* Interaction list */}
       <ListSection
         title="Interaction list"
-        items={interactionLabels}
+        items={interactionItems} // Use mapped items
         onAdd={() => {
           window.dispatchEvent(
             new CustomEvent('designer:open-interactions', {
@@ -47,7 +52,17 @@ export default function ButtonMenu(p: KindProps) {
             })
           );
         }}
-        //onAdd={() => {}}
+        // --- CHANGED: Add click handler to select edge ---
+        onItemClick={(i) => {
+          const ix = interactions[i];
+          if (ix) {
+            window.dispatchEvent(
+              new CustomEvent('designer:select-interaction', {
+                detail: { interactionId: ix.id },
+              })
+            );
+          }
+        }}
         addTooltip="Add interaction"
         disabled={disabled}
       />

@@ -56,7 +56,7 @@ import { activationIcons, type ActivationKey } from './domain/icons';
 import SideMenu from './components/menus/SideMenu';
 import ComponentsMenu from './components/menus/ComponentsMenu';
 import AddComponentPopup from './components/popups/ComponentPopup';
-import DataPopup from './components/popups/DataPopup'; // <--- ADDED IMPORT
+import DataPopup from './components/popups/DataPopup';
 import SavePopup from './components/popups/SavePopup';
 import NodeGhost from './canvas/nodes/NodeGhost';
 import InteractionEdgeMenu from './components/menus/InteractionEdgeMenu';
@@ -809,6 +809,7 @@ export default function Editor() {
   useGlobalEvents({
     nodes: nodes as AppNode[],
     setNodes: setNodes as any,
+    edges: edges as AppEdge[], // <--- UPDATED: Passed edges here
     setEdges,
     setSelectedId,
     setSelectedEdgeId,
@@ -1132,7 +1133,12 @@ export default function Editor() {
         groups.get(pKey)!.push(tip);
 
         const attachedTo = (tip.data as any)?.attachedTo as string | undefined;
-        if (!attachedTo) continue;
+
+        // --- CHANGED: Always consider standalone tooltips visible ---
+        if (!attachedTo) {
+          rawVisibility.add(tip.id);
+          continue;
+        }
 
         const vizSelected =
           selectedId === attachedTo || vizIdFromEdge === attachedTo;

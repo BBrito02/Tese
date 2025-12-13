@@ -58,7 +58,7 @@ function nodeTypeFor(kind: NodeKind): string {
 interface UseGlobalEventsProps {
   nodes: AppNode[];
   setNodes: React.Dispatch<React.SetStateAction<AppNode[]>>;
-  // edges: AppEdge[]; // <-- REMOVED THIS LINE
+  edges: AppEdge[];
   setEdges: React.Dispatch<React.SetStateAction<AppEdge[]>>;
   setSelectedId: (id: string | null) => void;
   setSelectedEdgeId: (id: string | null) => void;
@@ -74,7 +74,7 @@ interface UseGlobalEventsProps {
 export function useGlobalEvents({
   nodes,
   setNodes,
-  // edges, // <-- REMOVED THIS LINE
+  edges,
   setEdges,
   setSelectedId,
   setSelectedEdgeId,
@@ -86,7 +86,53 @@ export function useGlobalEvents({
   updateNodeById,
   createChildInParent,
 }: UseGlobalEventsProps) {
-  // 1. EDGE SELECTION
+  // --- NEW: Select Interaction Edge Listener ---
+  useEffect(() => {
+    const onSelectInteraction = (e: Event) => {
+      const { interactionId } = (e as CustomEvent).detail || {};
+      if (!interactionId) return;
+
+      // Find the first edge associated with this interaction
+      const targetEdge = edges.find(
+        (e) => e.data?.interactionId === interactionId
+      );
+
+      if (targetEdge) {
+        console.log('[Editor] selecting interaction edge:', targetEdge.id);
+
+        // 1. Deselect all nodes to prevent React Flow from reverting selection
+        setNodes((nds) =>
+          nds.map((n) => (n.selected ? { ...n, selected: false } : n))
+        );
+
+        // 2. Select the specific edge and deselect others
+        setEdges((eds) =>
+          eds.map((e) => ({
+            ...e,
+            selected: e.id === targetEdge.id,
+          }))
+        );
+
+        // 3. Update the Editor state
+        setSelectedId(null);
+        setSelectedEdgeId(targetEdge.id);
+      } else {
+        console.warn('No edge found for interaction:', interactionId);
+      }
+    };
+
+    window.addEventListener(
+      'designer:select-interaction',
+      onSelectInteraction as EventListener
+    );
+    return () =>
+      window.removeEventListener(
+        'designer:select-interaction',
+        onSelectInteraction as EventListener
+      );
+  }, [edges, setNodes, setEdges, setSelectedId, setSelectedEdgeId]);
+
+  // 1. EDGE SELECTION (Direct click on canvas edge)
   useEffect(() => {
     const onSelectEdge = (e: Event) => {
       const { edgeId } = (e as CustomEvent).detail || {};
@@ -558,7 +604,7 @@ export function useGlobalEvents({
                         ...(sourceType === 'data' && sourceDataRef
                           ? { sourceDataRef }
                           : {}),
-                        interactionId,
+                        interactionId, // Storing ID for selection later
                         targetId: tid,
                         targetType: detail.targetType,
                         ...(detail.targetDataRef

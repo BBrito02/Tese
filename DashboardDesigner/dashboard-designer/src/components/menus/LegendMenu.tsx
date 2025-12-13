@@ -1,5 +1,3 @@
-// src/components/menus/LegendMenu.tsx
-
 import type { KindProps } from './common';
 import {
   NameField,
@@ -7,6 +5,7 @@ import {
   ListSection,
   AddComponentSection,
   SectionTitle,
+  type ListItem, // Import ListItem type
 } from './sections';
 import type { DataItem, Interaction, NodeKind } from '../../domain/types';
 import { useModal } from '../ui/ModalHost';
@@ -27,24 +26,22 @@ export default function LegendMenu(p: KindProps) {
         )
       : [];
 
-  // store is Interaction[], ListSection wants strings -> format them
   const interactions: Interaction[] = Array.isArray(d.interactions)
     ? (d.interactions as Interaction[])
     : [];
-  const interactionLabels: string[] = interactions.map((ix) => {
-    const tgtCount = Array.isArray(ix.targets) ? ix.targets.length : 0;
-    return `${ix.name} · ${ix.trigger}/${ix.result} · ${tgtCount} target${
-      tgtCount === 1 ? '' : 's'
-    }`;
-  });
+
+  // --- CHANGED: Map to objects with { name, badge } ---
+  const interactionItems: ListItem[] = interactions.map((ix) => ({
+    name: ix.name,
+    badge: ix.result,
+  }));
 
   const { openModal, closeModal } = useModal();
 
   const handleAddComponent = () => {
     const parentKind = (p.node.data?.kind ?? 'Visualization') as NodeKind;
-    const baseKinds = allowedChildKinds(parentKind); // NodeKind[]
+    const baseKinds = allowedChildKinds(parentKind);
 
-    // Allow VisualVariable to be added
     const kinds = [...baseKinds, 'VisualVariable'] as const;
 
     openModal({
@@ -54,19 +51,14 @@ export default function LegendMenu(p: KindProps) {
           kinds={
             kinds as unknown as (NodeKind | 'GraphType' | 'VisualVariable')[]
           }
-          initialVisualVars={d.visualVars ?? []} // Pass current vars so popup shows them checked
+          initialVisualVars={d.visualVars ?? []}
           onCancel={closeModal}
           onSave={(payload) => {
-            // Route by payload.kind
             if (payload.kind === 'VisualVariable') {
-              // FIX: Use p.onChange directly to update the node data
               p.onChange({ visualVars: payload.variables } as any);
-
               closeModal();
               return;
             }
-
-            // Handle other adds if necessary
             closeModal();
           }}
         />
@@ -125,13 +117,24 @@ export default function LegendMenu(p: KindProps) {
       {/* Interaction list */}
       <ListSection
         title="Interaction list"
-        items={interactionLabels}
+        items={interactionItems} // Use mapped items
         onAdd={() => {
           window.dispatchEvent(
             new CustomEvent('designer:open-interactions', {
               detail: { nodeId: p.node.id },
             })
           );
+        }}
+        // --- CHANGED: Add click handler ---
+        onItemClick={(i) => {
+          const ix = interactions[i];
+          if (ix) {
+            window.dispatchEvent(
+              new CustomEvent('designer:select-interaction', {
+                detail: { interactionId: ix.id },
+              })
+            );
+          }
         }}
         addTooltip="Add interaction"
         disabled={disabled}

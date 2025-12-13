@@ -1,4 +1,3 @@
-// VisualizationMenu.tsx
 import type { KindProps } from './common';
 import type { DataItem, NodeKind, Interaction } from '../../domain/types';
 import {
@@ -7,6 +6,7 @@ import {
   ListSection,
   AddComponentSection,
   SectionTitle,
+  type ListItem, // Import ListItem to support object structure
 } from './sections';
 import { useModal } from '../ui/ModalHost';
 import { allowedChildKinds } from '../../domain/rules';
@@ -25,16 +25,16 @@ export default function VisualizationMenu(p: KindProps) {
         )
       : [];
 
-  // store is Interaction[], ListSection wants strings -> format them
   const interactions: Interaction[] = Array.isArray(d.interactions)
     ? (d.interactions as Interaction[])
     : [];
-  const interactionLabels: string[] = interactions.map((ix) => {
-    const tgtCount = Array.isArray(ix.targets) ? ix.targets.length : 0;
-    return `${ix.name} · ${ix.trigger}/${ix.result} · ${tgtCount} target${
-      tgtCount === 1 ? '' : 's'
-    }`;
-  });
+
+  // --- CHANGED: Map interactions to { name, badge } objects ---
+  // This ensures they render with the same chip style as Data List (Title + Result Badge)
+  const interactionItems: ListItem[] = interactions.map((ix) => ({
+    name: ix.name,
+    badge: ix.result,
+  }));
 
   const tooltips: string[] = d.tooltips ?? [];
   const dataList = d.data as (string | DataItem)[] | undefined;
@@ -52,7 +52,7 @@ export default function VisualizationMenu(p: KindProps) {
         <AddComponentPopup
           kinds={kinds as any}
           initialVisualVars={d.visualVars ?? []}
-          initialGraphTypes={d.graphTypes ?? []} // ← preselect
+          initialGraphTypes={d.graphTypes ?? []}
           onCancel={closeModal}
           onSave={(payload) => {
             if (payload.kind === 'GraphType') {
@@ -72,7 +72,6 @@ export default function VisualizationMenu(p: KindProps) {
               closeModal();
               return;
             }
-            // default child add
             window.dispatchEvent(
               new CustomEvent('designer:add-component', {
                 detail: { parentId: p.node.id, payload },
@@ -85,7 +84,6 @@ export default function VisualizationMenu(p: KindProps) {
     });
   };
 
-  // ... the rest of the menu (data list, objectives, etc.) unchanged ...
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ fontWeight: 700, textAlign: 'center' }}>MENU</div>
@@ -115,19 +113,16 @@ export default function VisualizationMenu(p: KindProps) {
               <DataPopup
                 initial={toDataItems(dataList)}
                 onCancel={closeModal}
-                // --- UPDATE THIS HANDLER ---
                 onSave={(
                   items: DataItem[],
                   renames: Record<string, string>
                 ) => {
                   p.onChange({
                     data: items,
-                    // Pass the rename map as a special property to Editor
                     _dataRenames: renames,
                   } as any);
                   closeModal();
                 }}
-                // ---------------------------
               />
             ),
           })
@@ -138,18 +133,30 @@ export default function VisualizationMenu(p: KindProps) {
 
       <ListSection
         title="Interaction list"
-        items={interactionLabels}
+        items={interactionItems} // Pass the object list here
         onAdd={() => {
+          // "Add" opens the popup to create a new interaction (no ID passed)
           window.dispatchEvent(
             new CustomEvent('designer:open-interactions', {
               detail: { nodeId: p.node.id },
             })
           );
         }}
-        //onAdd={() => {}}
+        // --- CHANGED: Clicking an item selects the edge on the canvas ---
+        onItemClick={(i) => {
+          const ix = interactions[i];
+          if (ix) {
+            window.dispatchEvent(
+              new CustomEvent('designer:select-interaction', {
+                detail: { interactionId: ix.id },
+              })
+            );
+          }
+        }}
         addTooltip="Add interaction"
         disabled={disabled}
       />
+
       <ListSection
         title="Tooltips"
         items={tooltips}

@@ -1,5 +1,11 @@
 import type { KindProps } from './common';
-import { NameField, TypeField, ListSection, SectionTitle } from './sections';
+import {
+  NameField,
+  TypeField,
+  ListSection,
+  SectionTitle,
+  type ListItem, // Import ListItem
+} from './sections';
 import type { DataItem, Interaction } from '../../domain/types';
 
 import { useModal } from '../ui/ModalHost';
@@ -20,16 +26,15 @@ export default function FilterMenu(p: KindProps) {
         )
       : [];
 
-  // store is Interaction[], ListSection wants strings -> format them
   const interactions: Interaction[] = Array.isArray(d.interactions)
     ? (d.interactions as Interaction[])
     : [];
-  const interactionLabels: string[] = interactions.map((ix) => {
-    const tgtCount = Array.isArray(ix.targets) ? ix.targets.length : 0;
-    return `${ix.name} · ${ix.trigger}/${ix.result} · ${tgtCount} target${
-      tgtCount === 1 ? '' : 's'
-    }`;
-  });
+
+  // --- CHANGED: Map to objects with { name, badge } ---
+  const interactionItems: ListItem[] = interactions.map((ix) => ({
+    name: ix.name,
+    badge: ix.result,
+  }));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -62,7 +67,6 @@ export default function FilterMenu(p: KindProps) {
                 initial={toDataItems(dataList)}
                 onCancel={closeModal}
                 onSave={(items: DataItem[]) => {
-                  // If you’re standardizing on DataItem[], keep as-is:
                   p.onChange({ data: items } as any);
                   closeModal();
                 }}
@@ -77,7 +81,7 @@ export default function FilterMenu(p: KindProps) {
       {/* Interaction list */}
       <ListSection
         title="Interaction list"
-        items={interactionLabels}
+        items={interactionItems} // Use mapped items
         onAdd={() => {
           window.dispatchEvent(
             new CustomEvent('designer:open-interactions', {
@@ -85,7 +89,17 @@ export default function FilterMenu(p: KindProps) {
             })
           );
         }}
-        //onAdd={() => {}}
+        // --- CHANGED: Add click handler ---
+        onItemClick={(i) => {
+          const ix = interactions[i];
+          if (ix) {
+            window.dispatchEvent(
+              new CustomEvent('designer:select-interaction', {
+                detail: { interactionId: ix.id },
+              })
+            );
+          }
+        }}
         addTooltip="Add interaction"
         disabled={disabled}
       />
