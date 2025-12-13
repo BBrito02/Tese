@@ -26,13 +26,14 @@ const MIN_SIZE: Record<string, { w: number; h: number }> = {
   Legend: { w: 170, h: 75 },
   Button: { w: 140, h: 75 },
   Filter: { w: 170, h: 75 },
-  Parameter: { w: 170, h: 75 },
+  Parameter: { w: 170, h: 75 }, // User wants this compact size
   DataAction: { w: 140, h: 75 },
   Placeholder: { w: 130, h: 40 },
   Graph: { w: 60, h: 40 },
 };
 
 export type BaseNodeShellProps = NodeProps<NodeData> & {
+  // renderables
   body?: React.ReactNode;
   footerItems?: (string | DataItem)[];
   visualVars?: VisualVariable[];
@@ -43,23 +44,27 @@ export type BaseNodeShellProps = NodeProps<NodeData> & {
   reviewCount?: number;
   reviewUnresolvedCount?: number;
 
+  // style overrides
   cardStyle?: React.CSSProperties;
   headerStyle?: React.CSSProperties;
   bodyStyle?: React.CSSProperties;
   footerStyle?: React.CSSProperties;
 
+  // layout toggles
   hideHeader?: boolean;
   hideFooter?: boolean;
   isParameter?: boolean;
   leftHandle?: boolean;
   rightHandle?: boolean;
 
-  highlightBorder?: boolean;
-  borderWidth?: number;
+  // border/highlight behavior
+  highlightBorder?: boolean; // default true
+  borderWidth?: number; // default 2
 
   overlayTopRight?: React.ReactNode;
 };
 
+// helper to remove border-related props to avoid mixing shorthand/longhand
 function stripBorderStyles(
   s?: React.CSSProperties
 ): React.CSSProperties | undefined {
@@ -128,9 +133,12 @@ function DataPills({
             <button
               title={title}
               className="nodrag"
+              // Removed stopPropagation so clicks can also select the node if desired
               onClick={(e) => {
-                e.stopPropagation();
-                if (onClick) onClick(i);
+                if (onClick) {
+                  e.stopPropagation();
+                  onClick(i);
+                }
               }}
               style={{
                 padding: '6px 10px',
@@ -151,7 +159,6 @@ function DataPills({
               {label}
             </button>
 
-            {/* Ports */}
             <Handle
               id={`${handleId}:target`}
               type="target"
@@ -168,6 +175,7 @@ function DataPills({
                 background: '#111',
               }}
             />
+
             <Handle
               id={`${handleId}:click`}
               type="source"
@@ -281,11 +289,13 @@ export default function BaseNodeShell({
   const cardStyleClean = stripBorderStyles(cardStyle) || {};
 
   const handlePillClick = (index: number) => {
-    window.dispatchEvent(
-      new CustomEvent('designer:edit-data', {
-        detail: { nodeId: id, index },
-      })
-    );
+    setTimeout(() => {
+      window.dispatchEvent(
+        new CustomEvent('designer:edit-data', {
+          detail: { nodeId: id, index },
+        })
+      );
+    }, 100);
   };
 
   return (
@@ -317,6 +327,7 @@ export default function BaseNodeShell({
           position: 'absolute',
           inset: 0,
           display: 'grid',
+          // Header height auto, body takes remaining space
           gridTemplateRows: hideHeader ? '1fr' : 'auto minmax(0, 1fr) auto',
           minHeight: 0,
           borderRadius: 12,
@@ -325,7 +336,8 @@ export default function BaseNodeShell({
           borderStyle: 'solid',
           borderColor,
           boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-          overflow: 'hidden',
+          // Allow overflow for dropdowns in parameters
+          overflow: isParameter ? 'visible' : 'hidden',
           boxSizing: 'border-box',
           ...cardStyleClean,
         }}
@@ -333,10 +345,10 @@ export default function BaseNodeShell({
         {!hideHeader && (
           <div
             style={{
-              padding: 10,
+              padding: isParameter ? '6px 8px' : 10, // Compact header padding for parameters
               display: 'flex',
-              alignItems: 'center',
-              gap: 8,
+              alignItems: 'flex-start', // Align items to top to handle multi-line title
+              gap: 6,
               position: 'relative',
               ...headerStyle,
             }}
@@ -355,22 +367,46 @@ export default function BaseNodeShell({
                   fontWeight: 800,
                   fontSize: 11,
                   lineHeight: '18px',
+                  flexShrink: 0, // Never shrink the badge
                 }}
                 title={data.badge}
               >
                 {data.badge}
               </span>
             )}
-            <div>
-              <div style={{ fontWeight: 700 }}>{data.title}</div>
+
+            {/* Title Container: Allows shrinking and wrapping */}
+            <div
+              style={{
+                flex: 1,
+                minWidth: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                minHeight: 22,
+              }}
+            >
+              <div
+                style={{
+                  fontWeight: 700,
+                  fontSize: isParameter ? 12 : 14,
+                  lineHeight: '1.2',
+                  whiteSpace: 'normal', // Allow text wrapping
+                  wordBreak: 'break-word', // Break long words if needed
+                }}
+              >
+                {data.title}
+              </div>
             </div>
 
+            {/* Right Controls: Force visibility */}
             <div
               style={{
                 marginLeft: 'auto',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 6,
+                gap: 4,
+                flexShrink: 0, // Prevent these from being cropped/squashed
               }}
             >
               {Array.isArray(visualVars) &&
@@ -379,6 +415,8 @@ export default function BaseNodeShell({
                     key={`${vv}-${i}`}
                     className="nodrag nopan"
                     title={`${vv} — click to manage`}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
                     onClick={(e) => {
                       e.stopPropagation();
                       window.dispatchEvent(
@@ -388,8 +426,8 @@ export default function BaseNodeShell({
                       );
                     }}
                     style={{
-                      width: 24,
-                      height: 24,
+                      width: 20, // Slightly smaller icons
+                      height: 20,
                       padding: 0,
                       borderRadius: 6,
                       display: 'inline-flex',
@@ -407,26 +445,24 @@ export default function BaseNodeShell({
                       src={VISUAL_VAR_ICONS[vv]}
                       alt=""
                       draggable={false}
-                      style={{ width: 16, height: 16, objectFit: 'contain' }}
+                      style={{ width: 14, height: 14, objectFit: 'contain' }}
                     />
                   </button>
                 ))}
 
               {tooltipCount > 0 && (
                 <span
-                  title={`${tooltipCount} tooltip${
-                    tooltipCount === 1 ? '' : 's'
-                  }`}
+                  title={`${tooltipCount} tooltips`}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    height: 22,
-                    minWidth: 22,
-                    padding: '0 6px',
+                    height: 20,
+                    minWidth: 20,
+                    padding: '0 4px',
                     borderRadius: 999,
                     fontWeight: 800,
-                    fontSize: 11,
+                    fontSize: 10,
                     background: '#e2e8f0',
                     color: '#0f172a',
                     borderWidth: 1,
@@ -445,12 +481,12 @@ export default function BaseNodeShell({
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    height: 22,
-                    minWidth: 22,
-                    padding: '0 6px',
+                    height: 20,
+                    minWidth: 20,
+                    padding: '0 4px',
                     borderRadius: 999,
                     fontWeight: 800,
-                    fontSize: 11,
+                    fontSize: 10,
                     background: '#e2e8f0',
                     color: '#0f172a',
                     borderWidth: 1,
@@ -482,9 +518,9 @@ export default function BaseNodeShell({
           style={{
             minHeight: 0,
             display: 'flex',
-            alignItems: isParameter ? 'center' : 'stretch',
+            alignItems: isParameter ? 'flex-start' : 'stretch', // Align top for inputs
             justifyContent: 'center',
-            padding: 10,
+            padding: isParameter ? '0 8px 8px 8px' : 10, // Tighter padding for parameters
             ...bodyStyle,
           }}
         >
