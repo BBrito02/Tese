@@ -1,15 +1,13 @@
-// src/components/menus/sections.tsx
 import React, { useState, type ElementType } from 'react';
 import { LuPlus, LuPencil, LuTag } from 'react-icons/lu';
 import type { DataItem } from '../../domain/types';
 import { WhiteField, GhostLine } from './common';
 
-// --- CHANGED: Unified ListItem type to support objects with badges ---
+// --- CHANGED: Unified ListItem type ---
 export interface StyledListItem {
   name: string;
-  badge?: string; // renders in the pill like a Data Type
+  badge?: string;
 }
-
 export type ListItem = string | DataItem | StyledListItem;
 
 interface TypeFieldProps {
@@ -18,7 +16,6 @@ interface TypeFieldProps {
   icon?: ElementType;
 }
 
-// Badge style (Used for Data Types and Interaction Results)
 const dtypeBadge: React.CSSProperties = {
   marginLeft: 6,
   padding: '2px 6px',
@@ -59,7 +56,6 @@ const headerRow: React.CSSProperties = {
   justifyContent: 'space-between',
 };
 
-// Tooltip specific styles
 const tooltipPill: React.CSSProperties = {
   fontSize: 12,
   padding: '4px 8px',
@@ -110,7 +106,6 @@ export function SectionTitle({ children }: { children: string }) {
   );
 }
 
-// --- UPDATED: Chips component ---
 export function Chips({
   items,
   onRemove,
@@ -135,17 +130,12 @@ export function Chips({
       {items.map((it, i) => {
         const isClickable = !!onItemClick && !disabled;
         const clickProps = isClickable
-          ? {
-              onClick: () => onItemClick(i),
-              style: { cursor: 'pointer' },
-            }
+          ? { onClick: () => onItemClick(i), style: { cursor: 'pointer' } }
           : { style: { cursor: 'default' } };
 
-        // 1. Handle Objects (Data Items OR Interactions)
+        // 1. Objects (DataItem or StyledListItem)
         if (typeof it !== 'string') {
           const label = it.name;
-          // Use 'dtype' for DataItem or 'badge' for StyledListItem
-          // This ensures interactions render the badge exactly like data types
           const badgeText =
             'dtype' in it ? it.dtype : (it as StyledListItem).badge;
 
@@ -193,7 +183,7 @@ export function Chips({
           );
         }
 
-        // 2. Handle Tooltip Strings
+        // 2. Tooltips
         const parsed = parseTooltip(it);
         if (parsed) {
           return (
@@ -203,10 +193,11 @@ export function Chips({
               style={{ ...tooltipPill, ...clickProps.style }}
               title={parsed.title}
             >
-              <span style={tooltipBadge}>{parsed.badge}</span>
+              {/* --- CHANGED: Title first, then Badge --- */}
               <span style={{ fontWeight: 600, color: '#000000ff' }}>
                 {parsed.title}
               </span>
+              <span style={tooltipBadge}>{parsed.badge}</span>
               {onRemove && (
                 <button
                   type="button"
@@ -233,7 +224,7 @@ export function Chips({
           );
         }
 
-        // 3. Handle Plain Strings
+        // 3. Plain Strings
         return (
           <span
             key={`str-${it}-${i}`}
@@ -389,7 +380,6 @@ export function SubTypeField(props: { value: string }) {
   );
 }
 
-// --- UPDATED: ListSection passes onItemClick to Chips ---
 export function ListSection(props: {
   title: string;
   items: ListItem[];

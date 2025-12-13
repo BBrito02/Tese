@@ -140,7 +140,6 @@ const PANEL_ANIM_MS = 200;
 const COLLAPSED_W = 28;
 const EXTRA_COLLAPSED_GAP = 18;
 
-// Handy aliases
 type AppNode = RFNode<NodeData>;
 type AppEdge = RFEdge<any>;
 const baseFrom = (name: string) => name.replace(/\.[^.]+$/, '');
@@ -184,7 +183,6 @@ export default function Editor() {
     setEdges
   );
 
-  // UI state
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
@@ -199,14 +197,12 @@ export default function Editor() {
   const { openModal, closeModal } = useModal();
   const [isConnecting, setIsConnecting] = useState(false);
 
-  // --- 1. Custom Hooks: Layout ---
   const { applyConstraints, handleLayoutReflow, syncParentGraphTypes } =
     useLayoutConstraints(
       setNodes as React.Dispatch<React.SetStateAction<AppNode[]>>,
       takeSnapshot
     );
 
-  // --- Logic: Prune Logic (Perspectives Aware) ---
   const pruneAfterRemoval = useCallback(
     (initialIds: string[]) => {
       takeSnapshot();
@@ -214,7 +210,6 @@ export default function Editor() {
         const all = nds as AppNode[];
         const base = new Set<string>(initialIds);
 
-        // 1. If Visualization deleted, delete Tooltips
         for (const id of Array.from(base)) {
           const n = all.find((x) => x.id === id);
           if (n?.data?.kind === 'Visualization') {
@@ -229,10 +224,8 @@ export default function Editor() {
           }
         }
 
-        // 2. Collect descendants
         const toDelete = collectDescendants(all, base);
 
-        // --- Perspective Visibility Failover Prep ---
         const deletedActiveNodes = new Map<string, { x: number; y: number }>();
         all.forEach((n) => {
           if (toDelete.has(n.id) && !n.hidden && n.data?.perspectives?.length) {
@@ -246,7 +239,6 @@ export default function Editor() {
           }
         });
 
-        // 3. Track tooltip labels to remove
         const labelsByViz = new Map<string, Set<string>>();
         for (const tip of all) {
           if (!toDelete.has(tip.id)) continue;
@@ -264,10 +256,8 @@ export default function Editor() {
           labelsByViz.get(attachedTo)!.add(label);
         }
 
-        // 4. Filter nodes
         let kept = all.filter((n) => !toDelete.has(n.id));
 
-        // --- Clean perspective lists in remaining nodes ---
         kept = kept.map((n) => {
           if (n.data?.perspectives) {
             const newPerspectives = n.data.perspectives.filter(
@@ -283,7 +273,6 @@ export default function Editor() {
           return n;
         });
 
-        // --- Ensure at least one perspective is visible per group ---
         const groups = new Map<string, AppNode[]>();
         kept.forEach((n) => {
           if (n.data?.perspectives?.length) {
@@ -296,11 +285,9 @@ export default function Editor() {
         groups.forEach((groupNodes, key) => {
           const anyVisible = groupNodes.some((n) => !n.hidden);
           if (!anyVisible && groupNodes.length > 0) {
-            // Failover candidate
             const candidate = groupNodes[groupNodes.length - 1];
             const newPos = deletedActiveNodes.get(key) ?? candidate.position;
 
-            // Unhide candidate AND its subtree
             const survivorSubtree = collectDescendants(
               kept,
               new Set([candidate.id])
@@ -321,7 +308,6 @@ export default function Editor() {
           }
         });
 
-        // 5. Prune labels inside Visualizations
         kept = kept.map((n) => {
           if (n.data?.kind !== 'Visualization') return n;
           const pruneSet = labelsByViz.get(n.id);
@@ -337,7 +323,6 @@ export default function Editor() {
           } as AppNode;
         });
 
-        // 6. Remove Interactions
         kept = kept.map((n) => {
           const d = n.data as any;
           if (!d?.interactions) return n;
@@ -361,19 +346,16 @@ export default function Editor() {
           return { ...n, data: { ...d, interactions: cleaned } } as AppNode;
         });
 
-        // 7. Edge cleanup
         setEdges((eds) =>
           eds.filter((e) => !toDelete.has(e.source) && !toDelete.has(e.target))
         );
 
-        // 9. Sync graph types
         return syncParentGraphTypes(kept) as AppNode[];
       });
     },
     [setNodes, setEdges, takeSnapshot, syncParentGraphTypes]
   );
 
-  // --- Logic: Perspective Handlers ---
   const handleCreatePerspective = useCallback(
     (sourceId: string) => {
       takeSnapshot();
@@ -439,7 +421,6 @@ export default function Editor() {
         return [...updatedNodes, newNode];
       });
 
-      // Duplicate incoming edges and fix handle IDs
       setEdges((eds) => {
         const newEdges: AppEdge[] = [];
         eds.forEach((e) => {
@@ -506,25 +487,21 @@ export default function Editor() {
     [setNodes, setSelectedId]
   );
 
-  // --- Logic: Update Logic (Fixed for Renaming) ---
   const updateNodeById = useCallback(
     async (id: string, patch: Partial<NodeData>) => {
       takeSnapshot();
       const patchAny = patch as any;
 
-      // 1. Capture Renames (Important: do this before deleting the property)
       const renames = patchAny._dataRenames as
         | Record<string, string>
         | undefined;
 
-      // 2. Handle Data Attribute Renames (Update Edges)
       if (renames) {
         const toHandle = (name: string) => `data:${slug(name)}`;
 
         setEdges((eds) =>
           eds.map((e) => {
             let next = e;
-            // Update Source Handle
             if (e.source === id && e.sourceHandle) {
               for (const [oldName, newName] of Object.entries(renames)) {
                 const oldPrefix = toHandle(oldName);
@@ -539,7 +516,6 @@ export default function Editor() {
                 }
               }
             }
-            // Update Target Handle
             if (e.target === id && e.targetHandle) {
               for (const [oldName, newName] of Object.entries(renames)) {
                 const oldPrefix = toHandle(oldName);
@@ -560,7 +536,6 @@ export default function Editor() {
         delete patchAny._dataRenames;
       }
 
-      // 3. Detect Data Removal
       if (patchAny.data && Array.isArray(patchAny.data)) {
         const node = nodes.find((n) => n.id === id);
         const rawOld = (node?.data as any)?.data;
@@ -575,10 +550,8 @@ export default function Editor() {
           (i: any) => !newNamesSet.has(toName(i))
         );
 
-        // --- FILTER: Exclude Renamed Items ---
         const realRemovedItems = removedItems.filter((i) => {
           const n = toName(i);
-          // If present in renames map, it wasn't removed, just renamed
           return !renames || !renames[n];
         });
 
@@ -703,17 +676,59 @@ export default function Editor() {
         }
       }
 
-      setNodes(
-        (nds) =>
-          nds.map((n) =>
-            n.id === id ? { ...n, data: { ...n.data, ...patch } } : n
-          ) as AppNode[]
-      );
+      setNodes((nds) => {
+        // Find the node being updated to check for side effects
+        const target = nds.find((n) => n.id === id);
+        if (!target) return nds;
+
+        // --- NEW: Tooltip Side Effect Calculation ---
+        let parentUpdate: {
+          id: string;
+          oldLabel: string;
+          newLabel: string;
+        } | null = null;
+        if (
+          target.data.kind === 'Tooltip' &&
+          (patchAny.title !== undefined || patchAny.badge !== undefined)
+        ) {
+          const attachedTo = (target.data as any).attachedTo;
+          if (attachedTo) {
+            const oldBadge = (target.data as any).badge ?? '';
+            const oldTitle = target.data.title ?? '';
+            const oldLabel = `${oldBadge ? oldBadge + ' ' : ''}${oldTitle}`;
+
+            const newBadge = patchAny.badge ?? oldBadge;
+            const newTitle = patchAny.title ?? oldTitle;
+            const newLabel = `${newBadge ? newBadge + ' ' : ''}${newTitle}`;
+
+            if (oldLabel !== newLabel) {
+              parentUpdate = { id: attachedTo, oldLabel, newLabel };
+            }
+          }
+        }
+
+        return nds.map((n) => {
+          // Apply update to target
+          if (n.id === id) {
+            return { ...n, data: { ...n.data, ...patch } };
+          }
+
+          // Apply side effect to parent
+          if (parentUpdate && n.id === parentUpdate.id) {
+            const currentTooltips = (n.data as any).tooltips || [];
+            const nextTooltips = currentTooltips.map((t: string) =>
+              t === parentUpdate!.oldLabel ? parentUpdate!.newLabel : t
+            );
+            return { ...n, data: { ...n.data, tooltips: nextTooltips } };
+          }
+
+          return n;
+        }) as AppNode[];
+      });
     },
     [nodes, edges, rf, setNodes, takeSnapshot]
   );
 
-  // Helper to create a child node
   const createChildInParent = useCallback(
     (parentId: string, payload: any) => {
       takeSnapshot();
@@ -732,7 +747,6 @@ export default function Editor() {
 
         let x: number, y: number;
 
-        // Use precise position if provided, else grid
         if (payload.position) {
           x = payload.position.x - size.width / 2;
           y = payload.position.y - size.height / 2;
@@ -774,7 +788,6 @@ export default function Editor() {
     [setNodes, takeSnapshot, applyConstraints]
   );
 
-  // --- 2. Custom Hooks: Drag ---
   const [modal, setModal] = useState<{
     type: 'add-component';
     nodeId: string;
@@ -805,11 +818,10 @@ export default function Editor() {
       })
   );
 
-  // --- 3. Custom Hooks: Global Events ---
   useGlobalEvents({
     nodes: nodes as AppNode[],
     setNodes: setNodes as any,
-    edges: edges as AppEdge[], // <--- UPDATED: Passed edges here
+    edges: edges as AppEdge[],
     setEdges,
     setSelectedId,
     setSelectedEdgeId,
@@ -822,7 +834,6 @@ export default function Editor() {
     createChildInParent,
   });
 
-  // --- 4. Load/Save Logic ---
   const buildSave = useCallback((): SaveFile => {
     const vp = (rf && (rf as any).getViewport?.()) || { x: 0, y: 0, zoom: 1 };
     const allReviews = Object.values(reviewsByTarget).flat();
@@ -840,7 +851,6 @@ export default function Editor() {
         },
         ...(n.parentNode ? { parentNode: n.parentNode } : {}),
         ...(n.extent === 'parent' ? { extent: 'parent' as const } : {}),
-        // --- ADDED: Persist hidden state ---
         hidden: n.hidden,
       };
     });
@@ -868,14 +878,9 @@ export default function Editor() {
           style: { width: n.style?.width, height: n.style?.height },
           parentNode: n.parentNode as any,
           extent: n.extent as any,
-          // Restore hidden state
           hidden: (n as any).hidden,
         };
       });
-
-      // --- Fix Perspective Visibility (Legacy/Broken State) ---
-      // If loading a file where multiple perspectives are visible (e.g. from before hidden was saved),
-      // we must enforce only one visible per group.
 
       const groups = new Map<string, string[]>();
       restored.forEach((n) => {
@@ -893,18 +898,16 @@ export default function Editor() {
         const visibleNodes = groupNodes.filter((n) => !n.hidden);
 
         if (visibleNodes.length === 0) {
-          // If all hidden, show the first one
           const winner = groupNodes[0];
           if (winner) winner.hidden = false;
         } else if (visibleNodes.length > 1) {
-          // If multiple visible, pick first and hide others
+          const winner = visibleNodes[0];
           visibleNodes.slice(1).forEach((loser) => {
             rootsToHide.add(loser.id);
           });
         }
       });
 
-      // Cascading Hide
       if (rootsToHide.size > 0) {
         const allHidden = collectDescendants(restored, rootsToHide);
         restored = restored.map((n) => {
@@ -950,13 +953,11 @@ export default function Editor() {
     });
   }, [buildSave, openModal, closeModal, saveNameBase]);
 
-  // Derived state
   const selectedEdge = useMemo(
     () => edges.find((e) => e.id === selectedEdgeId) ?? null,
     [edges, selectedEdgeId]
   );
 
-  // Handlers
   const onConnect = useCallback(
     (c: Connection) => {
       setIsConnecting(false);
@@ -1001,7 +1002,6 @@ export default function Editor() {
     setSelectedId(fallbackId);
   }, [selectedId, nodes, pruneAfterRemoval]);
 
-  // Modal Wiring
   useEffect(() => {
     if (modal?.type !== 'add-component') return;
     const { nodeId, presetKind, position } = modal;
@@ -1026,7 +1026,6 @@ export default function Editor() {
     });
   }, [modal, createChildInParent, openModal, closeModal]);
 
-  // --- NEW: Global Listener for Data Edit ---
   useEffect(() => {
     const onEditData = (e: Event) => {
       const { nodeId, index } = (e as CustomEvent).detail;
@@ -1046,7 +1045,7 @@ export default function Editor() {
         node: (
           <DataPopup
             initial={toDataItems(rawData)}
-            initialSelectedIndex={index} // Select the item directly
+            initialSelectedIndex={index}
             onCancel={closeModal}
             onSave={(items, renames) => {
               updateNodeById(nodeId, {
@@ -1064,7 +1063,6 @@ export default function Editor() {
     return () => window.removeEventListener('designer:edit-data', onEditData);
   }, [nodes, openModal, closeModal, updateNodeById]);
 
-  // Menu Animation
   useEffect(() => {
     const onWidth = (e: Event) =>
       setMenuWidth((e as CustomEvent).detail?.width ?? PANEL_WIDTH);
@@ -1076,7 +1074,6 @@ export default function Editor() {
       );
   }, []);
 
-  // Track last selected
   const lastSelectedIdRef = useRef<string | null>(null);
   useEffect(() => {
     let t: number | undefined;
@@ -1100,7 +1097,6 @@ export default function Editor() {
       )
     : 0;
 
-  // Tooltip Visibility logic
   useEffect(() => {
     setNodes((nds) => {
       const next = nds.map((n) => ({ ...n }));
@@ -1118,7 +1114,6 @@ export default function Editor() {
         }
       }
 
-      // Group tooltips by perspective set
       const groups = new Map<string, AppNode[]>();
       const rawVisibility = new Set<string>();
 
@@ -1133,7 +1128,7 @@ export default function Editor() {
 
         const attachedTo = (tip.data as any)?.attachedTo as string | undefined;
 
-        // --- CHANGED: Always consider standalone tooltips visible ---
+        // --- CHANGED: Standalone tooltips are always candidates for visibility ---
         if (!attachedTo) {
           rawVisibility.add(tip.id);
           continue;
@@ -1160,7 +1155,6 @@ export default function Editor() {
         }
       }
 
-      // Resolve conflicts: Only 1 perspective visible per group
       groups.forEach((groupNodes) => {
         const candidates = groupNodes.filter((n) => rawVisibility.has(n.id));
 
@@ -1171,7 +1165,6 @@ export default function Editor() {
           return;
         }
 
-        // Pick best: Selected > Edge Target > Already Visible > Last
         let best = candidates[candidates.length - 1];
 
         const directlySelected = candidates.find((n) => n.id === selectedId);

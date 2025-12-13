@@ -86,13 +86,63 @@ export function useGlobalEvents({
   updateNodeById,
   createChildInParent,
 }: UseGlobalEventsProps) {
+  // --- NEW: Select Tooltip Listener ---
+  useEffect(() => {
+    const onSelectTooltip = (e: Event) => {
+      const { parentId, label } = (e as CustomEvent).detail || {};
+      if (!parentId || !label) return;
+
+      // Find the node that matches the criteria
+      const target = nodes.find((n) => {
+        if (n.data?.kind !== 'Tooltip') return false;
+        const d = n.data as any;
+        if (d.attachedTo !== parentId) return false;
+
+        // Reconstruct label to compare: "Badge Title"
+        const l = `${d.badge ? d.badge + ' ' : ''}${d.title || ''}`;
+        return l === label;
+      });
+
+      if (target) {
+        console.log('[Editor] selecting tooltip node:', target.id);
+
+        // 1. Explicitly select the target node and deselect others
+        // This ensures React Flow knows about the selection change immediately
+        setNodes((nds) =>
+          nds.map((n) => ({
+            ...n,
+            selected: n.id === target.id,
+          }))
+        );
+
+        // 2. Deselect any edges
+        setEdges((eds) => eds.map((e) => ({ ...e, selected: false })));
+
+        // 3. Update global selection state
+        setSelectedEdgeId(null);
+        setSelectedId(target.id);
+      } else {
+        console.warn('No tooltip found for label:', label);
+      }
+    };
+
+    window.addEventListener(
+      'designer:select-tooltip',
+      onSelectTooltip as EventListener
+    );
+    return () =>
+      window.removeEventListener(
+        'designer:select-tooltip',
+        onSelectTooltip as EventListener
+      );
+  }, [nodes, setNodes, setEdges, setSelectedId, setSelectedEdgeId]);
+
   // --- NEW: Select Interaction Edge Listener ---
   useEffect(() => {
     const onSelectInteraction = (e: Event) => {
       const { interactionId } = (e as CustomEvent).detail || {};
       if (!interactionId) return;
 
-      // Find the first edge associated with this interaction
       const targetEdge = edges.find(
         (e) => e.data?.interactionId === interactionId
       );
@@ -100,12 +150,12 @@ export function useGlobalEvents({
       if (targetEdge) {
         console.log('[Editor] selecting interaction edge:', targetEdge.id);
 
-        // 1. Deselect all nodes to prevent React Flow from reverting selection
+        // 1. Deselect all nodes
         setNodes((nds) =>
           nds.map((n) => (n.selected ? { ...n, selected: false } : n))
         );
 
-        // 2. Select the specific edge and deselect others
+        // 2. Select the specific edge
         setEdges((eds) =>
           eds.map((e) => ({
             ...e,
@@ -113,7 +163,7 @@ export function useGlobalEvents({
           }))
         );
 
-        // 3. Update the Editor state
+        // 3. Update global selection state
         setSelectedId(null);
         setSelectedEdgeId(targetEdge.id);
       } else {
@@ -132,12 +182,11 @@ export function useGlobalEvents({
       );
   }, [edges, setNodes, setEdges, setSelectedId, setSelectedEdgeId]);
 
-  // 1. EDGE SELECTION (Direct click on canvas edge)
+  // 1. EDGE SELECTION
   useEffect(() => {
     const onSelectEdge = (e: Event) => {
       const { edgeId } = (e as CustomEvent).detail || {};
       if (!edgeId) return;
-
       console.log('[Editor] edge selected', { edgeId });
       setSelectedId(null);
       setSelectedEdgeId(edgeId);
@@ -153,7 +202,7 @@ export function useGlobalEvents({
       );
   }, [setSelectedId, setSelectedEdgeId]);
 
-  // 2. VISUAL VARIABLES (Syncing)
+  // 2. VISUAL VARIABLES
   useEffect(() => {
     function onEnsureVV(e: Event) {
       const { parentId, vars } = (
@@ -166,10 +215,8 @@ export function useGlobalEvents({
           const cur = Array.isArray((n.data as any).visualVars)
             ? (n.data as any).visualVars
             : [];
-          // Merge unique variables
           const next = Array.from(new Set([...(cur ?? []), ...(vars ?? [])]));
-
-          if (next.length === cur.length) return n; // Simple check, could be more robust
+          if (next.length === cur.length) return n;
           return { ...n, data: { ...(n.data as any), visualVars: next } };
         })
       );
@@ -221,7 +268,7 @@ export function useGlobalEvents({
       );
   }, [nodes, openModal, closeModal]);
 
-  // 4. PATCH NODE DATA (Generic Update)
+  // 4. PATCH NODE DATA
   useEffect(() => {
     function onPatchNodeData(
       e: CustomEvent<{ nodeId: string; patch: Partial<NodeData> }>
@@ -230,14 +277,13 @@ export function useGlobalEvents({
       if (!nodeId || !patch) return;
       updateNodeById(nodeId, patch);
     }
-    // Cast to EventListener to satisfy TS
     const handler = onPatchNodeData as unknown as EventListener;
     window.addEventListener('designer:patch-node-data', handler);
     return () =>
       window.removeEventListener('designer:patch-node-data', handler);
   }, [updateNodeById]);
 
-  // 5. ADD COMPONENT (Programmatic)
+  // 5. ADD COMPONENT
   useEffect(() => {
     function onAddComponent(
       e: CustomEvent<{ parentId: string; payload: any }>
@@ -251,7 +297,7 @@ export function useGlobalEvents({
     return () => window.removeEventListener('designer:add-component', handler);
   }, [createChildInParent]);
 
-  // 6. ADD GRAPHS (Batch)
+  // 6. ADD GRAPHS
   useEffect(() => {
     function onAddGraphs(e: Event) {
       const { parentId, graphTypes } =
@@ -321,7 +367,7 @@ export function useGlobalEvents({
       );
   }, [setNodes, takeSnapshot, applyConstraints]);
 
-  // 7. EDIT GRAPHS (Replace)
+  // 7. EDIT GRAPHS
   useEffect(() => {
     function onEditGraphs(e: Event) {
       const { parentId, graphTypes } =
@@ -405,7 +451,7 @@ export function useGlobalEvents({
       );
   }, [setNodes, takeSnapshot, applyConstraints]);
 
-  // 8. SET GRAPH TYPE (Single)
+  // 8. SET GRAPH TYPE
   useEffect(() => {
     function onSetGraphType(e: Event) {
       const { nodeId, graphType } =
@@ -604,7 +650,7 @@ export function useGlobalEvents({
                         ...(sourceType === 'data' && sourceDataRef
                           ? { sourceDataRef }
                           : {}),
-                        interactionId, // Storing ID for selection later
+                        interactionId,
                         targetId: tid,
                         targetType: detail.targetType,
                         ...(detail.targetDataRef

@@ -18,7 +18,6 @@ export default function VisualizationMenu(p: KindProps) {
   const disabled = p.disabled;
   const { openModal, closeModal } = useModal();
 
-  // Helper to normalize data items
   const toDataItems = (list?: (string | DataItem)[]): DataItem[] =>
     Array.isArray(list)
       ? list.map((v) =>
@@ -30,7 +29,7 @@ export default function VisualizationMenu(p: KindProps) {
     ? (d.interactions as Interaction[])
     : [];
 
-  // Map interactions to objects with { name, badge } for styling
+  // Map interactions to { name, badge } for chip styling
   const interactionItems: ListItem[] = interactions.map((ix) => ({
     name: ix.name,
     badge: ix.result,
@@ -127,7 +126,6 @@ export default function VisualizationMenu(p: KindProps) {
             ),
           })
         }
-        // --- ADDED: Click handler to edit specific data item ---
         onItemClick={(index) => {
           openModal({
             title: 'Data fields',
@@ -185,6 +183,15 @@ export default function VisualizationMenu(p: KindProps) {
           window.dispatchEvent(
             new CustomEvent('designer:open-tooltips', {
               detail: { nodeId: p.node.id },
+            })
+          );
+        }}
+        // --- ADDED: Click handler to select tooltip node ---
+        onItemClick={(i) => {
+          const label = tooltips[i];
+          window.dispatchEvent(
+            new CustomEvent('designer:select-tooltip', {
+              detail: { parentId: p.node.id, label },
             })
           );
         }}
