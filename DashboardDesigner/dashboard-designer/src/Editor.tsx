@@ -898,7 +898,6 @@ export default function Editor() {
           if (winner) winner.hidden = false;
         } else if (visibleNodes.length > 1) {
           // If multiple visible, pick first and hide others
-          const winner = visibleNodes[0];
           visibleNodes.slice(1).forEach((loser) => {
             rootsToHide.add(loser.id);
           });
