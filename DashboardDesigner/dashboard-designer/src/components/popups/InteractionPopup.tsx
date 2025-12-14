@@ -1,12 +1,16 @@
 // src/components/popups/InteractionPopup.tsx
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { InteractionType, InteractionResult } from '../../domain/types';
+import type {
+  InteractionType,
+  InteractionResult,
+  NodeKind,
+} from '../../domain/types';
 
 type SourceType = 'component' | 'data';
 
 type DataAttrOption = {
-  ref: string; // internal ref (slug / name)
-  label: string; // display label
+  ref: string;
+  label: string;
 };
 
 type TargetOption = {
@@ -14,7 +18,7 @@ type TargetOption = {
   title: string;
   kind: string;
   badge?: string;
-  parentId?: string; // NEW: for hierarchy
+  parentId?: string;
   dataAttributes?: DataAttrOption[];
 };
 
@@ -25,24 +29,23 @@ type TargetDetail = {
 };
 
 type Props = {
+  sourceKind: NodeKind;
   initialName?: string;
   initialType?: InteractionType;
   initialResult?: InteractionResult;
   initialTargets?: string[];
   availableTargets: TargetOption[];
-
-  // Data attributes from the SOURCE component
   dataAttributes?: DataAttrOption[];
-
   onCancel: () => void;
   onSave: (payload: {
     name: string;
     trigger: InteractionType;
     result: InteractionResult;
-    targets: string[]; // node ids only (deduped)
+    targets: string[];
     sourceType: SourceType;
     sourceDataRef?: string;
     targetDetails: TargetDetail[];
+    newDashboardName?: string;
   }) => void;
 };
 
@@ -56,13 +59,25 @@ const pill: React.CSSProperties = {
   whiteSpace: 'nowrap',
 };
 
-// Keys used for "data attribute targets"
+const ALLOWED_RESULTS: Partial<Record<NodeKind, InteractionResult[]>> = {
+  Legend: ['highlight', 'filter'],
+  Button: ['dashboard'],
+  Filter: ['filter'],
+  Visualization: ['filter', 'highlight', 'dashboard', 'link'],
+  Graph: ['filter', 'highlight', 'dashboard', 'link'],
+  Tooltip: ['filter', 'highlight', 'dashboard', 'link'],
+  Parameter: ['filter', 'highlight', 'dashboard', 'link'],
+  DataAction: ['filter', 'highlight'],
+  Placeholder: [],
+};
+
 const DATA_DELIM = '::data::';
 const makeDataKey = (targetId: string, ref: string) =>
   `${targetId}${DATA_DELIM}${ref}`;
 const isDataKey = (key: string) => key.includes(DATA_DELIM);
 
 export default function InteractionPopup({
+  sourceKind,
   initialName = '',
   initialType = 'click',
   initialResult = 'filter',
@@ -76,19 +91,32 @@ export default function InteractionPopup({
   const [trigger, setTrigger] = useState<InteractionType>(initialType);
   const [result, setResult] = useState<InteractionResult>(initialResult);
 
-  // Selected entries (can be component ids OR composite data keys)
+  // --- CHANGED: Renamed variable to match usage ---
+  const [newDashName, setNewDashName] = useState('');
+  const isDashboard = result === 'dashboard';
+
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set(initialTargets)
   );
 
-  // ---------- Source selection (component vs data attribute) ----------
-
   const hasSourceDataAttrs = dataAttributes.length > 0;
-
   const [sourceType, setSourceType] = useState<SourceType>('component');
   const [sourceDataRef, setSourceDataRef] = useState<string>(
     dataAttributes[0]?.ref ?? ''
   );
+
+  const allowedResults = useMemo(() => {
+    return (
+      ALLOWED_RESULTS[sourceKind] ??
+      (['filter', 'highlight', 'dashboard', 'link'] as InteractionResult[])
+    );
+  }, [sourceKind]);
+
+  useEffect(() => {
+    if (allowedResults.length > 0 && !allowedResults.includes(result)) {
+      setResult(allowedResults[0]);
+    }
+  }, [allowedResults, result]);
 
   useEffect(() => {
     if (!hasSourceDataAttrs) {
@@ -101,51 +129,39 @@ export default function InteractionPopup({
     }
   }, [hasSourceDataAttrs, dataAttributes, sourceDataRef]);
 
-  // ---------- Build target lookup & hierarchy ----------
-
-  // 1. FILTER: Exclude 'GraphType' from the list of connectable targets
   const validTargets = useMemo(() => {
     return availableTargets.filter((t) => t.kind !== 'Graph');
   }, [availableTargets]);
 
   const targetById = useMemo(() => {
     const m = new Map<string, TargetOption>();
-    // Use validTargets instead of availableTargets
     for (const t of validTargets) m.set(t.id, t);
     return m;
   }, [validTargets]);
 
   const childrenByParent = useMemo(() => {
     const m = new Map<string | null, TargetOption[]>();
-
-    // Use validTargets here as well
     for (const t of validTargets) {
-      // Only nest under parent if that parent is also in the VALID target list;
-      // otherwise treat as root.
       const hasParentInList = t.parentId && targetById.has(t.parentId);
       const parentKey: string | null = hasParentInList ? t.parentId! : null;
-
       const arr = m.get(parentKey) ?? [];
       arr.push(t);
       m.set(parentKey, arr);
     }
-
-    // Sort each level by title
     for (const arr of m.values()) {
       arr.sort((a, b) => a.title.localeCompare(b.title));
     }
-
     return m;
   }, [validTargets, targetById]);
 
   const rootTargets = childrenByParent.get(null) ?? [];
 
+  // --- FIXED: Now uses 'isDashboard' which is correctly defined ---
   const canSave =
     name.trim().length > 0 &&
-    selected.size > 0 &&
+    (isDashboard ? newDashName.trim().length > 0 : selected.size > 0) &&
     (sourceType === 'component' || !!sourceDataRef);
 
-  // Multi-select dropdown state
   const [open, setOpen] = useState(false);
   const ddRef = useRef<HTMLDivElement | null>(null);
 
@@ -176,33 +192,26 @@ export default function InteractionPopup({
 
   const selectedArray = Array.from(selected);
 
-  // Build chip labels for all selections
   const selectedEntries = useMemo(() => {
     const entries: { key: string; label: string }[] = [];
-
     for (const key of selectedArray) {
       if (isDataKey(key)) {
         const [targetId, dataRef] = key.split(DATA_DELIM);
         const t = targetById.get(targetId);
         const attr =
           t?.dataAttributes?.find((a) => a.ref === dataRef) ?? undefined;
-
         const badgePrefix = t?.badge ? t.badge + ' ' : '';
         const title = t?.title ?? targetId;
         const attrLabel = attr?.label ?? dataRef;
-
         entries.push({
           key,
           label: `${badgePrefix}${title} · ${attrLabel}`,
         });
       } else {
         const t = targetById.get(key);
-        // If the target was filtered out (e.g. it was a GraphType selected previously),
-        // handle gracefully or skip. Here we try to show it if it exists in lookup.
         if (t) {
           const badgePrefix = t?.badge ? t.badge + ' ' : '';
           const title = t?.title ?? key;
-
           entries.push({
             key,
             label: `${badgePrefix}${title}`,
@@ -210,22 +219,18 @@ export default function InteractionPopup({
         }
       }
     }
-
     return entries;
   }, [selectedArray, targetById]);
 
-  // Recursive renderer for a component row + its data attributes + its children
   const renderTargetRow = (t: TargetOption, depth: number) => {
     const compChecked = selected.has(t.id);
     const badgePrefix = t.badge ? t.badge + ' ' : '';
     const compLabel = `${badgePrefix}${t.title}`;
     const indent = depth * 18;
-
     const children = childrenByParent.get(t.id) ?? [];
 
     return (
       <div key={t.id} style={{ marginBottom: 2 }}>
-        {/* Component row */}
         <div
           onClick={() => toggleKey(t.id)}
           onKeyDown={(e) => {
@@ -262,8 +267,6 @@ export default function InteractionPopup({
             {compLabel} <span style={{ color: '#6b7280' }}>· {t.kind}</span>
           </div>
         </div>
-
-        {/* Data attributes (if any) */}
         {t.dataAttributes?.length ? (
           <div style={{ marginLeft: indent + 24, marginTop: 2 }}>
             {t.dataAttributes.map((attr) => {
@@ -302,12 +305,7 @@ export default function InteractionPopup({
                       background: checked ? '#06b6d4' : '#fff',
                     }}
                   />
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: '#0f172a',
-                    }}
-                  >
+                  <div style={{ fontSize: 12, color: '#0f172a' }}>
                     {attr.label}
                     <span style={{ color: '#6b7280' }}> · data attribute</span>
                   </div>
@@ -316,8 +314,6 @@ export default function InteractionPopup({
             })}
           </div>
         ) : null}
-
-        {/* Nested child components (graphs, tooltips, etc.) */}
         {children.length > 0 && (
           <div>
             {children.map((child) => renderTargetRow(child, depth + 1))}
@@ -336,7 +332,6 @@ export default function InteractionPopup({
         minWidth: 360,
       }}
     >
-      {/* Name */}
       <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>
           Name
@@ -356,7 +351,6 @@ export default function InteractionPopup({
         />
       </section>
 
-      {/* Trigger */}
       <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>
           Trigger
@@ -388,19 +382,16 @@ export default function InteractionPopup({
         </div>
       </section>
 
-      {/* Source: component vs data attribute */}
       <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>
           Source
         </div>
-
         {!hasSourceDataAttrs && (
           <div style={{ fontSize: 12, color: '#6b7280' }}>
             This component has no data attributes. The source will be the
             component itself.
           </div>
         )}
-
         {hasSourceDataAttrs && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ display: 'flex', gap: 12 }}>
@@ -439,7 +430,6 @@ export default function InteractionPopup({
                 Data attribute
               </label>
             </div>
-
             {sourceType === 'data' && (
               <select
                 value={sourceDataRef}
@@ -463,7 +453,6 @@ export default function InteractionPopup({
         )}
       </section>
 
-      {/* Result */}
       <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>
           Result
@@ -479,109 +468,124 @@ export default function InteractionPopup({
             fontWeight: 700,
           }}
         >
-          <option value="filter">Filtering</option>
-          <option value="highlight">Highlighting</option>
-          <option value="dashboard">Dashboard</option>
-          <option value="link">Link</option>
+          {allowedResults.map((r) => (
+            <option key={r} value={r}>
+              {r.charAt(0).toUpperCase() + r.slice(1)}
+            </option>
+          ))}
         </select>
       </section>
 
-      {/* Affected (hierarchical) */}
-      <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>
-          Affected
-        </div>
-
-        <div ref={ddRef} style={{ position: 'relative' }}>
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
+      {/* --- CHANGED: Use isDashboard for condition --- */}
+      {isDashboard ? (
+        <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>
+            New Dashboard Name
+          </div>
+          <input
+            type="text"
+            value={newDashName}
+            onChange={(e) => setNewDashName(e.target.value)}
+            placeholder="e.g., Sales Detail"
             style={{
-              width: '100%',
               padding: '8px 12px',
               border: '1px solid #e5e7eb',
               borderRadius: 12,
               background: '#fff',
               fontWeight: 700,
-              textAlign: 'left',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 8,
             }}
-            title="Select affected components"
-          >
-            {selected.size > 0
-              ? `${selected.size} selected`
-              : 'Select components, nested components, or data attributes'}
-            <span>▾</span>
-          </button>
-
-          {open && (
-            <div
+          />
+        </section>
+      ) : (
+        <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>
+            Affected
+          </div>
+          <div ref={ddRef} style={{ position: 'relative' }}>
+            <button
+              type="button"
+              onClick={() => setOpen((v) => !v)}
               style={{
-                position: 'absolute',
-                top: '100%',
-                left: 0,
-                right: 0,
-                marginTop: 4,
-                maxHeight: 260,
-                overflow: 'auto',
-                background: '#fff',
+                width: '100%',
+                padding: '8px 12px',
+                border: '1px solid #e5e7eb',
                 borderRadius: 12,
-                boxShadow: '0 8px 20px rgba(15,23,42,0.18)',
-                padding: 4,
-                zIndex: 20,
+                background: '#fff',
+                fontWeight: 700,
+                textAlign: 'left',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 8,
               }}
+              title="Select affected components"
             >
-              {rootTargets.map((t) => renderTargetRow(t, 0))}
-
-              {/* Use validTargets length for the empty state check */}
-              {validTargets.length === 0 && (
-                <div
-                  style={{
-                    padding: 8,
-                    fontSize: 12,
-                    color: '#9ca3af',
-                    textAlign: 'center',
-                  }}
-                >
-                  No connectable components available
-                </div>
-              )}
+              {selected.size > 0
+                ? `${selected.size} selected`
+                : 'Select components, nested components, or data attributes'}
+              <span>▾</span>
+            </button>
+            {open && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  marginTop: 4,
+                  maxHeight: 260,
+                  overflow: 'auto',
+                  background: '#fff',
+                  borderRadius: 12,
+                  boxShadow: '0 8px 20px rgba(15,23,42,0.18)',
+                  padding: 4,
+                  zIndex: 20,
+                }}
+              >
+                {rootTargets.map((t) => renderTargetRow(t, 0))}
+                {validTargets.length === 0 && (
+                  <div
+                    style={{
+                      padding: 8,
+                      fontSize: 12,
+                      color: '#9ca3af',
+                      textAlign: 'center',
+                    }}
+                  >
+                    No connectable components available
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          {selectedEntries.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {selectedEntries.map((s) => (
+                <span key={s.key} style={pill}>
+                  {s.label}
+                  <button
+                    type="button"
+                    onClick={() => removeKey(s.key)}
+                    style={{
+                      marginLeft: 8,
+                      border: 'none',
+                      background: 'transparent',
+                      cursor: 'pointer',
+                      fontWeight: 900,
+                      lineHeight: 1,
+                    }}
+                    aria-label={`Remove ${s.label}`}
+                    title="Remove"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
             </div>
           )}
-        </div>
+        </section>
+      )}
 
-        {/* Selected chips */}
-        {selectedEntries.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {selectedEntries.map((s) => (
-              <span key={s.key} style={pill}>
-                {s.label}
-                <button
-                  type="button"
-                  onClick={() => removeKey(s.key)}
-                  style={{
-                    marginLeft: 8,
-                    border: 'none',
-                    background: 'transparent',
-                    cursor: 'pointer',
-                    fontWeight: 900,
-                    lineHeight: 1,
-                  }}
-                  aria-label={`Remove ${s.label}`}
-                  title="Remove"
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Actions */}
       <section
         style={{
           marginTop: 8,
@@ -607,25 +611,27 @@ export default function InteractionPopup({
           type="button"
           onClick={() => {
             const selections = Array.from(selected);
-
             const targetsSet = new Set<string>();
             const targetDetails: TargetDetail[] = [];
 
-            for (const key of selections) {
-              if (isDataKey(key)) {
-                const [targetId, dataRef] = key.split(DATA_DELIM);
-                targetsSet.add(targetId);
-                targetDetails.push({
-                  targetId,
-                  targetType: 'data',
-                  targetDataRef: dataRef,
-                });
-              } else {
-                targetsSet.add(key);
-                targetDetails.push({
-                  targetId: key,
-                  targetType: 'component',
-                });
+            // Only parse selections if NOT dashboard
+            if (!isDashboard) {
+              for (const key of selections) {
+                if (isDataKey(key)) {
+                  const [targetId, dataRef] = key.split(DATA_DELIM);
+                  targetsSet.add(targetId);
+                  targetDetails.push({
+                    targetId,
+                    targetType: 'data',
+                    targetDataRef: dataRef,
+                  });
+                } else {
+                  targetsSet.add(key);
+                  targetDetails.push({
+                    targetId: key,
+                    targetType: 'component',
+                  });
+                }
               }
             }
 
@@ -639,6 +645,7 @@ export default function InteractionPopup({
                 ? { sourceDataRef }
                 : {}),
               targetDetails,
+              newDashboardName: isDashboard ? newDashName.trim() : undefined,
             });
           }}
           disabled={!canSave}

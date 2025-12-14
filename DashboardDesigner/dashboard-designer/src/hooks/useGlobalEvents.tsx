@@ -19,7 +19,6 @@ import {
   GRID_GAP,
 } from '../domain/layoutUtils';
 
-// Popups
 import InteractionPopup from '../components/popups/InteractionPopup';
 import VisualVariablePopup from '../components/popups/VisualVariablePopup';
 import TooltipPopup from '../components/popups/TooltipPopup';
@@ -27,7 +26,6 @@ import TooltipPopup from '../components/popups/TooltipPopup';
 type AppNode = RFNode<NodeData>;
 type AppEdge = RFEdge<any>;
 
-// Local helper to avoid circular dependency with Editor.tsx
 function nodeTypeFor(kind: NodeKind): string {
   switch (kind) {
     case 'Dashboard':
@@ -86,19 +84,16 @@ export function useGlobalEvents({
   updateNodeById,
   createChildInParent,
 }: UseGlobalEventsProps) {
-  // --- NEW: Select Tooltip Listener ---
+  // --- Select Tooltip Listener ---
   useEffect(() => {
     const onSelectTooltip = (e: Event) => {
       const { parentId, label } = (e as CustomEvent).detail || {};
       if (!parentId || !label) return;
 
-      // Find the node that matches the criteria
       const target = nodes.find((n) => {
         if (n.data?.kind !== 'Tooltip') return false;
         const d = n.data as any;
         if (d.attachedTo !== parentId) return false;
-
-        // Reconstruct label to compare: "Badge Title"
         const l = `${d.badge ? d.badge + ' ' : ''}${d.title || ''}`;
         return l === label;
       });
@@ -106,19 +101,16 @@ export function useGlobalEvents({
       if (target) {
         console.log('[Editor] selecting tooltip node:', target.id);
 
-        // 1. Explicitly select the target node and deselect others
-        // This ensures React Flow knows about the selection change immediately
         setNodes((nds) =>
           nds.map((n) => ({
             ...n,
             selected: n.id === target.id,
+            hidden: n.id === target.id ? false : n.hidden,
           }))
         );
 
-        // 2. Deselect any edges
         setEdges((eds) => eds.map((e) => ({ ...e, selected: false })));
 
-        // 3. Update global selection state
         setSelectedEdgeId(null);
         setSelectedId(target.id);
       } else {
@@ -137,7 +129,7 @@ export function useGlobalEvents({
       );
   }, [nodes, setNodes, setEdges, setSelectedId, setSelectedEdgeId]);
 
-  // --- NEW: Select Interaction Edge Listener ---
+  // --- Select Interaction Edge Listener ---
   useEffect(() => {
     const onSelectInteraction = (e: Event) => {
       const { interactionId } = (e as CustomEvent).detail || {};
@@ -149,21 +141,12 @@ export function useGlobalEvents({
 
       if (targetEdge) {
         console.log('[Editor] selecting interaction edge:', targetEdge.id);
-
-        // 1. Deselect all nodes
         setNodes((nds) =>
           nds.map((n) => (n.selected ? { ...n, selected: false } : n))
         );
-
-        // 2. Select the specific edge
         setEdges((eds) =>
-          eds.map((e) => ({
-            ...e,
-            selected: e.id === targetEdge.id,
-          }))
+          eds.map((e) => ({ ...e, selected: e.id === targetEdge.id }))
         );
-
-        // 3. Update global selection state
         setSelectedId(null);
         setSelectedEdgeId(targetEdge.id);
       } else {
@@ -557,6 +540,7 @@ export function useGlobalEvents({
         title: 'Add interaction',
         node: (
           <InteractionPopup
+            sourceKind={source.data.kind}
             availableTargets={availableTargets}
             dataAttributes={dataAttributes}
             onCancel={closeModal}
@@ -568,8 +552,41 @@ export function useGlobalEvents({
               sourceType,
               sourceDataRef,
               targetDetails,
+              newDashboardName,
             }) => {
               const interactionId = nanoid();
+
+              // --- HANDLE DASHBOARD CREATION ---
+              let finalTargets = targets;
+              let finalTargetDetails = targetDetails;
+
+              if (result === 'dashboard' && newDashboardName) {
+                const newDashId = nanoid();
+
+                setNodes((nds) => {
+                  const all = [...nds];
+                  const sourcePos = source.position;
+                  all.push({
+                    id: newDashId,
+                    type: 'dashboard',
+                    position: { x: sourcePos.x + 400, y: sourcePos.y },
+                    data: {
+                      kind: 'Dashboard',
+                      title: newDashboardName,
+                      badge: nextBadgeFor('Dashboard', all),
+                    } as NodeData,
+                    style: { width: 800, height: 600 },
+                  } as AppNode);
+                  return all;
+                });
+
+                finalTargets = [newDashId];
+                finalTargetDetails = [
+                  { targetId: newDashId, targetType: 'component' },
+                ];
+              }
+              // ---------------------------------
+
               setNodes((nds) => {
                 const next = nds.map((n) => ({ ...n }));
                 const i = next.findIndex((n) => n.id === sourceId);
@@ -584,8 +601,8 @@ export function useGlobalEvents({
                     name,
                     trigger,
                     result,
-                    targets,
-                    ...({ targetDetails } as any),
+                    targets: finalTargets,
+                    ...({ targetDetails: finalTargetDetails } as any),
                   } as any);
                   next[i] = {
                     ...next[i],
@@ -610,55 +627,38 @@ export function useGlobalEvents({
                   : `data:${slug(sourceDataRef ?? '')}:${trigger}`;
 
               setEdges((eds) => {
-                const add = targetDetails
-                  .filter((detail) => {
-                    return !(eds as AppEdge[]).some((e) => {
-                      if (
-                        e.type !== 'interaction' ||
-                        e.source !== sourceId ||
-                        e.target !== detail.targetId
-                      )
-                        return false;
-                      const d = (e.data as any) || {};
-                      return (
-                        d?.label === name &&
-                        (d?.targetDataRef ?? null) ===
-                          (detail.targetDataRef ?? null)
-                      );
-                    });
-                  })
-                  .map((detail) => {
-                    const tid = detail.targetId;
-                    const targetHandle =
-                      detail.targetType === 'data' && detail.targetDataRef
-                        ? `data:${slug(detail.targetDataRef)}:target`
-                        : `${tid}:target`;
-                    return {
-                      id: `ix-${sourceId}-${tid}-${nanoid(4)}`,
-                      source: sourceId,
+                const add = finalTargetDetails.map((detail) => {
+                  const tid = detail.targetId;
+                  const targetHandle =
+                    detail.targetType === 'data' && detail.targetDataRef
+                      ? `data:${slug(detail.targetDataRef)}:target`
+                      : `${tid}:target`;
+                  return {
+                    id: `ix-${sourceId}-${tid}-${nanoid(4)}`,
+                    source: sourceId,
+                    sourceHandle: sourceHandleId,
+                    target: tid,
+                    targetHandle,
+                    type: 'interaction',
+                    data: {
+                      kind: 'interaction-link',
+                      label: name,
+                      trigger,
+                      result,
                       sourceHandle: sourceHandleId,
-                      target: tid,
-                      targetHandle,
-                      type: 'interaction',
-                      data: {
-                        kind: 'interaction-link',
-                        label: name,
-                        trigger,
-                        result,
-                        sourceHandle: sourceHandleId,
-                        sourceType,
-                        ...(sourceType === 'data' && sourceDataRef
-                          ? { sourceDataRef }
-                          : {}),
-                        interactionId,
-                        targetId: tid,
-                        targetType: detail.targetType,
-                        ...(detail.targetDataRef
-                          ? { targetDataRef: detail.targetDataRef }
-                          : {}),
-                      },
-                    } as AppEdge;
-                  });
+                      sourceType,
+                      ...(sourceType === 'data' && sourceDataRef
+                        ? { sourceDataRef }
+                        : {}),
+                      interactionId,
+                      targetId: tid,
+                      targetType: detail.targetType,
+                      ...(detail.targetDataRef
+                        ? { targetDataRef: detail.targetDataRef }
+                        : {}),
+                    },
+                  } as AppEdge;
+                });
                 return eds.concat(add);
               });
               closeModal();
