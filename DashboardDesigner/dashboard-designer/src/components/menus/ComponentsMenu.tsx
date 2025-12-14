@@ -115,6 +115,12 @@ export default function ComponentsMenu(props: Props) {
   const currentIndex = perspectiveIds.indexOf(panelNode.id);
   const hasPerspectives = perspectiveIds.length > 0;
 
+  // --- CHANGED: Determine visibility of perspective section ---
+  // Show if not disabled AND (we have perspectives OR we can create them)
+  // This allows it to show in Review Mode, but hides it for things like Edges (where onCreatePerspective is undefined)
+  const showPerspectiveSection =
+    !disabled && (hasPerspectives || !!onCreatePerspective);
+
   return (
     <aside
       onTransitionEnd={handleTransitionEnd}
@@ -188,7 +194,8 @@ export default function ComponentsMenu(props: Props) {
           height: '100%',
         }}
       >
-        {!reviewMode && !disabled && (
+        {/* --- CHANGED: Use showPerspectiveSection instead of !reviewMode --- */}
+        {showPerspectiveSection && (
           <div
             style={{
               marginBottom: 16,
@@ -218,7 +225,6 @@ export default function ComponentsMenu(props: Props) {
                   : ''}
               </span>
 
-              {/* --- CHANGED: Only render "New" if handler is provided --- */}
               {onCreatePerspective && (
                 <button
                   onClick={() => onCreatePerspective(panelNode.id)}
@@ -239,7 +245,6 @@ export default function ComponentsMenu(props: Props) {
                   <LuPlus size={12} /> New
                 </button>
               )}
-              {/* -------------------------------------------------------- */}
             </div>
 
             {hasPerspectives && (
