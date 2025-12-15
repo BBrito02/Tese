@@ -11,34 +11,43 @@ const ParameterNode = (p: NodeProps<NodeData>) => {
     ? (d.perspectives as string[]).length
     : 0;
 
-  // Compact styling for the dropdown to fit in the min-size node
+  // Compact styling for the dropdown
   const selectStyle: React.CSSProperties = {
     width: '100%',
     boxSizing: 'border-box',
-    padding: '2px 4px', // Compact padding
+    padding: '2px 4px',
     borderRadius: 6,
     border: '1px solid #cbd5e1',
     background: '#fff',
-    fontSize: 11, // Smaller font size
-    height: 24, // Fixed small height
+    fontSize: 11,
+    height: 24,
     lineHeight: '20px',
     cursor: 'pointer',
     outline: 'none',
   };
 
+  // --- NEW: Handle Value Change ---
+  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    // Dispatch event to global listener
+    window.dispatchEvent(
+      new CustomEvent('designer:parameter-value-change', {
+        detail: { nodeId: p.id, value: val },
+      })
+    );
+  };
+
   return (
     <BaseNodeShell
       {...p}
-      isParameter // Critical: Tells BaseNodeShell to allow overflow for the dropdown
+      isParameter
       cardStyle={{ background: '#E6E6E6', borderRadius: 10 }}
       perspectiveCount={perspectiveCount}
       reviewMode={d.reviewMode ?? false}
       reviewCount={d.reviewTotal ?? 0}
       reviewUnresolvedCount={d.reviewUnresolved ?? 0}
-      // UPDATED: Align items center for vertical centering
       bodyStyle={{ padding: '0 8px 8px 8px', alignItems: 'center' }}
       body={
-        // UPDATED: Removed marginTop to ensure true centering
         <div style={{ width: '100%' }}>
           <select
             className="nodrag nopan"
@@ -46,6 +55,7 @@ const ParameterNode = (p: NodeProps<NodeData>) => {
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
             defaultValue=""
+            onChange={handleChange} // <--- Attached Handler
             style={selectStyle}
           >
             <option value="" disabled>

@@ -1,3 +1,4 @@
+// src/hooks/useGlobalEvents.tsx
 import { useEffect } from 'react';
 import type { Node as RFNode, Edge as RFEdge } from 'reactflow';
 import { nanoid } from 'nanoid';
@@ -18,6 +19,7 @@ import {
   PAD_TOP,
   GRID_GAP,
 } from '../domain/layoutUtils';
+import { slug } from '../domain/utils';
 
 import InteractionPopup from '../components/popups/InteractionPopup';
 import VisualVariablePopup from '../components/popups/VisualVariablePopup';
@@ -26,6 +28,7 @@ import TooltipPopup from '../components/popups/TooltipPopup';
 type AppNode = RFNode<NodeData>;
 type AppEdge = RFEdge<any>;
 
+// Helper to determine ReactFlow node type string from NodeKind
 function nodeTypeFor(kind: NodeKind): string {
   switch (kind) {
     case 'Dashboard':
@@ -84,7 +87,7 @@ export function useGlobalEvents({
   updateNodeById,
   createChildInParent,
 }: UseGlobalEventsProps) {
-  // --- Select Tooltip Listener ---
+  // 1. SELECT TOOLTIP LISTENER
   useEffect(() => {
     const onSelectTooltip = (e: Event) => {
       const { parentId, label } = (e as CustomEvent).detail || {};
@@ -94,6 +97,7 @@ export function useGlobalEvents({
         if (n.data?.kind !== 'Tooltip') return false;
         const d = n.data as any;
         if (d.attachedTo !== parentId) return false;
+
         const l = `${d.badge ? d.badge + ' ' : ''}${d.title || ''}`;
         return l === label;
       });
@@ -129,7 +133,7 @@ export function useGlobalEvents({
       );
   }, [nodes, setNodes, setEdges, setSelectedId, setSelectedEdgeId]);
 
-  // --- Select Interaction Edge Listener ---
+  // 2. SELECT INTERACTION EDGE LISTENER
   useEffect(() => {
     const onSelectInteraction = (e: Event) => {
       const { interactionId } = (e as CustomEvent).detail || {};
@@ -140,17 +144,18 @@ export function useGlobalEvents({
       );
 
       if (targetEdge) {
-        console.log('[Editor] selecting interaction edge:', targetEdge.id);
         setNodes((nds) =>
           nds.map((n) => (n.selected ? { ...n, selected: false } : n))
         );
         setEdges((eds) =>
-          eds.map((e) => ({ ...e, selected: e.id === targetEdge.id }))
+          eds.map((e) => ({
+            ...e,
+            selected: e.id === targetEdge.id,
+          }))
         );
+
         setSelectedId(null);
         setSelectedEdgeId(targetEdge.id);
-      } else {
-        console.warn('No edge found for interaction:', interactionId);
       }
     };
 
@@ -165,12 +170,11 @@ export function useGlobalEvents({
       );
   }, [edges, setNodes, setEdges, setSelectedId, setSelectedEdgeId]);
 
-  // 1. EDGE SELECTION
+  // 3. SELECT EDGE (CANVAS CLICK)
   useEffect(() => {
     const onSelectEdge = (e: Event) => {
       const { edgeId } = (e as CustomEvent).detail || {};
       if (!edgeId) return;
-      console.log('[Editor] edge selected', { edgeId });
       setSelectedId(null);
       setSelectedEdgeId(edgeId);
     };
@@ -185,7 +189,7 @@ export function useGlobalEvents({
       );
   }, [setSelectedId, setSelectedEdgeId]);
 
-  // 2. VISUAL VARIABLES
+  // 4. VISUAL VARIABLES SYNC
   useEffect(() => {
     function onEnsureVV(e: Event) {
       const { parentId, vars } = (
@@ -212,7 +216,7 @@ export function useGlobalEvents({
       );
   }, [setNodes, takeSnapshot]);
 
-  // 3. OPEN VISUAL VARS MODAL
+  // 5. OPEN VISUAL VARS MODAL
   useEffect(() => {
     function onOpenVisualVars(e: Event) {
       const { nodeId } = (e as CustomEvent<{ nodeId: string }>).detail || {};
@@ -251,7 +255,7 @@ export function useGlobalEvents({
       );
   }, [nodes, openModal, closeModal]);
 
-  // 4. PATCH NODE DATA
+  // 6. PATCH NODE DATA
   useEffect(() => {
     function onPatchNodeData(
       e: CustomEvent<{ nodeId: string; patch: Partial<NodeData> }>
@@ -266,7 +270,7 @@ export function useGlobalEvents({
       window.removeEventListener('designer:patch-node-data', handler);
   }, [updateNodeById]);
 
-  // 5. ADD COMPONENT
+  // 7. ADD COMPONENT
   useEffect(() => {
     function onAddComponent(
       e: CustomEvent<{ parentId: string; payload: any }>
@@ -280,7 +284,7 @@ export function useGlobalEvents({
     return () => window.removeEventListener('designer:add-component', handler);
   }, [createChildInParent]);
 
-  // 6. ADD GRAPHS
+  // 8. ADD GRAPHS
   useEffect(() => {
     function onAddGraphs(e: Event) {
       const { parentId, graphTypes } =
@@ -350,7 +354,7 @@ export function useGlobalEvents({
       );
   }, [setNodes, takeSnapshot, applyConstraints]);
 
-  // 7. EDIT GRAPHS
+  // 9. EDIT GRAPHS
   useEffect(() => {
     function onEditGraphs(e: Event) {
       const { parentId, graphTypes } =
@@ -434,7 +438,7 @@ export function useGlobalEvents({
       );
   }, [setNodes, takeSnapshot, applyConstraints]);
 
-  // 8. SET GRAPH TYPE
+  // 10. SET GRAPH TYPE
   useEffect(() => {
     function onSetGraphType(e: Event) {
       const { nodeId, graphType } =
@@ -488,7 +492,7 @@ export function useGlobalEvents({
       );
   }, [setNodes, takeSnapshot]);
 
-  // 9. INTERACTIONS POPUP
+  // 11. INTERACTIONS POPUP (MAIN LOGIC)
   useEffect(() => {
     function onOpenInteractions(e: Event) {
       const sourceId = (e as CustomEvent<{ nodeId: string }>).detail?.nodeId;
@@ -503,11 +507,7 @@ export function useGlobalEvents({
           const dataAttrs = Array.isArray(nd.data)
             ? nd.data.map((v: any) => {
                 const label = typeof v === 'string' ? v : v.name;
-                const ref = label
-                  .toLowerCase()
-                  .trim()
-                  .replace(/\s+/g, '-')
-                  .replace(/[^a-z0-9_-]/g, '');
+                const ref = slug(label);
                 return { ref, label };
               })
             : [];
@@ -556,9 +556,49 @@ export function useGlobalEvents({
             }) => {
               const interactionId = nanoid();
 
-              // --- HANDLE DASHBOARD CREATION ---
+              // --- LOGIC: Parameter Renaming (Initial Setup) ---
+              const isParameter = source.data.kind === 'Parameter';
+              const renamesByNode: Record<string, Record<string, string>> = {};
+              let finalTargetDetails = [...targetDetails];
+
+              if (isParameter) {
+                finalTargetDetails = finalTargetDetails.map((detail) => {
+                  if (detail.targetType === 'data' && detail.targetDataRef) {
+                    const oldSlug = detail.targetDataRef;
+
+                    // We need the original display name from the target node to rename it
+                    const targetNode = nodes.find(
+                      (n) => n.id === detail.targetId
+                    );
+                    const rawDataList = (targetNode?.data as any)?.data || [];
+                    const originalItem = rawDataList.find(
+                      (it: any) =>
+                        slug(typeof it === 'string' ? it : it.name) === oldSlug
+                    );
+                    const originalName = originalItem
+                      ? typeof originalItem === 'string'
+                        ? originalItem
+                        : originalItem.name
+                      : oldSlug;
+
+                    // New name logic: "City" -> "City = ?"
+                    const newName = `${originalName} = ?`;
+
+                    if (!renamesByNode[detail.targetId])
+                      renamesByNode[detail.targetId] = {};
+                    renamesByNode[detail.targetId][originalName] = newName;
+                    renamesByNode[detail.targetId][slug(originalName)] =
+                      newName;
+
+                    return { ...detail, targetDataRef: slug(newName) };
+                  }
+                  return detail;
+                });
+              }
+
+              // --- LOGIC: Dashboard Creation ---
               let finalTargets = targets;
-              let finalTargetDetails = targetDetails;
+              let finalTargetDetailsList = finalTargetDetails;
 
               if (result === 'dashboard' && newDashboardName) {
                 const newDashId = nanoid();
@@ -566,6 +606,8 @@ export function useGlobalEvents({
                 setNodes((nds) => {
                   const all = [...nds];
                   const sourcePos = source.position;
+
+                  // CREATE NEW DASHBOARD NODE
                   all.push({
                     id: newDashId,
                     type: 'dashboard',
@@ -579,88 +621,176 @@ export function useGlobalEvents({
                   } as AppNode);
                   return all;
                 });
-
                 finalTargets = [newDashId];
-                finalTargetDetails = [
+                finalTargetDetailsList = [
                   { targetId: newDashId, targetType: 'component' },
                 ];
               }
-              // ---------------------------------
 
+              // --- BATCH UPDATE NODES (Applies Renames & Add Interaction) ---
               setNodes((nds) => {
-                const next = nds.map((n) => ({ ...n }));
-                const i = next.findIndex((n) => n.id === sourceId);
+                const all = nds.map((n) => ({ ...n }));
+
+                // 1. Apply renames to target data attributes (Visual Update)
+                Object.entries(renamesByNode).forEach(([nodeId, renameMap]) => {
+                  const nodeIndex = all.findIndex((n) => n.id === nodeId);
+                  if (nodeIndex >= 0) {
+                    const node = all[nodeIndex];
+                    const oldDataList = (node.data as any).data || [];
+
+                    const newDataList = Array.isArray(oldDataList)
+                      ? oldDataList.map((item: any) => {
+                          const itemName =
+                            typeof item === 'string' ? item : item.name;
+                          const itemSlug = slug(itemName);
+
+                          const newName =
+                            renameMap[itemName] || renameMap[itemSlug];
+
+                          if (newName) {
+                            return typeof item === 'string'
+                              ? newName
+                              : { ...item, name: newName };
+                          }
+                          return item;
+                        })
+                      : [];
+
+                    // Update target node data structure
+                    const nextData = { ...node.data };
+                    if ((node.data as any).data) {
+                      (nextData as any).data = newDataList;
+                    }
+
+                    all[nodeIndex] = { ...node, data: nextData };
+                  }
+                });
+
+                // 2. Add Interaction to Source
+                const i = all.findIndex((n) => n.id === sourceId);
                 if (i >= 0) {
                   const cur: Interaction[] = Array.isArray(
-                    (next[i].data as any).interactions
+                    (all[i].data as any).interactions
                   )
-                    ? [...(next[i].data as any).interactions]
+                    ? [...(all[i].data as any).interactions]
                     : [];
+
                   cur.push({
                     id: interactionId,
                     name,
                     trigger,
                     result,
                     targets: finalTargets,
-                    ...({ targetDetails: finalTargetDetails } as any),
+                    ...({ targetDetails: finalTargetDetailsList } as any),
                   } as any);
-                  next[i] = {
-                    ...next[i],
+
+                  all[i] = {
+                    ...all[i],
                     data: {
-                      ...(next[i].data as any),
+                      ...(all[i].data as any),
                       interactions: cur,
                     } as any,
                   };
                 }
-                return next;
+                return all;
               });
 
-              const slug = (s: string) =>
-                s
-                  .toLowerCase()
-                  .trim()
-                  .replace(/\s+/g, '-')
-                  .replace(/[^a-z0-9_-]/g, '');
-              const sourceHandleId =
-                sourceType === 'component'
-                  ? `${sourceId}:act:${trigger}`
-                  : `data:${slug(sourceDataRef ?? '')}:${trigger}`;
+              // --- BATCH UPDATE EDGES (Deferred to avoid Handle missing warning) ---
+              setTimeout(() => {
+                setEdges((eds) => {
+                  let nextEdges = [...eds];
 
-              setEdges((eds) => {
-                const add = finalTargetDetails.map((detail) => {
-                  const tid = detail.targetId;
-                  const targetHandle =
-                    detail.targetType === 'data' && detail.targetDataRef
-                      ? `data:${slug(detail.targetDataRef)}:target`
-                      : `${tid}:target`;
-                  return {
-                    id: `ix-${sourceId}-${tid}-${nanoid(4)}`,
-                    source: sourceId,
-                    sourceHandle: sourceHandleId,
-                    target: tid,
-                    targetHandle,
-                    type: 'interaction',
-                    data: {
-                      kind: 'interaction-link',
-                      label: name,
-                      trigger,
-                      result,
+                  // 1. Fix existing edges if handles were renamed (check BOTH source and target)
+                  if (Object.keys(renamesByNode).length > 0) {
+                    nextEdges = nextEdges.map((e) => {
+                      const updateHandle = (
+                        handle: string | null | undefined,
+                        nodeId: string
+                      ) => {
+                        if (!handle || !renamesByNode[nodeId]) return handle;
+                        const map = renamesByNode[nodeId];
+                        for (const [oldName, newName] of Object.entries(map)) {
+                          const oldSlug = slug(oldName);
+                          const newSlug = slug(newName);
+                          // Data handles look like "data:slug:..."
+                          if (handle.includes(`data:${oldSlug}`))
+                            return handle.replace(oldSlug, newSlug);
+                        }
+                        return handle;
+                      };
+
+                      const newTargetHandle = updateHandle(
+                        e.targetHandle,
+                        e.target
+                      );
+                      const newSourceHandle = updateHandle(
+                        e.sourceHandle,
+                        e.source
+                      );
+
+                      if (
+                        newTargetHandle !== e.targetHandle ||
+                        newSourceHandle !== e.sourceHandle
+                      ) {
+                        return {
+                          ...e,
+                          targetHandle: newTargetHandle,
+                          sourceHandle: newSourceHandle,
+                        };
+                      }
+                      return e;
+                    });
+                  }
+
+                  // 2. Determine Source Handle for new edge
+                  // FIX: Parameters use 'null' (default node handle)
+                  let sourceHandleId: string | null | undefined;
+                  if (isParameter) {
+                    sourceHandleId = null;
+                  } else {
+                    sourceHandleId =
+                      sourceType === 'component'
+                        ? `${sourceId}:act:${trigger}`
+                        : `data:${slug(sourceDataRef ?? '')}:${trigger}`;
+                  }
+
+                  // 3. Create new interaction edges
+                  const add = finalTargetDetailsList.map((detail) => {
+                    const tid = detail.targetId;
+                    const targetHandle =
+                      detail.targetType === 'data' && detail.targetDataRef
+                        ? `data:${detail.targetDataRef}:target`
+                        : `${tid}:target`;
+
+                    return {
+                      id: `ix-${sourceId}-${tid}-${nanoid(4)}`,
+                      source: sourceId,
                       sourceHandle: sourceHandleId,
-                      sourceType,
-                      ...(sourceType === 'data' && sourceDataRef
-                        ? { sourceDataRef }
-                        : {}),
-                      interactionId,
-                      targetId: tid,
-                      targetType: detail.targetType,
-                      ...(detail.targetDataRef
-                        ? { targetDataRef: detail.targetDataRef }
-                        : {}),
-                    },
-                  } as AppEdge;
+                      target: tid,
+                      targetHandle,
+                      type: 'interaction',
+                      data: {
+                        kind: 'interaction-link',
+                        label: name,
+                        trigger,
+                        result,
+                        sourceHandle: sourceHandleId,
+                        sourceType,
+                        ...(sourceType === 'data' && sourceDataRef
+                          ? { sourceDataRef }
+                          : {}),
+                        interactionId,
+                        targetId: tid,
+                        targetType: detail.targetType,
+                        ...(detail.targetDataRef
+                          ? { targetDataRef: detail.targetDataRef }
+                          : {}),
+                      },
+                    } as AppEdge;
+                  });
+                  return nextEdges.concat(add);
                 });
-                return eds.concat(add);
-              });
+              }, 0);
               closeModal();
             }}
           />
@@ -678,7 +808,7 @@ export function useGlobalEvents({
       );
   }, [nodes, openModal, closeModal, setNodes, setEdges]);
 
-  // 10. TOOLTIPS POPUP
+  // 12. TOOLTIPS POPUP
   useEffect(() => {
     function onOpenTooltips(e: Event) {
       const vizId = (e as CustomEvent<{ nodeId: string }>).detail?.nodeId;
@@ -813,4 +943,123 @@ export function useGlobalEvents({
         onOpenTooltips as EventListener
       );
   }, [nodes, selectedId, openModal, closeModal, setNodes, setEdges]);
+
+  // 15. PARAMETER VALUE CHANGE LISTENER
+  useEffect(() => {
+    const onParamChange = (e: Event) => {
+      const { nodeId, value } = (e as CustomEvent).detail;
+      if (!nodeId || !value) return;
+
+      // Find edges emanating from this parameter
+      // Since Parameter sourceHandle is null, we match by source node ID
+      const connectedEdges = edges.filter((ed) => ed.source === nodeId);
+      if (connectedEdges.length === 0) return;
+
+      takeSnapshot();
+
+      // Create maps for efficient updates
+      let nodesMap = new Map(nodes.map((n) => [n.id, { ...n }]));
+      let edgesToUpdate = [...edges];
+
+      connectedEdges.forEach((edge) => {
+        const targetId = edge.target;
+        const targetNode = nodesMap.get(targetId);
+        if (!targetNode) return;
+
+        // Check if edge targets a data attribute
+        if (edge.targetHandle && edge.targetHandle.startsWith('data:')) {
+          const parts = edge.targetHandle.split(':');
+          if (parts.length < 2) return;
+          const currentSlug = parts[1];
+
+          const dataList = (targetNode.data as any).data || [];
+
+          const itemIndex = dataList.findIndex((it: any) => {
+            const name = typeof it === 'string' ? it : it.name;
+            return slug(name) === currentSlug;
+          });
+
+          if (itemIndex > -1) {
+            const item = dataList[itemIndex];
+            const oldName = typeof item === 'string' ? item : item.name;
+
+            // Extract base name: "City = ?" -> "City"
+            const match = oldName.match(/^(.*?)(\s*=\s*.*)?$/);
+            const baseName = match ? match[1] : oldName;
+
+            const newName = `${baseName} = ${value}`;
+            const newSlug = slug(newName);
+
+            // 1. Update Target Node Data
+            const newDataList = [...dataList];
+            if (typeof item === 'string') {
+              newDataList[itemIndex] = newName;
+            } else {
+              newDataList[itemIndex] = { ...item, name: newName };
+            }
+
+            const nextData = { ...targetNode.data };
+            if ((nextData as any).data) {
+              (nextData as any).data = newDataList;
+            }
+            targetNode.data = nextData;
+            nodesMap.set(targetId, targetNode);
+
+            // 2. Update all edges connected to this attribute (Source AND Target)
+            // This uses setTimeout to defer the edge update until after re-render
+            setTimeout(() => {
+              setEdges((currentEdges) => {
+                return currentEdges.map((edg) => {
+                  let nextEdge = { ...edg };
+
+                  // Update target handle if it points to old slug
+                  // Need to handle both the edge being processed and other edges to same attr
+                  if (
+                    nextEdge.target === targetId &&
+                    nextEdge.targetHandle?.includes(`:${currentSlug}:`)
+                  ) {
+                    nextEdge.targetHandle = nextEdge.targetHandle.replace(
+                      `:${currentSlug}:`,
+                      `:${newSlug}:`
+                    );
+                    // Update metadata if present
+                    if (nextEdge.data?.targetDataRef === currentSlug) {
+                      nextEdge.data = {
+                        ...nextEdge.data,
+                        targetDataRef: newSlug,
+                      };
+                    }
+                  }
+
+                  // Update source handle if it comes from old slug
+                  if (
+                    nextEdge.source === targetId &&
+                    nextEdge.sourceHandle?.includes(`:${currentSlug}:`)
+                  ) {
+                    nextEdge.sourceHandle = nextEdge.sourceHandle.replace(
+                      `:${currentSlug}:`,
+                      `:${newSlug}:`
+                    );
+                  }
+                  return nextEdge;
+                });
+              });
+            }, 0);
+          }
+        }
+      });
+
+      setNodes(Array.from(nodesMap.values()));
+    };
+
+    window.addEventListener(
+      'designer:parameter-value-change',
+      onParamChange as EventListener
+    );
+    return () =>
+      window.removeEventListener(
+        'designer:parameter-value-change',
+        onParamChange as EventListener
+      );
+  }, [nodes, edges, setNodes, setEdges, takeSnapshot]);
 }

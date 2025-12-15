@@ -1,4 +1,3 @@
-// src/components/popups/InteractionPopup.tsx
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type {
   InteractionType,
@@ -63,10 +62,10 @@ const ALLOWED_RESULTS: Partial<Record<NodeKind, InteractionResult[]>> = {
   Legend: ['highlight', 'filter'],
   Button: ['dashboard'],
   Filter: ['filter'],
+  Parameter: ['binding' as InteractionResult], // Custom result type
   Visualization: ['filter', 'highlight', 'dashboard', 'link'],
   Graph: ['filter', 'highlight', 'dashboard', 'link'],
   Tooltip: ['filter', 'highlight', 'dashboard', 'link'],
-  Parameter: ['filter', 'highlight', 'dashboard', 'link'],
   DataAction: ['filter', 'highlight'],
   Placeholder: [],
 };
@@ -87,11 +86,19 @@ export default function InteractionPopup({
   onCancel,
   onSave,
 }: Props) {
-  const [name, setName] = useState(initialName);
-  const [trigger, setTrigger] = useState<InteractionType>(initialType);
-  const [result, setResult] = useState<InteractionResult>(initialResult);
+  const isParameter = sourceKind === 'Parameter';
 
-  // --- CHANGED: Renamed variable to match usage ---
+  // --- Force Defaults for Parameter ---
+  const [name, setName] = useState(initialName);
+
+  // If Parameter, force trigger to 'click' and result to 'binding'
+  const [trigger, setTrigger] = useState<InteractionType>(
+    isParameter ? ('click' as InteractionType) : initialType
+  );
+  const [result, setResult] = useState<InteractionResult>(
+    isParameter ? ('binding' as InteractionResult) : initialResult
+  );
+
   const [newDashName, setNewDashName] = useState('');
   const isDashboard = result === 'dashboard';
 
@@ -100,7 +107,12 @@ export default function InteractionPopup({
   );
 
   const hasSourceDataAttrs = dataAttributes.length > 0;
-  const [sourceType, setSourceType] = useState<SourceType>('component');
+
+  // If Parameter, force SourceType to 'component'
+  const [sourceType, setSourceType] = useState<SourceType>(
+    isParameter ? 'component' : 'component'
+  );
+
   const [sourceDataRef, setSourceDataRef] = useState<string>(
     dataAttributes[0]?.ref ?? ''
   );
@@ -112,13 +124,20 @@ export default function InteractionPopup({
     );
   }, [sourceKind]);
 
+  // Enforce constraints on mount/update
   useEffect(() => {
-    if (allowedResults.length > 0 && !allowedResults.includes(result)) {
+    if (isParameter) {
+      setTrigger('click' as InteractionType);
+      setResult('binding' as InteractionResult);
+      setSourceType('component');
+    } else if (allowedResults.length > 0 && !allowedResults.includes(result)) {
       setResult(allowedResults[0]);
     }
-  }, [allowedResults, result]);
+  }, [allowedResults, result, isParameter]);
 
   useEffect(() => {
+    if (isParameter) return; // Skip for parameters
+
     if (!hasSourceDataAttrs) {
       setSourceType('component');
       setSourceDataRef('');
@@ -127,8 +146,9 @@ export default function InteractionPopup({
     if (!dataAttributes.some((a) => a.ref === sourceDataRef)) {
       setSourceDataRef(dataAttributes[0]?.ref ?? '');
     }
-  }, [hasSourceDataAttrs, dataAttributes, sourceDataRef]);
+  }, [hasSourceDataAttrs, dataAttributes, sourceDataRef, isParameter]);
 
+  // --- REVERTED: Show all non-Graph targets ---
   const validTargets = useMemo(() => {
     return availableTargets.filter((t) => t.kind !== 'Graph');
   }, [availableTargets]);
@@ -156,7 +176,6 @@ export default function InteractionPopup({
 
   const rootTargets = childrenByParent.get(null) ?? [];
 
-  // --- FIXED: Now uses 'isDashboard' which is correctly defined ---
   const canSave =
     name.trim().length > 0 &&
     (isDashboard ? newDashName.trim().length > 0 : selected.size > 0) &&
@@ -267,6 +286,7 @@ export default function InteractionPopup({
             {compLabel} <span style={{ color: '#6b7280' }}>· {t.kind}</span>
           </div>
         </div>
+
         {t.dataAttributes?.length ? (
           <div style={{ marginLeft: indent + 24, marginTop: 2 }}>
             {t.dataAttributes.map((attr) => {
@@ -277,10 +297,7 @@ export default function InteractionPopup({
                   key={key}
                   onClick={() => toggleKey(key)}
                   onKeyDown={(e) => {
-                    if (e.key === ' ' || e.key === 'Enter') {
-                      e.preventDefault();
-                      toggleKey(key);
-                    }
+                    if (e.key === ' ' || e.key === 'Enter') toggleKey(key);
                   }}
                   tabIndex={0}
                   style={{
@@ -314,6 +331,7 @@ export default function InteractionPopup({
             })}
           </div>
         ) : null}
+
         {children.length > 0 && (
           <div>
             {children.map((child) => renderTargetRow(child, depth + 1))}
@@ -340,7 +358,11 @@ export default function InteractionPopup({
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="e.g., Highlight related charts"
+          placeholder={
+            isParameter
+              ? 'e.g., Bind to Year'
+              : 'e.g., Highlight related charts'
+          }
           style={{
             padding: '8px 12px',
             border: '1px solid #e5e7eb',
@@ -351,132 +373,153 @@ export default function InteractionPopup({
         />
       </section>
 
-      <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>
-          Trigger
-        </div>
-        <div style={{ display: 'flex', gap: 12 }}>
-          {(['hover', 'click'] as InteractionType[]).map((t) => {
-            const label = t.charAt(0).toUpperCase() + t.slice(1);
-            return (
-              <label
-                key={t}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  cursor: 'pointer',
-                }}
-              >
-                <input
-                  type="radio"
-                  name="int-trigger"
-                  value={t}
-                  checked={trigger === t}
-                  onChange={() => setTrigger(t)}
-                />
-                {label}
-              </label>
-            );
-          })}
-        </div>
-      </section>
-
-      <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>
-          Source
-        </div>
-        {!hasSourceDataAttrs && (
-          <div style={{ fontSize: 12, color: '#6b7280' }}>
-            This component has no data attributes. The source will be the
-            component itself.
+      {/* --- CUSTOM PARAMETER UI --- */}
+      {isParameter ? (
+        <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>
+            Result
           </div>
-        )}
-        {hasSourceDataAttrs && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div style={{ display: 'flex', gap: 12 }}>
-              <label
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  cursor: 'pointer',
-                }}
-              >
-                <input
-                  type="radio"
-                  name="int-source-kind"
-                  value="component"
-                  checked={sourceType === 'component'}
-                  onChange={() => setSourceType('component')}
-                />
-                Component
-              </label>
-              <label
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  cursor: 'pointer',
-                }}
-              >
-                <input
-                  type="radio"
-                  name="int-source-kind"
-                  value="data"
-                  checked={sourceType === 'data'}
-                  onChange={() => setSourceType('data')}
-                />
-                Data attribute
-              </label>
+          <div
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #e5e7eb',
+              borderRadius: 12,
+              background: '#f1f5f9',
+              color: '#0f172a',
+              fontSize: 13,
+              fontWeight: 600,
+            }}
+          >
+            Parameter Binding
+          </div>
+        </section>
+      ) : (
+        /* Standard UI for other nodes */
+        <>
+          <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>
+              Trigger
             </div>
-            {sourceType === 'data' && (
-              <select
-                value={sourceDataRef}
-                onChange={(e) => setSourceDataRef(e.target.value)}
-                style={{
-                  padding: '6px 10px',
-                  borderRadius: 8,
-                  border: '1px solid #e5e7eb',
-                  background: '#fff',
-                  fontSize: 13,
-                }}
-              >
-                {dataAttributes.map((a) => (
-                  <option key={a.ref} value={a.ref}>
-                    {a.label}
-                  </option>
-                ))}
-              </select>
+            <div style={{ display: 'flex', gap: 12 }}>
+              {(['hover', 'click'] as InteractionType[]).map((t) => (
+                <label
+                  key={t}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="int-trigger"
+                    value={t}
+                    checked={trigger === t}
+                    onChange={() => setTrigger(t)}
+                  />
+                  {t.charAt(0).toUpperCase() + t.slice(1)}
+                </label>
+              ))}
+            </div>
+          </section>
+
+          <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>
+              Result
+            </div>
+            <select
+              value={result}
+              onChange={(e) => setResult(e.target.value as InteractionResult)}
+              style={{
+                padding: '8px 12px',
+                border: '1px solid #e5e7eb',
+                borderRadius: 12,
+                background: '#fff',
+                fontWeight: 700,
+              }}
+            >
+              {allowedResults.map((r) => (
+                <option key={r} value={r}>
+                  {r.charAt(0).toUpperCase() + r.slice(1)}
+                </option>
+              ))}
+            </select>
+          </section>
+
+          <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>
+              Source
+            </div>
+            {!hasSourceDataAttrs && (
+              <div style={{ fontSize: 12, color: '#6b7280' }}>
+                This component has no data attributes. The source will be the
+                component itself.
+              </div>
             )}
-          </div>
-        )}
-      </section>
+            {hasSourceDataAttrs && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <label
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="int-source-kind"
+                      value="component"
+                      checked={sourceType === 'component'}
+                      onChange={() => setSourceType('component')}
+                    />{' '}
+                    Component
+                  </label>
+                  <label
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="int-source-kind"
+                      value="data"
+                      checked={sourceType === 'data'}
+                      onChange={() => setSourceType('data')}
+                    />{' '}
+                    Data attribute
+                  </label>
+                </div>
+                {sourceType === 'data' && (
+                  <select
+                    value={sourceDataRef}
+                    onChange={(e) => setSourceDataRef(e.target.value)}
+                    style={{
+                      padding: '6px 10px',
+                      borderRadius: 8,
+                      border: '1px solid #e5e7eb',
+                      background: '#fff',
+                      fontSize: 13,
+                    }}
+                  >
+                    {dataAttributes.map((a) => (
+                      <option key={a.ref} value={a.ref}>
+                        {a.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            )}
+          </section>
+        </>
+      )}
 
-      <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>
-          Result
-        </div>
-        <select
-          value={result}
-          onChange={(e) => setResult(e.target.value as InteractionResult)}
-          style={{
-            padding: '8px 12px',
-            border: '1px solid #e5e7eb',
-            borderRadius: 12,
-            background: '#fff',
-            fontWeight: 700,
-          }}
-        >
-          {allowedResults.map((r) => (
-            <option key={r} value={r}>
-              {r.charAt(0).toUpperCase() + r.slice(1)}
-            </option>
-          ))}
-        </select>
-      </section>
-
-      {/* --- CHANGED: Use isDashboard for condition --- */}
       {isDashboard ? (
         <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>
@@ -518,11 +561,10 @@ export default function InteractionPopup({
                 justifyContent: 'space-between',
                 gap: 8,
               }}
-              title="Select affected components"
             >
               {selected.size > 0
                 ? `${selected.size} selected`
-                : 'Select components, nested components, or data attributes'}
+                : 'Select components...'}{' '}
               <span>▾</span>
             </button>
             {open && (
@@ -543,18 +585,6 @@ export default function InteractionPopup({
                 }}
               >
                 {rootTargets.map((t) => renderTargetRow(t, 0))}
-                {validTargets.length === 0 && (
-                  <div
-                    style={{
-                      padding: 8,
-                      fontSize: 12,
-                      color: '#9ca3af',
-                      textAlign: 'center',
-                    }}
-                  >
-                    No connectable components available
-                  </div>
-                )}
               </div>
             )}
           </div>
@@ -572,10 +602,7 @@ export default function InteractionPopup({
                       background: 'transparent',
                       cursor: 'pointer',
                       fontWeight: 900,
-                      lineHeight: 1,
                     }}
-                    aria-label={`Remove ${s.label}`}
-                    title="Remove"
                   >
                     ×
                   </button>
@@ -614,7 +641,6 @@ export default function InteractionPopup({
             const targetsSet = new Set<string>();
             const targetDetails: TargetDetail[] = [];
 
-            // Only parse selections if NOT dashboard
             if (!isDashboard) {
               for (const key of selections) {
                 if (isDataKey(key)) {
@@ -657,7 +683,6 @@ export default function InteractionPopup({
             color: '#fff',
             cursor: canSave ? 'pointer' : 'not-allowed',
           }}
-          title={canSave ? 'Save interaction' : 'Complete the form'}
         >
           Save
         </button>
