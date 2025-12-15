@@ -1,5 +1,12 @@
+// src/domain/types.ts
+
 export type InteractionType = 'click' | 'hover';
-export type InteractionResult = 'filter' | 'highlight' | 'dashboard' | 'link';
+export type InteractionResult =
+  | 'filter'
+  | 'highlight'
+  | 'dashboard'
+  | 'link'
+  | 'binding'; // Added 'binding' for parameters if you want it typed here, strictly speaking 'binding' wasn't in your previous list but used in logic. Let's keep it safe.
 
 export type Reply = {
   id: string;
@@ -27,6 +34,12 @@ export type Interaction = {
   trigger: InteractionType; // click | hover
   result: InteractionResult; // what it does
   targets: string[]; // array of target node ids
+  // Stores details about specific targets (e.g., which data attribute ID is targeted)
+  targetDetails?: {
+    targetId: string;
+    targetType: string;
+    targetDataRef?: string;
+  }[];
 };
 
 export type VisualVariable = 'Size' | 'Shape' | 'Color' | 'Text';
@@ -41,18 +54,19 @@ export type GraphType =
   | 'Pilled100'
   | 'Gantt'
   | 'Dots'
-  | 'Map' //nao fiz
-  | 'ColorMap' //nao fiz
+  | 'Map'
+  | 'ColorMap'
   | 'Hexabin'
-  | 'Table' //done
-  | 'HeatMap' //done
+  | 'Table'
+  | 'HeatMap'
   | 'Clock';
-// highlighted table? | nao tenho piechart //
 
 export type DataType = 'Binary' | 'Continuous' | 'Discrete' | 'Other';
 
+// --- CHANGED: Added ID to DataItem ---
 export interface DataItem {
-  name: string;
+  id: string; // Unique, stable identifier (UUID)
+  name: string; // Display label (mutable)
   dtype: DataType;
 }
 
@@ -83,7 +97,7 @@ interface NodeDataBase {
   visualVars?: VisualVariable[];
   graphType?: GraphType | null;
   interactions?: Interaction[];
-  perspectives?: string[]; // <--- ADDED: List of node IDs in this perspective group
+  perspectives?: string[];
 }
 
 const KIND_PREFIX = {
@@ -135,22 +149,22 @@ interface DashboardNodeData extends NodeDataBase {
 interface VisualizationNodeData extends NodeDataBase {
   kind: 'Visualization';
   objectives?: string[];
-  data?: DataItem[]; //when adding display the data on the bottom of the component
-  tooltips?: string[]; //will be added thru the tooltip menu(to be done later)
+  data?: DataItem[]; // Now uses objects with IDs
+  tooltips?: string[];
   graphTypes?: GraphType[];
   visualVars?: VisualVariable[];
 }
 
 interface TooltipNodeData extends NodeDataBase {
   kind: 'Tooltip';
-  data?: DataItem[]; //when adding display the data on the bottom of the component
+  data?: DataItem[];
   graphTypes?: GraphType[];
   visualVars?: VisualVariable[];
 }
 
 interface LegendNodeData extends NodeDataBase {
   kind: 'Legend';
-  data?: DataItem[]; //when adding display the data on the bottom of the component
+  data?: DataItem[];
   visualVars?: VisualVariable[];
 }
 
@@ -160,16 +174,15 @@ interface ButtonNodeData extends NodeDataBase {
 
 interface FilterNodeData extends NodeDataBase {
   kind: 'Filter';
-  data?: DataItem[]; //when adding display the data on the bottom of the component
+  data?: DataItem[];
 }
 
 interface ParameterNodeData extends NodeDataBase {
   kind: 'Parameter';
-  options?: string[]; //when adding display the different options on the center of the component in a drop-down menu
+  options?: string[];
 }
 
 interface DataActionNodeData extends NodeDataBase {
-  //Ver o que fazer com esta componente, realidade e que eu ainda nao percebi muito bem o que e que ela faz
   kind: 'DataAction';
   actionType?: 'Filtering' | 'Highlight';
   targetDataRef?: string;

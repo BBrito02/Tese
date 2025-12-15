@@ -26,16 +26,15 @@ const MIN_SIZE: Record<string, { w: number; h: number }> = {
   Legend: { w: 170, h: 75 },
   Button: { w: 140, h: 75 },
   Filter: { w: 170, h: 75 },
-  Parameter: { w: 170, h: 75 }, // User wants this compact size
+  Parameter: { w: 170, h: 75 },
   DataAction: { w: 140, h: 75 },
   Placeholder: { w: 130, h: 40 },
   Graph: { w: 60, h: 40 },
 };
 
 export type BaseNodeShellProps = NodeProps<NodeData> & {
-  // renderables
   body?: React.ReactNode;
-  footerItems?: (string | DataItem)[];
+  footerItems?: DataItem[]; // Changed to strict DataItem[]
   visualVars?: VisualVariable[];
   tooltipCount?: number;
   perspectiveCount?: number;
@@ -44,27 +43,23 @@ export type BaseNodeShellProps = NodeProps<NodeData> & {
   reviewCount?: number;
   reviewUnresolvedCount?: number;
 
-  // style overrides
   cardStyle?: React.CSSProperties;
   headerStyle?: React.CSSProperties;
   bodyStyle?: React.CSSProperties;
   footerStyle?: React.CSSProperties;
 
-  // layout toggles
   hideHeader?: boolean;
   hideFooter?: boolean;
   isParameter?: boolean;
   leftHandle?: boolean;
   rightHandle?: boolean;
 
-  // border/highlight behavior
-  highlightBorder?: boolean; // default true
-  borderWidth?: number; // default 2
+  highlightBorder?: boolean;
+  borderWidth?: number;
 
   overlayTopRight?: React.ReactNode;
 };
 
-// helper to remove border-related props to avoid mixing shorthand/longhand
 function stripBorderStyles(
   s?: React.CSSProperties
 ): React.CSSProperties | undefined {
@@ -99,16 +94,9 @@ function DataPills({
   items,
   onClick,
 }: {
-  items: (string | DataItem)[];
+  items: DataItem[];
   onClick?: (index: number) => void;
 }) {
-  const slug = (s: string) =>
-    s
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, '-')
-      .replace(/[^a-z0-9_-]/g, '');
-
   return (
     <div
       style={{
@@ -121,19 +109,19 @@ function DataPills({
       }}
     >
       {items.map((it, i) => {
-        const label = typeof it === 'string' ? it : it.name;
-        const title = typeof it === 'string' ? it : `${it.name} · ${it.dtype}`;
-        const handleId = `data:${slug(label)}`;
+        // --- CHANGED: Use Stable ID for Handles ---
+        const handleId = `data:${it.id}`;
+        const label = it.name;
+        const title = `${it.name} · ${it.dtype}`;
 
         return (
           <div
-            key={`${label}-${i}`}
+            key={it.id}
             style={{ position: 'relative', display: 'inline-block' }}
           >
             <button
               title={title}
               className="nodrag"
-              // Removed stopPropagation so clicks can also select the node if desired
               onClick={(e) => {
                 if (onClick) {
                   e.stopPropagation();
@@ -159,6 +147,7 @@ function DataPills({
               {label}
             </button>
 
+            {/* Target Handle (Top) - Connects to data:{id}:target */}
             <Handle
               id={`${handleId}:target`}
               type="target"
@@ -176,6 +165,7 @@ function DataPills({
               }}
             />
 
+            {/* Source Handles (Bottom) */}
             <Handle
               id={`${handleId}:click`}
               type="source"
@@ -220,22 +210,19 @@ export default function BaseNodeShell({
   data,
   selected,
   body,
-  footerItems,
+  footerItems = [],
   visualVars,
   tooltipCount = 0,
   perspectiveCount = 0,
-
   cardStyle,
   headerStyle,
   bodyStyle,
   footerStyle,
-
   hideHeader = false,
   hideFooter = false,
   isParameter = false,
   leftHandle = true,
   rightHandle = true,
-
   highlightBorder = true,
   borderWidth = 2,
   overlayTopRight,
@@ -252,17 +239,9 @@ export default function BaseNodeShell({
     unresolved: reviewUnresolvedCount,
   } = useReviews(id);
 
+  // --- CHANGED: Track IDs for updates ---
   const pillHandleIds = useMemo(
-    () =>
-      (footerItems ?? []).map((it) => {
-        const label = typeof it === 'string' ? it : it.name;
-        const slug = label
-          .toLowerCase()
-          .trim()
-          .replace(/\s+/g, '-')
-          .replace(/[^a-z0-9_-]/g, '');
-        return `data:${slug}`;
-      }),
+    () => (footerItems ?? []).map((it) => `data:${it.id}`),
     [footerItems]
   );
 
@@ -284,16 +263,13 @@ export default function BaseNodeShell({
     : selected
     ? '#60a5fa'
     : 'transparent';
-
   const borderColor = highlightBorder ? dynamicBorderColor : '#e5e7eb';
   const cardStyleClean = stripBorderStyles(cardStyle) || {};
 
   const handlePillClick = (index: number) => {
     setTimeout(() => {
       window.dispatchEvent(
-        new CustomEvent('designer:edit-data', {
-          detail: { nodeId: id, index },
-        })
+        new CustomEvent('designer:edit-data', { detail: { nodeId: id, index } })
       );
     }, 100);
   };
@@ -317,9 +293,9 @@ export default function BaseNodeShell({
         minHeight={minH}
         handleStyle={{ width: 12, height: 12, borderRadius: 4 }}
         lineStyle={{ strokeWidth: 1.5 }}
-        onResizeEnd={() => {
-          window.dispatchEvent(new Event('designer:node-resize-stop'));
-        }}
+        onResizeEnd={() =>
+          window.dispatchEvent(new Event('designer:node-resize-stop'))
+        }
       />
 
       <div
@@ -327,7 +303,6 @@ export default function BaseNodeShell({
           position: 'absolute',
           inset: 0,
           display: 'grid',
-          // Header height auto, body takes remaining space
           gridTemplateRows: hideHeader ? '1fr' : 'auto minmax(0, 1fr) auto',
           minHeight: 0,
           borderRadius: 12,
@@ -336,7 +311,6 @@ export default function BaseNodeShell({
           borderStyle: 'solid',
           borderColor,
           boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-          // Allow overflow for dropdowns in parameters
           overflow: isParameter ? 'visible' : 'hidden',
           boxSizing: 'border-box',
           ...cardStyleClean,
@@ -345,9 +319,9 @@ export default function BaseNodeShell({
         {!hideHeader && (
           <div
             style={{
-              padding: isParameter ? '6px 8px' : 10, // Compact header padding for parameters
+              padding: isParameter ? '6px 8px' : 10,
               display: 'flex',
-              alignItems: 'flex-start', // Align items to top to handle multi-line title
+              alignItems: 'flex-start',
               gap: 6,
               position: 'relative',
               ...headerStyle,
@@ -367,15 +341,13 @@ export default function BaseNodeShell({
                   fontWeight: 800,
                   fontSize: 11,
                   lineHeight: '18px',
-                  flexShrink: 0, // Never shrink the badge
+                  flexShrink: 0,
                 }}
                 title={data.badge}
               >
                 {data.badge}
               </span>
             )}
-
-            {/* Title Container: Allows shrinking and wrapping */}
             <div
               style={{
                 flex: 1,
@@ -391,22 +363,20 @@ export default function BaseNodeShell({
                   fontWeight: 700,
                   fontSize: isParameter ? 12 : 14,
                   lineHeight: '1.2',
-                  whiteSpace: 'normal', // Allow text wrapping
-                  wordBreak: 'break-word', // Break long words if needed
+                  whiteSpace: 'normal',
+                  wordBreak: 'break-word',
                 }}
               >
                 {data.title}
               </div>
             </div>
-
-            {/* Right Controls: Force visibility */}
             <div
               style={{
                 marginLeft: 'auto',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 4,
-                flexShrink: 0, // Prevent these from being cropped/squashed
+                flexShrink: 0,
               }}
             >
               {Array.isArray(visualVars) &&
@@ -426,7 +396,7 @@ export default function BaseNodeShell({
                       );
                     }}
                     style={{
-                      width: 20, // Slightly smaller icons
+                      width: 20,
                       height: 20,
                       padding: 0,
                       borderRadius: 6,
@@ -449,10 +419,8 @@ export default function BaseNodeShell({
                     />
                   </button>
                 ))}
-
               {tooltipCount > 0 && (
                 <span
-                  title={`${tooltipCount} tooltips`}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -473,10 +441,8 @@ export default function BaseNodeShell({
                   T({tooltipCount})
                 </span>
               )}
-
               {perspectiveCount > 1 && (
                 <span
-                  title={`${perspectiveCount} perspectives`}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -497,7 +463,6 @@ export default function BaseNodeShell({
                   P({perspectiveCount})
                 </span>
               )}
-
               {reviewMode && (
                 <div
                   className="nodrag nopan"
@@ -518,9 +483,9 @@ export default function BaseNodeShell({
           style={{
             minHeight: 0,
             display: 'flex',
-            alignItems: isParameter ? 'flex-start' : 'stretch', // Align top for inputs
+            alignItems: isParameter ? 'flex-start' : 'stretch',
             justifyContent: 'center',
-            padding: isParameter ? '0 8px 8px 8px' : 10, // Tighter padding for parameters
+            padding: isParameter ? '0 8px 8px 8px' : 10,
             ...bodyStyle,
           }}
         >
@@ -538,7 +503,10 @@ export default function BaseNodeShell({
                 ...footerStyle,
               }}
             >
-              <DataPills items={footerItems!} onClick={handlePillClick} />
+              <DataPills
+                items={footerItems as DataItem[]}
+                onClick={handlePillClick}
+              />
             </div>
           ) : (
             <div style={{ height: 0 }} />
@@ -575,7 +543,6 @@ export default function BaseNodeShell({
           className="nodrag nopan"
         />
       )}
-
       {rightHandle && canInteract && (
         <ClickHoverPorts position={Position.Right} idPrefix={`${id}:act`} />
       )}

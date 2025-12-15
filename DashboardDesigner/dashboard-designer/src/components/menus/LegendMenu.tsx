@@ -8,6 +8,7 @@ import {
   type ListItem,
 } from './sections';
 import type { DataItem, Interaction, NodeKind } from '../../domain/types';
+import { nanoid } from 'nanoid'; // Import nanoid
 import { useModal } from '../ui/ModalHost';
 import { allowedChildKinds } from '../../domain/rules';
 import AddComponentPopup from '../popups/ComponentPopup';
@@ -19,11 +20,19 @@ export default function LegendMenu(p: KindProps) {
 
   const dataList = d.data as (string | DataItem)[] | undefined;
 
+  // UPDATED: Ensure all items have an ID (migrates legacy strings/objects)
   const toDataItems = (list?: (string | DataItem)[]): DataItem[] =>
     Array.isArray(list)
-      ? list.map((v) =>
-          typeof v === 'string' ? { name: v, dtype: 'Other' } : v
-        )
+      ? list.map((v) => {
+          if (typeof v === 'string') {
+            return { id: nanoid(), name: v, dtype: 'Other' };
+          }
+          // If object exists but lacks ID, assign one
+          if (v && !v.id) {
+            return { ...v, id: nanoid() };
+          }
+          return v;
+        })
       : [];
 
   const interactions: Interaction[] = Array.isArray(d.interactions)
@@ -38,6 +47,7 @@ export default function LegendMenu(p: KindProps) {
 
   const { openModal, closeModal } = useModal();
 
+  // --- RESTORED: Add Component Handler ---
   const handleAddComponent = () => {
     const parentKind = (p.node.data?.kind ?? 'Visualization') as NodeKind;
     const baseKinds = allowedChildKinds(parentKind);
@@ -81,6 +91,7 @@ export default function LegendMenu(p: KindProps) {
 
       <SectionTitle>Actions</SectionTitle>
 
+      {/* --- RESTORED: Add Component Section --- */}
       <AddComponentSection
         title="Add component"
         disabled={disabled}
@@ -97,11 +108,9 @@ export default function LegendMenu(p: KindProps) {
               <DataPopup
                 initial={toDataItems(dataList)}
                 onCancel={closeModal}
-                onSave={(
-                  items: DataItem[],
-                  renames: Record<string, string>
-                ) => {
-                  p.onChange({ data: items, _dataRenames: renames } as any);
+                // FIXED: Updated signature
+                onSave={(items: DataItem[]) => {
+                  p.onChange({ data: items } as any);
                   closeModal();
                 }}
               />
@@ -117,11 +126,9 @@ export default function LegendMenu(p: KindProps) {
                 initial={toDataItems(dataList)}
                 initialSelectedIndex={index}
                 onCancel={closeModal}
-                onSave={(
-                  items: DataItem[],
-                  renames: Record<string, string>
-                ) => {
-                  p.onChange({ data: items, _dataRenames: renames } as any);
+                // FIXED: Updated signature
+                onSave={(items: DataItem[]) => {
+                  p.onChange({ data: items } as any);
                   closeModal();
                 }}
               />

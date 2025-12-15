@@ -5,7 +5,9 @@ import { memo } from 'react';
 
 const LegendNode = (p: NodeProps<NodeData>) => {
   const d: any = p.data;
-  const footer = d.data as (string | DataItem)[] | undefined;
+
+  // --- CHANGE: Enforce DataItem[] ---
+  const footer = d.data as DataItem[] | undefined;
 
   const visualVars: VisualVariable[] = Array.isArray(d.visualVariables)
     ? (d.visualVariables as VisualVariable[])

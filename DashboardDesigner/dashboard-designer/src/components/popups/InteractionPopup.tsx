@@ -8,7 +8,7 @@ import type {
 type SourceType = 'component' | 'data';
 
 type DataAttrOption = {
-  ref: string;
+  ref: string; // THIS IS NOW THE STABLE ID (UUID)
   label: string;
 };
 
@@ -62,7 +62,7 @@ const ALLOWED_RESULTS: Partial<Record<NodeKind, InteractionResult[]>> = {
   Legend: ['highlight', 'filter'],
   Button: ['dashboard'],
   Filter: ['filter'],
-  Parameter: ['binding' as InteractionResult], // Custom result type
+  Parameter: ['binding' as InteractionResult],
   Visualization: ['filter', 'highlight', 'dashboard', 'link'],
   Graph: ['filter', 'highlight', 'dashboard', 'link'],
   Tooltip: ['filter', 'highlight', 'dashboard', 'link'],
@@ -88,10 +88,10 @@ export default function InteractionPopup({
 }: Props) {
   const isParameter = sourceKind === 'Parameter';
 
-  // --- Force Defaults for Parameter ---
+  // --- Defaults ---
   const [name, setName] = useState(initialName);
 
-  // If Parameter, force trigger to 'click' and result to 'binding'
+  // Force Parameter defaults
   const [trigger, setTrigger] = useState<InteractionType>(
     isParameter ? ('click' as InteractionType) : initialType
   );
@@ -107,12 +107,10 @@ export default function InteractionPopup({
   );
 
   const hasSourceDataAttrs = dataAttributes.length > 0;
-
-  // If Parameter, force SourceType to 'component'
+  // Force 'component' source for Parameter
   const [sourceType, setSourceType] = useState<SourceType>(
     isParameter ? 'component' : 'component'
   );
-
   const [sourceDataRef, setSourceDataRef] = useState<string>(
     dataAttributes[0]?.ref ?? ''
   );
@@ -124,7 +122,7 @@ export default function InteractionPopup({
     );
   }, [sourceKind]);
 
-  // Enforce constraints on mount/update
+  // Enforce Parameter constraints
   useEffect(() => {
     if (isParameter) {
       setTrigger('click' as InteractionType);
@@ -136,8 +134,7 @@ export default function InteractionPopup({
   }, [allowedResults, result, isParameter]);
 
   useEffect(() => {
-    if (isParameter) return; // Skip for parameters
-
+    if (isParameter) return;
     if (!hasSourceDataAttrs) {
       setSourceType('component');
       setSourceDataRef('');
@@ -148,7 +145,7 @@ export default function InteractionPopup({
     }
   }, [hasSourceDataAttrs, dataAttributes, sourceDataRef, isParameter]);
 
-  // --- REVERTED: Show all non-Graph targets ---
+  // Use all targets except Graphs (internal)
   const validTargets = useMemo(() => {
     return availableTargets.filter((t) => t.kind !== 'Graph');
   }, [availableTargets]);
@@ -217,11 +214,12 @@ export default function InteractionPopup({
       if (isDataKey(key)) {
         const [targetId, dataRef] = key.split(DATA_DELIM);
         const t = targetById.get(targetId);
-        const attr =
-          t?.dataAttributes?.find((a) => a.ref === dataRef) ?? undefined;
+        // dataRef is the ID, use it to find the label
+        const attr = t?.dataAttributes?.find((a) => a.ref === dataRef);
+
         const badgePrefix = t?.badge ? t.badge + ' ' : '';
         const title = t?.title ?? targetId;
-        const attrLabel = attr?.label ?? dataRef;
+        const attrLabel = attr?.label ?? 'Attribute';
         entries.push({
           key,
           label: `${badgePrefix}${title} · ${attrLabel}`,
@@ -248,17 +246,29 @@ export default function InteractionPopup({
     const indent = depth * 18;
     const children = childrenByParent.get(t.id) ?? [];
 
+    // PARAMETER LOGIC:
+    // If it's a Parameter interaction, users can select Dashboards/Visualizations directly.
+    // For other components (like Legends), they should select the inner data attribute, not the node itself.
+    let isUnavailable = false;
+    if (isParameter) {
+      if (t.kind !== 'Dashboard' && t.kind !== 'Visualization') {
+        isUnavailable = true;
+      }
+    }
+
     return (
       <div key={t.id} style={{ marginBottom: 2 }}>
         <div
-          onClick={() => toggleKey(t.id)}
+          onClick={() => {
+            if (!isUnavailable) toggleKey(t.id);
+          }}
           onKeyDown={(e) => {
-            if (e.key === ' ' || e.key === 'Enter') {
+            if (!isUnavailable && (e.key === ' ' || e.key === 'Enter')) {
               e.preventDefault();
               toggleKey(t.id);
             }
           }}
-          tabIndex={0}
+          tabIndex={isUnavailable ? -1 : 0}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -268,8 +278,12 @@ export default function InteractionPopup({
             marginLeft: indent,
             border: '1px solid #e5e7eb',
             borderRadius: 8,
-            background: compChecked ? '#eef2ff' : 'transparent',
-            cursor: 'pointer',
+            background: isUnavailable
+              ? '#f9fafb'
+              : compChecked
+              ? '#eef2ff'
+              : 'transparent',
+            cursor: isUnavailable ? 'default' : 'pointer',
             userSelect: 'none',
           }}
         >
@@ -278,12 +292,22 @@ export default function InteractionPopup({
               width: 14,
               height: 14,
               borderRadius: 4,
-              border: '1px solid #94a3b8',
-              background: compChecked ? '#4f46e5' : '#fff',
+              border: '1px solid',
+              borderColor: isUnavailable ? '#cbd5e1' : '#94a3b8',
+              background: !isUnavailable && compChecked ? '#4f46e5' : '#fff',
+              opacity: isUnavailable ? 0.5 : 1,
             }}
           />
-          <div style={{ fontSize: 13, color: '#0f172a' }}>
-            {compLabel} <span style={{ color: '#6b7280' }}>· {t.kind}</span>
+          <div
+            style={{
+              fontSize: 13,
+              color: isUnavailable ? '#94a3b8' : '#0f172a',
+            }}
+          >
+            {compLabel}{' '}
+            <span style={{ color: isUnavailable ? '#cbd5e1' : '#6b7280' }}>
+              · {t.kind}
+            </span>
           </div>
         </div>
 
@@ -394,7 +418,7 @@ export default function InteractionPopup({
           </div>
         </section>
       ) : (
-        /* Standard UI for other nodes */
+        /* Standard UI */
         <>
           <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>

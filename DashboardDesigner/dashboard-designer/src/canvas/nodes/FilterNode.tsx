@@ -5,10 +5,14 @@ import { memo } from 'react';
 
 const FilterNode = (p: NodeProps<NodeData>) => {
   const d: any = p.data;
-  const footer = d.data as (string | DataItem)[] | undefined;
+
+  // --- CHANGE: Enforce DataItem[] ---
+  const footer = d.data as DataItem[] | undefined;
+
   const perspectiveCount = Array.isArray(d.perspectives)
     ? (d.perspectives as string[]).length
     : 0;
+
   return (
     <BaseNodeShell
       {...p}

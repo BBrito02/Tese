@@ -5,8 +5,16 @@ import { memo } from 'react';
 
 const TooltipNode = (p: NodeProps<NodeData>) => {
   const d: any = p.data;
-  const footer = d.data as (string | DataItem)[] | undefined;
-  const vv = d.visualVars as VisualVariable[] | undefined;
+
+  // --- CHANGE: Enforce DataItem[] ---
+  const footer = d.data as DataItem[] | undefined;
+
+  const visualVars: VisualVariable[] = Array.isArray(d.visualVariables)
+    ? (d.visualVariables as VisualVariable[])
+    : Array.isArray(d.visualVars)
+    ? (d.visualVars as VisualVariable[])
+    : [];
+
   const perspectiveCount = Array.isArray(d.perspectives)
     ? (d.perspectives as string[]).length
     : 0;
@@ -15,7 +23,7 @@ const TooltipNode = (p: NodeProps<NodeData>) => {
     <BaseNodeShell
       {...p}
       footerItems={footer}
-      visualVars={vv}
+      visualVars={visualVars}
       perspectiveCount={perspectiveCount}
       reviewMode={(d as any).reviewMode ?? false}
       reviewCount={(d as any).reviewTotal ?? 0}

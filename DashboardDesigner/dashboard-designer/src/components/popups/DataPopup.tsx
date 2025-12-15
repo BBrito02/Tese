@@ -1,18 +1,13 @@
 import React, { useMemo, useState } from 'react';
+import { nanoid } from 'nanoid';
 import type { DataItem } from '../../domain/types';
 
 type Props = {
   initial: DataItem[];
   onCancel: () => void;
-  // Update signature to pass back the rename map
-  onSave: (items: DataItem[], renames: Record<string, string>) => void;
+  onSave: (items: DataItem[]) => void;
   initialSelectedIndex?: number;
 };
-
-// Extend DataItem locally to track history
-interface LocalDataItem extends DataItem {
-  originalName?: string;
-}
 
 const pill: React.CSSProperties = {
   display: 'inline-flex',
@@ -65,12 +60,9 @@ export default function DataPopup({
   onSave,
   initialSelectedIndex,
 }: Props) {
-  // Initialize items with their original names to track changes
-  const [items, setItems] = useState<LocalDataItem[]>(
-    initial?.map((i) => ({ ...i, originalName: i.name })) ?? []
-  );
+  // Items will now always have an ID from the node data
+  const [items, setItems] = useState<DataItem[]>(initial ?? []);
 
-  // Initialize state based on initialSelectedIndex
   const [editingIndex, setEditingIndex] = useState<number | null>(
     typeof initialSelectedIndex === 'number' && initialSelectedIndex >= 0
       ? initialSelectedIndex
@@ -104,18 +96,11 @@ export default function DataPopup({
   const isNameEmpty = nameTrim.length === 0;
   const canSubmit = !isNameEmpty && !isDuplicate;
 
-  const isDirty = useMemo(
-    () =>
-      JSON.stringify(items.map((i) => ({ name: i.name, dtype: i.dtype }))) !==
-      JSON.stringify(initial ?? []),
-    [items, initial]
-  );
-
   function handleSubmit() {
     if (!canSubmit) return;
 
     if (editingIndex !== null) {
-      // Update existing: Keep originalName, update current name
+      // Update existing: Keep the stable ID, update name/dtype
       setItems((prev) =>
         prev.map((item, i) =>
           i === editingIndex ? { ...item, name: nameTrim, dtype } : item
@@ -123,21 +108,18 @@ export default function DataPopup({
       );
       setEditingIndex(null);
     } else {
-      // Add new: No originalName
-      setItems((prev) => prev.concat({ name: nameTrim, dtype }));
+      // Add new: Generate a new unique ID
+      setItems((prev) => prev.concat({ id: nanoid(), name: nameTrim, dtype }));
     }
     setName('');
     setDtype('Other');
   }
 
   function startEdit(i: number) {
-    // --- FIX: Toggle off if clicking the same item ---
     if (editingIndex === i) {
       cancelEdit();
       return;
     }
-    // -------------------------------------------------
-
     const item = items[i];
     setName(item.name);
     setDtype(item.dtype);
@@ -160,22 +142,9 @@ export default function DataPopup({
   }
 
   function handleSave() {
-    // Allow saving even if not dirty to confirm "no changes" state if desired,
-    // but usually we check isDirty. For now keeping isDirty check if you prefer,
-    // or removing it to allow "save" to simply close with current state.
-    // if (!isDirty) return;
-
-    // Calculate renames: { "Old Name": "New Name" }
-    const renames: Record<string, string> = {};
-    items.forEach((item) => {
-      if (item.originalName && item.originalName !== item.name) {
-        renames[item.originalName] = item.name;
-      }
-    });
-
-    // Strip internal properties before saving
-    const cleanItems = items.map(({ name, dtype }) => ({ name, dtype }));
-    onSave(cleanItems, renames);
+    // We no longer need to pass a "renames" map because the IDs are stable.
+    // The parent component just replaces the data array.
+    onSave(items);
   }
 
   return (
@@ -193,7 +162,7 @@ export default function DataPopup({
               }
             }}
             placeholder="e.g., Country"
-            autoFocus // Auto focus for better UX when opening directly
+            autoFocus
             style={{
               ...field,
               borderColor: isDuplicate ? '#ef4444' : '#e5e7eb',
@@ -262,7 +231,8 @@ export default function DataPopup({
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {items.map((d, i) => (
             <span
-              key={`${d.name}-${i}`}
+              // Use the stable ID as the key
+              key={d.id}
               style={{
                 ...pill,
                 border:
@@ -313,7 +283,7 @@ export default function DataPopup({
             padding: '8px 12px',
             borderRadius: 8,
             border: '1px solid #38bdf8',
-            background: '#38bdf8', // Enable save always so user can close and confirm changes
+            background: '#38bdf8',
             color: '#fff',
             cursor: 'pointer',
           }}

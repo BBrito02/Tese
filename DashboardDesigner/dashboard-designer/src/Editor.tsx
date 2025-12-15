@@ -35,7 +35,6 @@ import type {
 } from './domain/types';
 import { canConnect } from './domain/rules';
 import { nextBadgeFor } from './domain/types';
-import { slug } from './domain/utils';
 import {
   SAVE_VERSION,
   type SaveFile,
@@ -331,15 +330,8 @@ export default function Editor() {
               (tid: string) => !toDelete.has(tid)
             );
             if (!stillValid) return false;
-            if (ix.sourceType === 'data' && ix.sourceDataRef) {
-              const dataArr = Array.isArray(d.data) ? d.data : [];
-              const exists = dataArr.some((attr: any) =>
-                typeof attr === 'string'
-                  ? attr === ix.sourceDataRef
-                  : attr?.name === ix.sourceDataRef
-              );
-              if (!exists) return false;
-            }
+            // NOTE: Relaxed check for interactions source data, since we use stable IDs now.
+            // If the node itself is deleted, interactions from/to it are removed elsewhere.
             return true;
           });
           if (cleaned.length === d.interactions.length) return n;
@@ -492,73 +484,24 @@ export default function Editor() {
       takeSnapshot();
       const patchAny = patch as any;
 
-      const renames = patchAny._dataRenames as
-        | Record<string, string>
-        | undefined;
-
-      if (renames) {
-        const toHandle = (name: string) => `data:${slug(name)}`;
-
-        setEdges((eds) =>
-          eds.map((e) => {
-            let next = e;
-            if (e.source === id && e.sourceHandle) {
-              for (const [oldName, newName] of Object.entries(renames)) {
-                const oldPrefix = toHandle(oldName);
-                if (e.sourceHandle.startsWith(oldPrefix)) {
-                  const newPrefix = toHandle(newName);
-                  const newHandle = e.sourceHandle.replace(
-                    oldPrefix,
-                    newPrefix
-                  );
-                  next = { ...next, sourceHandle: newHandle };
-                  break;
-                }
-              }
-            }
-            if (e.target === id && e.targetHandle) {
-              for (const [oldName, newName] of Object.entries(renames)) {
-                const oldPrefix = toHandle(oldName);
-                if (e.targetHandle.startsWith(oldPrefix)) {
-                  const newPrefix = toHandle(newName);
-                  const newHandle = e.targetHandle.replace(
-                    oldPrefix,
-                    newPrefix
-                  );
-                  next = { ...next, targetHandle: newHandle };
-                  break;
-                }
-              }
-            }
-            return next;
-          })
-        );
-        delete patchAny._dataRenames;
-      }
+      // Note: _dataRenames logic removed as it's no longer needed with stable IDs
 
       if (patchAny.data && Array.isArray(patchAny.data)) {
+        // --- CLEANUP LOGIC FOR REMOVED ITEMS ---
         const node = nodes.find((n) => n.id === id);
         const rawOld = (node?.data as any)?.data;
-        const oldItems = Array.isArray(rawOld) ? rawOld : [];
-        const newItems = patchAny.data;
+        const oldItems: DataItem[] = Array.isArray(rawOld) ? rawOld : [];
+        const newItems: DataItem[] = patchAny.data;
 
-        const toName = (i: any) =>
-          !i ? '' : typeof i === 'string' ? i.trim() : (i.name || '').trim();
-        const newNamesSet = new Set(newItems.map(toName));
+        // Compare by ID to find removals
+        const newIds = new Set(newItems.map((i) => i.id));
+        const removedItems = oldItems.filter((i) => !newIds.has(i.id));
 
-        const removedItems = oldItems.filter(
-          (i: any) => !newNamesSet.has(toName(i))
-        );
-
-        const realRemovedItems = removedItems.filter((i) => {
-          const n = toName(i);
-          return !renames || !renames[n];
-        });
-
-        if (realRemovedItems.length > 0) {
-          const toSlug = (s: string) => slug(s);
-          const removedPrefixes = new Set(
-            realRemovedItems.map((i: any) => `data:${toSlug(toName(i))}`)
+        if (removedItems.length > 0) {
+          // Identify edges connected to removed data handles
+          // Handle format: data:{UUID}
+          const removedHandlePrefixes = new Set(
+            removedItems.map((i) => `data:${i.id}`)
           );
 
           const edgeIdsToDelete: string[] = [];
@@ -568,25 +511,32 @@ export default function Editor() {
 
           edges.forEach((e) => {
             let isMatch = false;
-
+            // Check source handle
             if (e.source === id && e.sourceHandle) {
-              for (const prefix of removedPrefixes)
+              for (const prefix of removedHandlePrefixes) {
                 if (e.sourceHandle.startsWith(prefix)) {
                   isMatch = true;
                   break;
                 }
+              }
             }
+            // Check target handle
             if (!isMatch && e.target === id && e.targetHandle) {
-              for (const prefix of removedPrefixes)
+              for (const prefix of removedHandlePrefixes) {
                 if (e.targetHandle.startsWith(prefix)) {
                   isMatch = true;
                   break;
                 }
+              }
             }
+
             if (isMatch) {
               edgeIdsToDelete.push(e.id);
-              if (e.type === 'tooltip' && e.source === id)
+              // If it's a tooltip edge from this node, mark the tooltip node for deletion
+              if (e.type === 'tooltip' && e.source === id) {
                 nodeIdsToDelete.push(e.target);
+              }
+              // If interaction edge, track ID to remove from metadata
               if (e.type === 'interaction') {
                 const d: any = e.data || {};
                 if (d?.interactionId) interactionsToRemove.add(d.interactionId);
@@ -594,19 +544,19 @@ export default function Editor() {
             }
           });
 
+          // Cleanup interactions that reference deleted data
           const currentInteractions = (node?.data as any)?.interactions || [];
           currentInteractions.forEach((ix: any) => {
             if (
               ix.sourceType === 'data' &&
               ix.sourceDataRef &&
-              realRemovedItems.some(
-                (rm: any) => toName(rm) === ix.sourceDataRef
-              )
+              removedItems.some((rm) => rm.id === ix.sourceDataRef)
             ) {
               interactionsToRemove.add(ix.id);
             }
           });
 
+          // Cleanup Tooltip labels
           if (nodeIdsToDelete.length > 0) {
             const nodesToDeleteSet = new Set(nodeIdsToDelete);
             const tooltipNodes = nodes.filter((n) =>
@@ -629,6 +579,7 @@ export default function Editor() {
             });
           }
 
+          // Apply updates to the node (remove interactions/tooltips references)
           setNodes(
             (nds) =>
               (nds as unknown as Array<RFNode<NodeData>>).map((n) => {
@@ -677,11 +628,9 @@ export default function Editor() {
       }
 
       setNodes((nds) => {
-        // Find the node being updated to check for side effects
         const target = nds.find((n) => n.id === id);
         if (!target) return nds;
 
-        // --- NEW: Tooltip Side Effect Calculation ---
         let parentUpdate: {
           id: string;
           oldLabel: string;
@@ -708,12 +657,9 @@ export default function Editor() {
         }
 
         return nds.map((n) => {
-          // Apply update to target
           if (n.id === id) {
             return { ...n, data: { ...n.data, ...patch } };
           }
-
-          // Apply side effect to parent
           if (parentUpdate && n.id === parentUpdate.id) {
             const currentTooltips = (n.data as any).tooltips || [];
             const nextTooltips = currentTooltips.map((t: string) =>
@@ -721,7 +667,6 @@ export default function Editor() {
             );
             return { ...n, data: { ...n.data, tooltips: nextTooltips } };
           }
-
           return n;
         }) as AppNode[];
       });
@@ -898,10 +843,10 @@ export default function Editor() {
         const visibleNodes = groupNodes.filter((n) => !n.hidden);
 
         if (visibleNodes.length === 0) {
-          const winner = groupNodes[0];
-          if (winner) winner.hidden = false;
+          const first = groupNodes[0];
+          if (first) first.hidden = false;
         } else if (visibleNodes.length > 1) {
-          const winner = visibleNodes[0];
+          // --- FIXED: Removed unused variable 'winner' ---
           visibleNodes.slice(1).forEach((loser) => {
             rootsToHide.add(loser.id);
           });
@@ -1033,11 +978,19 @@ export default function Editor() {
       if (!node) return;
 
       const rawData = (node.data as any).data;
+
+      // --- FIXED: Ensure generated IDs for legacy string items or missing IDs ---
       const toDataItems = (list: any[]): DataItem[] =>
         Array.isArray(list)
-          ? list.map((v) =>
-              typeof v === 'string' ? { name: v, dtype: 'Other' } : v
-            )
+          ? list.map((v) => {
+              if (typeof v === 'string') {
+                return { id: nanoid(), name: v, dtype: 'Other' };
+              }
+              if (v && !v.id) {
+                return { ...v, id: nanoid() };
+              }
+              return v;
+            })
           : [];
 
       openModal({
@@ -1047,10 +1000,10 @@ export default function Editor() {
             initial={toDataItems(rawData)}
             initialSelectedIndex={index}
             onCancel={closeModal}
-            onSave={(items, renames) => {
+            // --- FIXED: Removed 'renames' argument usage ---
+            onSave={(items) => {
               updateNodeById(nodeId, {
                 data: items,
-                _dataRenames: renames,
               } as any);
               closeModal();
             }}
@@ -1062,6 +1015,8 @@ export default function Editor() {
     window.addEventListener('designer:edit-data', onEditData);
     return () => window.removeEventListener('designer:edit-data', onEditData);
   }, [nodes, openModal, closeModal, updateNodeById]);
+
+  // ... (rest of useEffects remain unchanged) ...
 
   useEffect(() => {
     const onWidth = (e: Event) =>
@@ -1128,7 +1083,6 @@ export default function Editor() {
 
         const attachedTo = (tip.data as any)?.attachedTo as string | undefined;
 
-        // --- CHANGED: Standalone tooltips are always candidates for visibility ---
         if (!attachedTo) {
           rawVisibility.add(tip.id);
           continue;

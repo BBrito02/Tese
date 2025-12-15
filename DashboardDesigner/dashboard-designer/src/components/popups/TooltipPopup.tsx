@@ -1,14 +1,14 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import type { DataItem } from '../../domain/types';
 
 type Activation = 'hover' | 'click';
 
 type Props = {
-  availableData: Array<string | DataItem>;
+  availableData: DataItem[]; // Updated to expect objects with IDs
   onCancel: () => void;
   onSave?: (payload: {
     mode: 'new';
-    attachRef: string; // REQUIRED: slug of the data attribute
+    attachRef: string; // Will now be the ID (UUID)
     activation: Activation;
     newTooltip: { title: string };
   }) => void;
@@ -24,26 +24,16 @@ const pill: React.CSSProperties = {
   whiteSpace: 'nowrap',
 };
 
-function slugify(s: string) {
-  return s
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9_-]/g, '');
-}
-
 export default function TooltipPopup({
   availableData,
   onCancel,
   onSave,
 }: Props) {
-  const existingNames = useMemo(
-    () => availableData.map((v) => (typeof v === 'string' ? v : v.name)),
-    [availableData]
-  );
+  // Logic Update: We no longer need to extract names or slugify.
+  // We use the DataItem objects directly.
 
   const [name, setName] = useState('');
-  const [attachRef, setAttachRef] = useState(''); // chosen data attribute (slug)
+  const [attachRef, setAttachRef] = useState(''); // Stores the ID
   const [activation, setActivation] = useState<Activation>('hover');
 
   const canSave = attachRef.length > 0;
@@ -108,9 +98,10 @@ export default function TooltipPopup({
           <option value="" disabled>
             (No data attributes in this visualization)
           </option>
-          {existingNames.map((n) => (
-            <option key={slugify(n)} value={slugify(n)}>
-              {n}
+          {/* LOGIC CHANGE: Use ID as value, Name as label */}
+          {availableData.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.name}
             </option>
           ))}
         </select>
