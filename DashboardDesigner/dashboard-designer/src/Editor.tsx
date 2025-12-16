@@ -202,6 +202,7 @@ export default function Editor() {
       takeSnapshot
     );
 
+  // --- NODE PRUNING (DELETION) LOGIC ---
   const pruneAfterRemoval = useCallback(
     (initialIds: string[]) => {
       takeSnapshot();
@@ -209,6 +210,7 @@ export default function Editor() {
         const all = nds as AppNode[];
         const base = new Set<string>(initialIds);
 
+        // If a Visualization is deleted, delete its Tooltips too
         for (const id of Array.from(base)) {
           const n = all.find((x) => x.id === id);
           if (n?.data?.kind === 'Visualization') {
@@ -225,6 +227,7 @@ export default function Editor() {
 
         const toDelete = collectDescendants(all, base);
 
+        // Save position of active nodes being deleted to restore siblings later
         const deletedActiveNodes = new Map<string, { x: number; y: number }>();
         all.forEach((n) => {
           if (toDelete.has(n.id) && !n.hidden && n.data?.perspectives?.length) {
@@ -238,6 +241,7 @@ export default function Editor() {
           }
         });
 
+        // Track tooltip labels for cleanup
         const labelsByViz = new Map<string, Set<string>>();
         for (const tip of all) {
           if (!toDelete.has(tip.id)) continue;
@@ -257,6 +261,7 @@ export default function Editor() {
 
         let kept = all.filter((n) => !toDelete.has(n.id));
 
+        // Update perspective lists in survivors
         kept = kept.map((n) => {
           if (n.data?.perspectives) {
             const newPerspectives = n.data.perspectives.filter(
@@ -272,6 +277,7 @@ export default function Editor() {
           return n;
         });
 
+        // Ensure at least one perspective sibling remains visible
         const groups = new Map<string, AppNode[]>();
         kept.forEach((n) => {
           if (n.data?.perspectives?.length) {
@@ -307,6 +313,7 @@ export default function Editor() {
           }
         });
 
+        // Remove deleted tooltips from parent metadata
         kept = kept.map((n) => {
           if (n.data?.kind !== 'Visualization') return n;
           const pruneSet = labelsByViz.get(n.id);
@@ -322,6 +329,7 @@ export default function Editor() {
           } as AppNode;
         });
 
+        // Cleanup broken interactions
         kept = kept.map((n) => {
           const d = n.data as any;
           if (!d?.interactions) return n;
@@ -330,8 +338,6 @@ export default function Editor() {
               (tid: string) => !toDelete.has(tid)
             );
             if (!stillValid) return false;
-            // NOTE: Relaxed check for interactions source data, since we use stable IDs now.
-            // If the node itself is deleted, interactions from/to it are removed elsewhere.
             return true;
           });
           if (cleaned.length === d.interactions.length) return n;
@@ -484,8 +490,6 @@ export default function Editor() {
       takeSnapshot();
       const patchAny = patch as any;
 
-      // Note: _dataRenames logic removed as it's no longer needed with stable IDs
-
       if (patchAny.data && Array.isArray(patchAny.data)) {
         // --- CLEANUP LOGIC FOR REMOVED ITEMS ---
         const node = nodes.find((n) => n.id === id);
@@ -499,7 +503,6 @@ export default function Editor() {
 
         if (removedItems.length > 0) {
           // Identify edges connected to removed data handles
-          // Handle format: data:{UUID}
           const removedHandlePrefixes = new Set(
             removedItems.map((i) => `data:${i.id}`)
           );
@@ -779,6 +782,65 @@ export default function Editor() {
     createChildInParent,
   });
 
+  // --- UPDATED Data Edit Listener with Bound Check ---
+  useEffect(() => {
+    const onEditData = (e: Event) => {
+      const { nodeId, index } = (e as CustomEvent).detail;
+      const node = nodes.find((n) => n.id === nodeId);
+      if (!node) return;
+
+      const rawData = (node.data as any).data;
+      const toDataItems = (list: any[]): DataItem[] =>
+        Array.isArray(list)
+          ? list.map((v) =>
+              typeof v === 'string'
+                ? { id: nanoid(), name: v, dtype: 'Other' }
+                : { ...v, id: v.id || nanoid() }
+            )
+          : [];
+
+      // Calculate which data attributes are bound to Parameters
+      const boundIds = new Set<string>();
+      const incomingEdges = edges.filter((ed) => ed.target === nodeId);
+
+      incomingEdges.forEach((edge) => {
+        const sourceNode = nodes.find((n) => n.id === edge.source);
+        // If source is a Parameter, it drives values
+        if (sourceNode?.data.kind === 'Parameter') {
+          // Check for data connection format: data:{id}:target
+          if (edge.targetHandle && edge.targetHandle.startsWith('data:')) {
+            const parts = edge.targetHandle.split(':');
+            if (parts.length >= 2) {
+              const attrId = parts[1];
+              boundIds.add(attrId);
+            }
+          }
+        }
+      });
+
+      openModal({
+        title: 'Data fields',
+        node: (
+          <DataPopup
+            initial={toDataItems(rawData)}
+            boundIds={boundIds} // Pass bound IDs to popup
+            initialSelectedIndex={index}
+            onCancel={closeModal}
+            onSave={(items) => {
+              updateNodeById(nodeId, {
+                data: items,
+              } as any);
+              closeModal();
+            }}
+          />
+        ),
+      });
+    };
+
+    window.addEventListener('designer:edit-data', onEditData);
+    return () => window.removeEventListener('designer:edit-data', onEditData);
+  }, [nodes, edges, openModal, closeModal, updateNodeById]);
+
   const buildSave = useCallback((): SaveFile => {
     const vp = (rf && (rf as any).getViewport?.()) || { x: 0, y: 0, zoom: 1 };
     const allReviews = Object.values(reviewsByTarget).flat();
@@ -846,7 +908,6 @@ export default function Editor() {
           const first = groupNodes[0];
           if (first) first.hidden = false;
         } else if (visibleNodes.length > 1) {
-          // --- FIXED: Removed unused variable 'winner' ---
           visibleNodes.slice(1).forEach((loser) => {
             rootsToHide.add(loser.id);
           });
@@ -972,53 +1033,6 @@ export default function Editor() {
   }, [modal, createChildInParent, openModal, closeModal]);
 
   useEffect(() => {
-    const onEditData = (e: Event) => {
-      const { nodeId, index } = (e as CustomEvent).detail;
-      const node = nodes.find((n) => n.id === nodeId);
-      if (!node) return;
-
-      const rawData = (node.data as any).data;
-
-      // --- FIXED: Ensure generated IDs for legacy string items or missing IDs ---
-      const toDataItems = (list: any[]): DataItem[] =>
-        Array.isArray(list)
-          ? list.map((v) => {
-              if (typeof v === 'string') {
-                return { id: nanoid(), name: v, dtype: 'Other' };
-              }
-              if (v && !v.id) {
-                return { ...v, id: nanoid() };
-              }
-              return v;
-            })
-          : [];
-
-      openModal({
-        title: 'Data fields',
-        node: (
-          <DataPopup
-            initial={toDataItems(rawData)}
-            initialSelectedIndex={index}
-            onCancel={closeModal}
-            // --- FIXED: Removed 'renames' argument usage ---
-            onSave={(items) => {
-              updateNodeById(nodeId, {
-                data: items,
-              } as any);
-              closeModal();
-            }}
-          />
-        ),
-      });
-    };
-
-    window.addEventListener('designer:edit-data', onEditData);
-    return () => window.removeEventListener('designer:edit-data', onEditData);
-  }, [nodes, openModal, closeModal, updateNodeById]);
-
-  // ... (rest of useEffects remain unchanged) ...
-
-  useEffect(() => {
     const onWidth = (e: Event) =>
       setMenuWidth((e as CustomEvent).detail?.width ?? PANEL_WIDTH);
     window.addEventListener('designer:menu-width', onWidth as EventListener);
@@ -1085,6 +1099,33 @@ export default function Editor() {
 
         if (!attachedTo) {
           rawVisibility.add(tip.id);
+          continue;
+        }
+
+        // --- NEW: Value Condition Logic ---
+        const edge = edges.find((e) => e.target === tip.id);
+        const edgeData = edge?.data as any; // Cast to any to avoid TS errors on dynamic props
+        const attachValue = edgeData?.attachValue;
+        const attachRef = edgeData?.attachRef;
+
+        let conditionMet = true;
+        if (attachRef && attachRef !== 'viz' && attachValue) {
+          const sourceNode = next.find((n) => n.id === edge?.source);
+          if (sourceNode) {
+            const dataItems = (sourceNode.data as any)?.data as
+              | DataItem[]
+              | undefined;
+            const item = dataItems?.find((d) => d.id === attachRef);
+            if (item) {
+              // Check if item.name contains the required value
+              if (!item.name.includes(attachValue)) {
+                conditionMet = false;
+              }
+            }
+          }
+        }
+
+        if (!conditionMet) {
           continue;
         }
 
@@ -1432,7 +1473,7 @@ export default function Editor() {
                 </ControlButton>
               </Controls>
             </ReactFlow>
-            {/* Markers Overlay - Restored */}
+            {/* Markers Overlay */}
             <div
               style={{
                 position: 'absolute',

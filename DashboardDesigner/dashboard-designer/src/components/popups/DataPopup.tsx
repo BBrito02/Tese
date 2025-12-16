@@ -4,6 +4,7 @@ import type { DataItem } from '../../domain/types';
 
 type Props = {
   initial: DataItem[];
+  boundIds?: Set<string>; // NEW: IDs of attributes connected to Parameters
   onCancel: () => void;
   onSave: (items: DataItem[]) => void;
   initialSelectedIndex?: number;
@@ -54,13 +55,30 @@ function norm(s: string) {
   return s.trim().toLowerCase();
 }
 
+// Helper to separate "Name" from " = Value" ONLY if bound
+function parseName(raw: string, isBound: boolean) {
+  // If not bound to a parameter, allow editing the full string (even if it contains '=')
+  if (!isBound) {
+    return { base: raw, suffix: '' };
+  }
+
+  const idx = raw.indexOf('=');
+  if (idx !== -1) {
+    return {
+      base: raw.substring(0, idx).trim(),
+      suffix: raw.substring(idx), // keeps " = Value"
+    };
+  }
+  return { base: raw, suffix: '' };
+}
+
 export default function DataPopup({
   initial,
+  boundIds,
   onCancel,
   onSave,
   initialSelectedIndex,
 }: Props) {
-  // Items will now always have an ID from the node data
   const [items, setItems] = useState<DataItem[]>(initial ?? []);
 
   const [editingIndex, setEditingIndex] = useState<number | null>(
@@ -69,21 +87,31 @@ export default function DataPopup({
       : null
   );
 
-  const [name, setName] = useState(
+  // Initialize Name and Suffix based on current selection or defaults
+  const initialItem =
     typeof initialSelectedIndex === 'number' && initial?.[initialSelectedIndex]
-      ? initial[initialSelectedIndex].name
-      : ''
-  );
+      ? initial[initialSelectedIndex]
+      : null;
+
+  // Check if the initial item is bound
+  const isInitialBound = initialItem
+    ? boundIds?.has(initialItem.id) ?? false
+    : false;
+
+  const parsed = initialItem
+    ? parseName(initialItem.name, isInitialBound)
+    : { base: '', suffix: '' };
+
+  const [name, setName] = useState(parsed.base);
+  const [lockedSuffix, setLockedSuffix] = useState(parsed.suffix);
+
   const [dtype, setDtype] = useState<DataItem['dtype']>(
-    typeof initialSelectedIndex === 'number' && initial?.[initialSelectedIndex]
-      ? initial[initialSelectedIndex].dtype
-      : 'Other'
+    initialItem ? initialItem.dtype : 'Other'
   );
 
   const names = useMemo(() => {
     const set = new Set<string>();
     items.forEach((d, i) => {
-      // Don't count the item currently being edited against itself
       if (i !== editingIndex) {
         set.add(norm(d.name));
       }
@@ -92,7 +120,11 @@ export default function DataPopup({
   }, [items, editingIndex]);
 
   const nameTrim = name.trim();
-  const isDuplicate = nameTrim.length > 0 && names.has(norm(nameTrim));
+  // Reconstruct full name to check for duplicates
+  const fullNameCandidate = lockedSuffix ? nameTrim + lockedSuffix : nameTrim;
+
+  const isDuplicate =
+    fullNameCandidate.length > 0 && names.has(norm(fullNameCandidate));
   const isNameEmpty = nameTrim.length === 0;
   const canSubmit = !isNameEmpty && !isDuplicate;
 
@@ -100,18 +132,21 @@ export default function DataPopup({
     if (!canSubmit) return;
 
     if (editingIndex !== null) {
-      // Update existing: Keep the stable ID, update name/dtype
       setItems((prev) =>
         prev.map((item, i) =>
-          i === editingIndex ? { ...item, name: nameTrim, dtype } : item
+          i === editingIndex
+            ? { ...item, name: fullNameCandidate, dtype }
+            : item
         )
       );
       setEditingIndex(null);
     } else {
-      // Add new: Generate a new unique ID
-      setItems((prev) => prev.concat({ id: nanoid(), name: nameTrim, dtype }));
+      setItems((prev) =>
+        prev.concat({ id: nanoid(), name: fullNameCandidate, dtype })
+      );
     }
     setName('');
+    setLockedSuffix('');
     setDtype('Other');
   }
 
@@ -121,13 +156,19 @@ export default function DataPopup({
       return;
     }
     const item = items[i];
-    setName(item.name);
+    // Check if this specific item is bound
+    const isBound = boundIds?.has(item.id) ?? false;
+
+    const p = parseName(item.name, isBound);
+    setName(p.base);
+    setLockedSuffix(p.suffix);
     setDtype(item.dtype);
     setEditingIndex(i);
   }
 
   function cancelEdit() {
     setName('');
+    setLockedSuffix('');
     setDtype('Other');
     setEditingIndex(null);
   }
@@ -142,8 +183,6 @@ export default function DataPopup({
   }
 
   function handleSave() {
-    // We no longer need to pass a "renames" map because the IDs are stable.
-    // The parent component just replaces the data array.
     onSave(items);
   }
 
@@ -151,23 +190,50 @@ export default function DataPopup({
     <div style={{ display: 'grid', gap: 14 }}>
       <div style={{ ...row }}>
         <div style={labelCell}>Name</div>
-        <div>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                if (canSubmit) handleSubmit();
-              }
-            }}
-            placeholder="e.g., Country"
-            autoFocus
-            style={{
-              ...field,
-              borderColor: isDuplicate ? '#ef4444' : '#e5e7eb',
-            }}
-          />
+        <div style={{ width: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'stretch' }}>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  if (canSubmit) handleSubmit();
+                }
+              }}
+              placeholder="e.g., Country"
+              autoFocus
+              style={{
+                ...field,
+                borderColor: isDuplicate ? '#ef4444' : '#e5e7eb',
+                borderTopRightRadius: lockedSuffix ? 0 : 10,
+                borderBottomRightRadius: lockedSuffix ? 0 : 10,
+                flex: 1,
+              }}
+            />
+            {lockedSuffix && (
+              <div
+                style={{
+                  background: '#f1f5f9',
+                  border: '1px solid #e5e7eb',
+                  borderLeft: 'none',
+                  borderTopRightRadius: 10,
+                  borderBottomRightRadius: 10,
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '0 12px',
+                  color: '#64748b',
+                  fontWeight: 600,
+                  fontSize: 13,
+                  whiteSpace: 'nowrap',
+                  userSelect: 'none',
+                }}
+                title="This part is bound to a parameter and cannot be edited directly."
+              >
+                {lockedSuffix}
+              </div>
+            )}
+          </div>
           {isDuplicate && (
             <div style={{ color: '#ef4444', fontSize: 12, marginTop: 6 }}>
               Name already exists.
@@ -231,7 +297,6 @@ export default function DataPopup({
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {items.map((d, i) => (
             <span
-              // Use the stable ID as the key
               key={d.id}
               style={{
                 ...pill,

@@ -77,7 +77,35 @@ export function useGlobalEvents({
   updateNodeById,
   createChildInParent,
 }: UseGlobalEventsProps) {
-  // 1-10: Standard listeners (Tooltip, Edges, Visual Vars, Patch Node, Add/Edit Graphs, Set Graph Type)
+  // --- NEW: Generic Node Selection Listener ---
+  useEffect(() => {
+    const onSelectNode = (e: Event) => {
+      const { nodeId } = (e as CustomEvent).detail || {};
+      if (!nodeId) return;
+
+      setNodes((nds) =>
+        nds.map((n) => ({
+          ...n,
+          selected: n.id === nodeId,
+        }))
+      );
+      setEdges((eds) => eds.map((e) => ({ ...e, selected: false })));
+      setSelectedId(nodeId);
+      setSelectedEdgeId(null);
+    };
+
+    window.addEventListener(
+      'designer:select-node',
+      onSelectNode as EventListener
+    );
+    return () =>
+      window.removeEventListener(
+        'designer:select-node',
+        onSelectNode as EventListener
+      );
+  }, [setNodes, setEdges, setSelectedId, setSelectedEdgeId]);
+
+  // ... (Previous listeners remain unchanged)
   useEffect(() => {
     const onSelectTooltip = (e: Event) => {
       const { parentId, label } = (e as CustomEvent).detail || {};
@@ -306,7 +334,6 @@ export function useGlobalEvents({
       );
   }, [setNodes, takeSnapshot, applyConstraints]);
 
-  // 9. EDIT GRAPHS
   useEffect(() => {
     function onEditGraphs(e: Event) {
       const { parentId, graphTypes } = (e as CustomEvent).detail || {};
@@ -382,7 +409,6 @@ export function useGlobalEvents({
       );
   }, [setNodes, takeSnapshot, applyConstraints]);
 
-  // 10. SET GRAPH TYPE
   useEffect(() => {
     function onSetGraphType(e: Event) {
       const { nodeId, graphType } = (e as CustomEvent).detail;
@@ -405,7 +431,6 @@ export function useGlobalEvents({
       );
   }, [setNodes, takeSnapshot]);
 
-  // 11. INTERACTIONS POPUP
   useEffect(() => {
     function onOpenInteractions(e: Event) {
       const sourceId = (e as CustomEvent).detail?.nodeId;
@@ -416,7 +441,6 @@ export function useGlobalEvents({
         .filter((n) => n.id !== sourceId)
         .map((n) => {
           const nd = n.data as any;
-          // Use ID for reference
           const dataAttrs = Array.isArray(nd.data)
             ? nd.data.map((v: any) => ({ ref: v.id, label: v.name }))
             : [];
@@ -459,7 +483,6 @@ export function useGlobalEvents({
 
               const nodesToUpdate = new Map<string, any>();
 
-              // 1. Initial Renaming (Visual Only) - IDs remain stable!
               if (isParameter) {
                 targetDetails.forEach((detail) => {
                   if (detail.targetType === 'data' && detail.targetDataRef) {
@@ -504,7 +527,6 @@ export function useGlobalEvents({
                 });
               }
 
-              // 2. Dashboard Creation
               let finalTargets = targets;
               let finalTargetDetailsList = targetDetails;
               let newDashboardNode: AppNode | null = null;
@@ -530,7 +552,6 @@ export function useGlobalEvents({
                 ];
               }
 
-              // 3. Batch Update Nodes
               setNodes((nds) => {
                 let all = nds.map((n) =>
                   nodesToUpdate.has(n.id) ? nodesToUpdate.get(n.id) : n
@@ -560,9 +581,6 @@ export function useGlobalEvents({
                 return all;
               });
 
-              // 4. Create Edges
-              // Parameter uses null sourceHandle.
-              // Target handle uses ID: data:{ID}:target - This is stable!
               setEdges((eds) => {
                 let nextEdges = [...eds];
                 const sourceHandleId = isParameter
@@ -631,7 +649,7 @@ export function useGlobalEvents({
             availableData={availableData}
             onCancel={closeModal}
             onSave={(spec) => {
-              const { attachRef, activation, newTooltip } = spec; // attachRef is ID
+              const { attachRef, activation, newTooltip, attachValue } = spec;
               const tipId = nanoid();
               const tipBadge = nextBadgeFor('Tooltip', nodes);
               const title = newTooltip?.title?.trim() || 'Tooltip';
@@ -672,7 +690,8 @@ export function useGlobalEvents({
 
               const targetHandle = `${tipId}:target`;
               const sourceHandle =
-                attachRef === 'viz' ? null : `data:${attachRef}:${activation}`; // Use ID in handle
+                attachRef === 'viz' ? null : `data:${attachRef}:${activation}`;
+
               setEdges((eds) => [
                 ...eds,
                 {
@@ -682,7 +701,11 @@ export function useGlobalEvents({
                   sourceHandle,
                   targetHandle,
                   type: 'tooltip',
-                  data: { activation, attachRef },
+                  data: {
+                    activation,
+                    attachRef,
+                    attachValue,
+                  },
                 },
               ]);
               closeModal();
@@ -719,22 +742,20 @@ export function useGlobalEvents({
         const targetNode = nodesMap.get(targetId);
         if (!targetNode) return;
 
-        // Check if edge targets a data attribute by ID "data:{ID}:target"
         if (edge.targetHandle && edge.targetHandle.startsWith('data:')) {
           const parts = edge.targetHandle.split(':');
           if (parts.length < 2) return;
-          const attrId = parts[1]; // THIS IS THE STABLE ID
+          const attrId = parts[1];
 
           const dataList = (targetNode.data as any).data || [];
           const itemIndex = dataList.findIndex((it: any) => it.id === attrId);
 
           if (itemIndex > -1) {
             const item = dataList[itemIndex];
-            // Rename visually (Name = Value)
             const baseName = item.name.split(' = ')[0];
             const newName = `${baseName} = ${value}`;
             const newDataList = [...dataList];
-            newDataList[itemIndex] = { ...item, name: newName }; // Update name, keep ID
+            newDataList[itemIndex] = { ...item, name: newName };
 
             const nextData = { ...targetNode.data };
             if ((nextData as any).data) (nextData as any).data = newDataList;
@@ -743,7 +764,6 @@ export function useGlobalEvents({
           }
         }
       });
-      // Update Nodes. NO EDGE UPDATES NEEDED because handle IDs (UUIDs) didn't change!
       setNodes(Array.from(nodesMap.values()));
     };
 

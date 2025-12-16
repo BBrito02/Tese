@@ -26,7 +26,7 @@ const ParameterNode = (p: NodeProps<NodeData>) => {
     outline: 'none',
   };
 
-  // --- NEW: Handle Value Change ---
+  // --- Handle Value Change ---
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value;
     // Dispatch event to global listener
@@ -51,11 +51,19 @@ const ParameterNode = (p: NodeProps<NodeData>) => {
         <div style={{ width: '100%' }}>
           <select
             className="nodrag nopan"
-            onPointerDown={(e) => e.stopPropagation()}
+            // --- UPDATED: Select node on click, while preventing drag ---
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              window.dispatchEvent(
+                new CustomEvent('designer:select-node', {
+                  detail: { nodeId: p.id },
+                })
+              );
+            }}
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
             defaultValue=""
-            onChange={handleChange} // <--- Attached Handler
+            onChange={handleChange}
             style={selectStyle}
           >
             <option value="" disabled>
