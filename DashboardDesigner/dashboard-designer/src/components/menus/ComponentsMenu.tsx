@@ -1,4 +1,3 @@
-// src/components/menus/ComponentsMenu.tsx
 import { useEffect, useState, useRef } from 'react';
 import type { Node as RFNode } from 'reactflow';
 import type { DataItem, NodeData, NodeKind } from '../../domain/types';
@@ -41,6 +40,21 @@ type Props = {
 
   onNavigate?: (nodeId: string) => void;
   onCreatePerspective?: (sourceNodeId: string) => void;
+};
+
+// Standard Round Button Style
+const roundIconBtn: React.CSSProperties = {
+  width: 24,
+  height: 24,
+  borderRadius: 999,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  border: 'none',
+  cursor: 'pointer',
+  color: '#fff',
+  background: '#38bdf8',
+  // Removed marginLeft here as it's handled in context or irrelevant for absolute pos
 };
 
 export default function ComponentsMenu(props: Props) {
@@ -110,14 +124,10 @@ export default function ComponentsMenu(props: Props) {
   const disabled = !node;
   const Menu = MENUS[panelNode.data.kind as NodeKind];
 
-  // Perspective logic
   const perspectiveIds = panelNode.data.perspectives ?? [];
   const currentIndex = perspectiveIds.indexOf(panelNode.id);
   const hasPerspectives = perspectiveIds.length > 0;
 
-  // --- CHANGED: Determine visibility of perspective section ---
-  // Show if not disabled AND (we have perspectives OR we can create them)
-  // This allows it to show in Review Mode, but hides it for things like Edges (where onCreatePerspective is undefined)
   const showPerspectiveSection =
     !disabled && (hasPerspectives || !!onCreatePerspective);
 
@@ -194,7 +204,6 @@ export default function ComponentsMenu(props: Props) {
           height: '100%',
         }}
       >
-        {/* --- CHANGED: Use showPerspectiveSection instead of !reviewMode --- */}
         {showPerspectiveSection && (
           <div
             style={{
@@ -207,8 +216,10 @@ export default function ComponentsMenu(props: Props) {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between',
+                justifyContent: 'center', // --- CHANGED: Centered content ---
                 marginBottom: 6,
+                position: 'relative', // --- ADDED: For absolute button positioning ---
+                minHeight: 24, // Ensure vertical space for button
               }}
             >
               <span
@@ -216,7 +227,7 @@ export default function ComponentsMenu(props: Props) {
                   fontSize: 12,
                   fontWeight: 700,
                   color: '#0f172a',
-                  marginLeft: 35,
+                  // Removed marginLeft to properly center
                 }}
               >
                 Perspective{' '}
@@ -227,22 +238,19 @@ export default function ComponentsMenu(props: Props) {
 
               {onCreatePerspective && (
                 <button
+                  type="button"
                   onClick={() => onCreatePerspective(panelNode.id)}
                   title="Create new perspective"
                   style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    fontSize: 11,
-                    padding: '4px 8px',
-                    borderRadius: 6,
-                    border: '1px solid #e5e7eb',
-                    background: '#fff',
-                    cursor: 'pointer',
-                    fontWeight: 600,
+                    ...roundIconBtn,
+                    opacity: disabled ? 0.6 : 1,
+                    position: 'absolute', // --- CHANGED: Absolute positioning ---
+                    right: 0,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
                   }}
                 >
-                  <LuPlus size={12} /> New
+                  <LuPlus size={16} />
                 </button>
               )}
             </div>
