@@ -98,6 +98,7 @@ interface NodeDataBase {
   graphType?: GraphType | null;
   interactions?: Interaction[];
   perspectives?: string[];
+  highlighted?: boolean;
 }
 
 const KIND_PREFIX = {

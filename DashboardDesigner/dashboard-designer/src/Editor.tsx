@@ -210,7 +210,6 @@ export default function Editor() {
         const all = nds as AppNode[];
         const base = new Set<string>(initialIds);
 
-        // If a Visualization is deleted, delete its Tooltips too
         for (const id of Array.from(base)) {
           const n = all.find((x) => x.id === id);
           if (n?.data?.kind === 'Visualization') {
@@ -227,7 +226,6 @@ export default function Editor() {
 
         const toDelete = collectDescendants(all, base);
 
-        // Save position of active nodes being deleted to restore siblings later
         const deletedActiveNodes = new Map<string, { x: number; y: number }>();
         all.forEach((n) => {
           if (toDelete.has(n.id) && !n.hidden && n.data?.perspectives?.length) {
@@ -241,7 +239,6 @@ export default function Editor() {
           }
         });
 
-        // Track tooltip labels for cleanup
         const labelsByViz = new Map<string, Set<string>>();
         for (const tip of all) {
           if (!toDelete.has(tip.id)) continue;
@@ -261,7 +258,6 @@ export default function Editor() {
 
         let kept = all.filter((n) => !toDelete.has(n.id));
 
-        // Update perspective lists in survivors
         kept = kept.map((n) => {
           if (n.data?.perspectives) {
             const newPerspectives = n.data.perspectives.filter(
@@ -277,7 +273,6 @@ export default function Editor() {
           return n;
         });
 
-        // Ensure at least one perspective sibling remains visible
         const groups = new Map<string, AppNode[]>();
         kept.forEach((n) => {
           if (n.data?.perspectives?.length) {
@@ -313,7 +308,6 @@ export default function Editor() {
           }
         });
 
-        // Remove deleted tooltips from parent metadata
         kept = kept.map((n) => {
           if (n.data?.kind !== 'Visualization') return n;
           const pruneSet = labelsByViz.get(n.id);
@@ -329,7 +323,6 @@ export default function Editor() {
           } as AppNode;
         });
 
-        // Cleanup broken interactions
         kept = kept.map((n) => {
           const d = n.data as any;
           if (!d?.interactions) return n;
@@ -502,7 +495,6 @@ export default function Editor() {
         const removedItems = oldItems.filter((i) => !newIds.has(i.id));
 
         if (removedItems.length > 0) {
-          // Identify edges connected to removed data handles
           const removedHandlePrefixes = new Set(
             removedItems.map((i) => `data:${i.id}`)
           );
@@ -547,7 +539,6 @@ export default function Editor() {
             }
           });
 
-          // Cleanup interactions that reference deleted data
           const currentInteractions = (node?.data as any)?.interactions || [];
           currentInteractions.forEach((ix: any) => {
             if (
@@ -559,7 +550,6 @@ export default function Editor() {
             }
           });
 
-          // Cleanup Tooltip labels
           if (nodeIdsToDelete.length > 0) {
             const nodesToDeleteSet = new Set(nodeIdsToDelete);
             const tooltipNodes = nodes.filter((n) =>
@@ -582,7 +572,6 @@ export default function Editor() {
             });
           }
 
-          // Apply updates to the node (remove interactions/tooltips references)
           setNodes(
             (nds) =>
               (nds as unknown as Array<RFNode<NodeData>>).map((n) => {
@@ -766,6 +755,31 @@ export default function Editor() {
       })
   );
 
+  // --- RESTORED: Modal handling effect for Drag & Drop ---
+  useEffect(() => {
+    if (modal?.type !== 'add-component') return;
+    const { nodeId, presetKind, position } = modal;
+    const closeAndClear = () => {
+      closeModal();
+      setModal(null);
+    };
+    openModal({
+      title: 'Component Menu',
+      node: (
+        <ModalCleanup onCleanup={() => setModal(null)}>
+          <AddComponentPopup
+            kinds={[presetKind] as any}
+            onCancel={closeAndClear}
+            onSave={(payload: any) => {
+              createChildInParent(nodeId, { ...payload, position });
+              closeAndClear();
+            }}
+          />
+        </ModalCleanup>
+      ),
+    });
+  }, [modal, createChildInParent, openModal, closeModal]);
+
   useGlobalEvents({
     nodes: nodes as AppNode[],
     setNodes: setNodes as any,
@@ -782,7 +796,7 @@ export default function Editor() {
     createChildInParent,
   });
 
-  // --- UPDATED Data Edit Listener with Bound Check ---
+  // --- PARAMETER-BOUND DATA ATTRIBUTES LOGIC ---
   useEffect(() => {
     const onEditData = (e: Event) => {
       const { nodeId, index } = (e as CustomEvent).detail;
@@ -805,9 +819,7 @@ export default function Editor() {
 
       incomingEdges.forEach((edge) => {
         const sourceNode = nodes.find((n) => n.id === edge.source);
-        // If source is a Parameter, it drives values
         if (sourceNode?.data.kind === 'Parameter') {
-          // Check for data connection format: data:{id}:target
           if (edge.targetHandle && edge.targetHandle.startsWith('data:')) {
             const parts = edge.targetHandle.split(':');
             if (parts.length >= 2) {
@@ -823,7 +835,7 @@ export default function Editor() {
         node: (
           <DataPopup
             initial={toDataItems(rawData)}
-            boundIds={boundIds} // Pass bound IDs to popup
+            boundIds={boundIds}
             initialSelectedIndex={index}
             onCancel={closeModal}
             onSave={(items) => {
@@ -841,6 +853,7 @@ export default function Editor() {
     return () => window.removeEventListener('designer:edit-data', onEditData);
   }, [nodes, edges, openModal, closeModal, updateNodeById]);
 
+  // --- SAVE/LOAD & MODALS ---
   const buildSave = useCallback((): SaveFile => {
     const vp = (rf && (rf as any).getViewport?.()) || { x: 0, y: 0, zoom: 1 };
     const allReviews = Object.values(reviewsByTarget).flat();
@@ -1008,30 +1021,7 @@ export default function Editor() {
     setSelectedId(fallbackId);
   }, [selectedId, nodes, pruneAfterRemoval]);
 
-  useEffect(() => {
-    if (modal?.type !== 'add-component') return;
-    const { nodeId, presetKind, position } = modal;
-    const closeAndClear = () => {
-      closeModal();
-      setModal(null);
-    };
-    openModal({
-      title: 'Component Menu',
-      node: (
-        <ModalCleanup onCleanup={() => setModal(null)}>
-          <AddComponentPopup
-            kinds={[presetKind] as any}
-            onCancel={closeAndClear}
-            onSave={(payload: any) => {
-              createChildInParent(nodeId, { ...payload, position });
-              closeAndClear();
-            }}
-          />
-        </ModalCleanup>
-      ),
-    });
-  }, [modal, createChildInParent, openModal, closeModal]);
-
+  // --- MENU RESIZING LOGIC ---
   useEffect(() => {
     const onWidth = (e: Event) =>
       setMenuWidth((e as CustomEvent).detail?.width ?? PANEL_WIDTH);
@@ -1066,23 +1056,43 @@ export default function Editor() {
       )
     : 0;
 
+  // --- HIGHLIGHT & TOOLTIP VISIBILITY LOGIC ---
   useEffect(() => {
     setNodes((nds) => {
-      const next = nds.map((n) => ({ ...n }));
-      const selected = selectedId
-        ? next.find((n) => n.id === selectedId)
-        : null;
-
+      // 1. Determine highlighted nodes from selected edge
+      let highlightSrc: string | undefined;
+      let highlightTgt: string | undefined;
       let vizIdFromEdge: string | null = null;
       let targetIdFromEdge: string | null = null;
+
       if (selectedEdgeId) {
         const edge = edges.find((e) => e.id === selectedEdgeId);
-        if (edge?.type === 'tooltip') {
-          vizIdFromEdge = edge.source;
-          targetIdFromEdge = edge.target;
+        if (edge) {
+          highlightSrc = edge.source;
+          highlightTgt = edge.target;
+
+          if (edge.type === 'tooltip') {
+            vizIdFromEdge = edge.source;
+            targetIdFromEdge = edge.target;
+          }
         }
       }
 
+      // 2. Update node highlight state
+      const next = nds.map((n) => {
+        const isHighlighted = n.id === highlightSrc || n.id === highlightTgt;
+        const currentHighlight = !!n.data?.highlighted;
+
+        if (isHighlighted !== currentHighlight) {
+          return {
+            ...n,
+            data: { ...n.data, highlighted: isHighlighted },
+          };
+        }
+        return n;
+      });
+
+      // 3. Tooltip visibility logic
       const groups = new Map<string, AppNode[]>();
       const rawVisibility = new Set<string>();
 
@@ -1102,9 +1112,9 @@ export default function Editor() {
           continue;
         }
 
-        // --- NEW: Value Condition Logic ---
+        // --- Value Condition Check ---
         const edge = edges.find((e) => e.target === tip.id);
-        const edgeData = edge?.data as any; // Cast to any to avoid TS errors on dynamic props
+        const edgeData = edge?.data as any;
         const attachValue = edgeData?.attachValue;
         const attachRef = edgeData?.attachRef;
 
@@ -1132,12 +1142,15 @@ export default function Editor() {
         const vizSelected =
           selectedId === attachedTo || vizIdFromEdge === attachedTo;
         const tipSelected = selectedId === tip.id;
-        const tipChildSelected = selected
-          ? isDescendant(selected, tip.id, next)
+        // Find node object safely
+        const selNode = next.find((n) => n.id === selectedId);
+
+        const tipChildSelected = selNode
+          ? isDescendant(selNode as AppNode, tip.id, next as AppNode[])
           : false;
         const vizChildSelected =
-          selected && attachedTo
-            ? isDescendant(selected, attachedTo, next)
+          selNode && attachedTo
+            ? isDescendant(selNode as AppNode, attachedTo, next as AppNode[])
             : false;
 
         if (

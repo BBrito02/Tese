@@ -158,10 +158,13 @@ function DataPills({
                 left: '50%',
                 top: -3,
                 transform: 'translateX(-50%)',
+                width: 6,
+                height: 6,
                 borderWidth: 1,
                 borderStyle: 'solid',
                 borderColor: '#222',
                 background: '#111',
+                zIndex: 10,
               }}
             />
 
@@ -176,10 +179,13 @@ function DataPills({
                 left: '70%',
                 bottom: -3,
                 transform: 'translateX(-50%)',
+                width: 6,
+                height: 6,
                 borderWidth: 1,
                 borderStyle: 'solid',
                 borderColor: '#222',
-                background: '#111',
+                background: '#3b82f6', // Blue for click
+                zIndex: 10,
               }}
             />
             <Handle
@@ -192,10 +198,13 @@ function DataPills({
                 left: '30%',
                 bottom: -3,
                 transform: 'translateX(-50%)',
+                width: 6,
+                height: 6,
                 borderWidth: 1,
                 borderStyle: 'solid',
                 borderColor: '#222',
-                background: '#111',
+                background: '#fbbf24', // Amber for hover
+                zIndex: 10,
               }}
             />
           </div>
@@ -239,7 +248,7 @@ export default function BaseNodeShell({
     unresolved: reviewUnresolvedCount,
   } = useReviews(id);
 
-  // --- CHANGED: Track IDs for updates ---
+  // --- Track IDs for updates ---
   const pillHandleIds = useMemo(
     () => (footerItems ?? []).map((it) => `data:${it.id}`),
     [footerItems]
@@ -258,12 +267,24 @@ export default function BaseNodeShell({
   }, [id, updateNodeInternals, canInteract]);
 
   const hasFooter = Array.isArray(footerItems) && footerItems.length > 0;
+
+  // --- HIGHLIGHT LOGIC ---
+  const isHighlighted = !!data.highlighted;
+  const isSelected = selected || isHighlighted;
+
   const dynamicBorderColor = isOver
     ? '#38bdf8'
-    : selected
-    ? '#60a5fa'
+    : isSelected
+    ? '#3b82f6' // Match Standard Blue
     : 'transparent';
+
   const borderColor = highlightBorder ? dynamicBorderColor : '#e5e7eb';
+
+  // Add Glow Effect for Highlighting
+  const boxShadow = isSelected
+    ? '0 0 0 2px rgba(59, 130, 246, 0.5)'
+    : '0 1px 3px rgba(0,0,0,0.06)';
+
   const cardStyleClean = stripBorderStyles(cardStyle) || {};
 
   const handlePillClick = (index: number) => {
@@ -288,7 +309,7 @@ export default function BaseNodeShell({
       }}
     >
       <NodeResizer
-        isVisible={selected}
+        isVisible={!!selected} // Only show resize handles when actually selected (not just highlighted)
         minWidth={minW}
         minHeight={minH}
         handleStyle={{ width: 12, height: 12, borderRadius: 4 }}
@@ -310,9 +331,10 @@ export default function BaseNodeShell({
           borderWidth,
           borderStyle: 'solid',
           borderColor,
-          boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+          boxShadow, // Applied here
           overflow: isParameter ? 'visible' : 'hidden',
           boxSizing: 'border-box',
+          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
           ...cardStyleClean,
         }}
       >
@@ -541,6 +563,13 @@ export default function BaseNodeShell({
           type="target"
           position={Position.Left}
           className="nodrag nopan"
+          style={{
+            width: 8,
+            height: 16,
+            borderRadius: 2,
+            background: '#94a3b8',
+            border: 'none',
+          }}
         />
       )}
       {rightHandle && canInteract && (
