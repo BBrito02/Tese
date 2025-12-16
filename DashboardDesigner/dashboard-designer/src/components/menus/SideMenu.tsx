@@ -154,15 +154,13 @@ export default function SideMenu() {
     setCollapsed(next);
     localStorage.setItem(LS_KEY, JSON.stringify(next));
 
-    // Let Editor know our width (0 if collapsed, SIDEBAR_W if open)
-    window.dispatchEvent(
-      new CustomEvent('designer:menu-width', {
-        detail: { width: next ? 0 : SIDEBAR_W },
-      })
-    );
+    // --- REMOVED: window.dispatchEvent(...) ---
+    // The side menu should NOT notify the editor about its width,
+    // because the editor uses that event to move the top-right buttons
+    // which should only move for the Right-side menu.
   };
 
-  // Common style for the toggle button (from your request)
+  // Common style for the toggle button
   const toggleButtonStyle: React.CSSProperties = {
     position: 'absolute',
     top: 6,
