@@ -27,6 +27,10 @@ type Props = {
     type: 'data' | 'interactions' | 'tooltips' | 'add-component'
   ) => void;
   parentData?: (string | DataItem)[];
+
+  // --- ADDED: This prop was missing in the interface ---
+  nodeNames?: Record<string, string>;
+
   reviewMode?: boolean;
   reviewTargetId?: string;
   reviewTargetLabel?: string;
@@ -54,7 +58,6 @@ const roundIconBtn: React.CSSProperties = {
   cursor: 'pointer',
   color: '#fff',
   background: '#38bdf8',
-  // Removed marginLeft here as it's handled in context or irrelevant for absolute pos
 };
 
 export default function ComponentsMenu(props: Props) {
@@ -64,6 +67,7 @@ export default function ComponentsMenu(props: Props) {
     onDelete,
     onOpen,
     parentData,
+    nodeNames, // Destructure
     reviewMode = false,
     reviewTargetId,
     reviewTargetLabel,
@@ -159,7 +163,6 @@ export default function ComponentsMenu(props: Props) {
           'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       }}
     >
-      {/* collapse toggle */}
       <button
         onClick={() => {
           const next = !collapsed;
@@ -196,7 +199,6 @@ export default function ComponentsMenu(props: Props) {
         )}
       </button>
 
-      {/* content */}
       <div
         style={{
           display: collapsed ? 'none' : 'block',
@@ -216,10 +218,10 @@ export default function ComponentsMenu(props: Props) {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center', // --- CHANGED: Centered content ---
+                justifyContent: 'center',
                 marginBottom: 6,
-                position: 'relative', // --- ADDED: For absolute button positioning ---
-                minHeight: 24, // Ensure vertical space for button
+                position: 'relative',
+                minHeight: 24,
               }}
             >
               <span
@@ -227,7 +229,6 @@ export default function ComponentsMenu(props: Props) {
                   fontSize: 12,
                   fontWeight: 700,
                   color: '#0f172a',
-                  // Removed marginLeft to properly center
                 }}
               >
                 Perspective{' '}
@@ -238,13 +239,12 @@ export default function ComponentsMenu(props: Props) {
 
               {onCreatePerspective && (
                 <button
-                  type="button"
                   onClick={() => onCreatePerspective(panelNode.id)}
                   title="Create new perspective"
                   style={{
                     ...roundIconBtn,
+                    position: 'absolute',
                     opacity: disabled ? 0.6 : 1,
-                    position: 'absolute', // --- CHANGED: Absolute positioning ---
                     right: 0,
                     top: '50%',
                     transform: 'translateY(-50%)',
@@ -344,6 +344,8 @@ export default function ComponentsMenu(props: Props) {
             disabled={disabled}
             onOpen={onOpen}
             parentData={parentData}
+            // --- NEW: Pass the names map ---
+            nodeNames={nodeNames}
           />
         ) : (
           <BaseMenu node={panelNode} onChange={onChange} disabled={disabled} />

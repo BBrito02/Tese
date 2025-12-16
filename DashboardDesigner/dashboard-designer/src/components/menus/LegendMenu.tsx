@@ -1,33 +1,31 @@
 import type { KindProps } from './common';
+import type { DataItem, Interaction } from '../../domain/types';
 import {
   NameField,
   TypeField,
   ListSection,
-  AddComponentSection,
   SectionTitle,
-  type ListItem,
+  type StyledListItem,
 } from './sections';
-import type { DataItem, Interaction, NodeKind } from '../../domain/types';
-import { nanoid } from 'nanoid'; // Import nanoid
+import { nanoid } from 'nanoid';
 import { useModal } from '../ui/ModalHost';
-import { allowedChildKinds } from '../../domain/rules';
-import AddComponentPopup from '../popups/ComponentPopup';
 import DataPopup from '../popups/DataPopup';
 
-export default function LegendMenu(p: KindProps) {
+type ExtendedKindProps = KindProps & {
+  nodeNames?: Record<string, string>;
+};
+
+export default function LegendMenu(p: ExtendedKindProps) {
   const d: any = p.node.data;
   const disabled = p.disabled;
+  const { openModal, closeModal } = useModal();
 
-  const dataList = d.data as (string | DataItem)[] | undefined;
-
-  // UPDATED: Ensure all items have an ID (migrates legacy strings/objects)
   const toDataItems = (list?: (string | DataItem)[]): DataItem[] =>
     Array.isArray(list)
       ? list.map((v) => {
           if (typeof v === 'string') {
             return { id: nanoid(), name: v, dtype: 'Other' };
           }
-          // If object exists but lacks ID, assign one
           if (v && !v.id) {
             return { ...v, id: nanoid() };
           }
@@ -39,64 +37,63 @@ export default function LegendMenu(p: KindProps) {
     ? (d.interactions as Interaction[])
     : [];
 
-  // Map interactions to { name, badge }
-  const interactionItems: ListItem[] = interactions.map((ix) => ({
-    name: ix.name,
-    badge: ix.result,
-  }));
+  const interactionListItems: (StyledListItem & {
+    _interactionId: string;
+    _targetId?: string;
+    _targetDataRef?: string;
+  })[] = [];
 
-  const { openModal, closeModal } = useModal();
+  interactions.forEach((ix) => {
+    if (ix.targetDetails && ix.targetDetails.length > 0) {
+      ix.targetDetails.forEach((detail) => {
+        const targetName =
+          p.nodeNames?.[detail.targetId] || detail.targetId || 'Unknown';
+        let subtitle = `Target: ${targetName}`;
+        if (detail.targetDataRef) subtitle += ' (Data)';
+        interactionListItems.push({
+          name: ix.name,
+          badge: ix.result,
+          subtitle,
+          _interactionId: ix.id,
+          _targetId: detail.targetId,
+          _targetDataRef: detail.targetDataRef,
+        });
+      });
+    } else if (ix.targets && ix.targets.length > 0) {
+      ix.targets.forEach((targetId) => {
+        const targetName = p.nodeNames?.[targetId] || targetId;
+        interactionListItems.push({
+          name: ix.name,
+          badge: ix.result,
+          subtitle: `Target: ${targetName}`,
+          _interactionId: ix.id,
+          _targetId: targetId,
+        });
+      });
+    } else {
+      interactionListItems.push({
+        name: ix.name,
+        badge: ix.result,
+        subtitle: '(No target)',
+        _interactionId: ix.id,
+      });
+    }
+  });
 
-  // --- RESTORED: Add Component Handler ---
-  const handleAddComponent = () => {
-    const parentKind = (p.node.data?.kind ?? 'Visualization') as NodeKind;
-    const baseKinds = allowedChildKinds(parentKind);
-    const kinds = [...baseKinds, 'VisualVariable'] as const;
-
-    openModal({
-      title: 'Component Menu',
-      node: (
-        <AddComponentPopup
-          kinds={
-            kinds as unknown as (NodeKind | 'GraphType' | 'VisualVariable')[]
-          }
-          initialVisualVars={d.visualVars ?? []}
-          onCancel={closeModal}
-          onSave={(payload) => {
-            if (payload.kind === 'VisualVariable') {
-              p.onChange({ visualVars: payload.variables } as any);
-              closeModal();
-              return;
-            }
-            closeModal();
-          }}
-        />
-      ),
-    });
-  };
+  const dataList = d.data as (string | DataItem)[] | undefined;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ fontWeight: 700, textAlign: 'center' }}>MENU</div>
-
       <SectionTitle>Properties</SectionTitle>
-
       <NameField
         value={d.title ?? ''}
         onChange={(val) => p.onChange({ title: val })}
         disabled={disabled}
       />
-
       <TypeField value="Legend" />
 
       <SectionTitle>Actions</SectionTitle>
-
-      {/* --- RESTORED: Add Component Section --- */}
-      <AddComponentSection
-        title="Add component"
-        disabled={disabled}
-        onAdd={handleAddComponent}
-      />
 
       <ListSection
         title="Data list"
@@ -108,16 +105,16 @@ export default function LegendMenu(p: KindProps) {
               <DataPopup
                 initial={toDataItems(dataList)}
                 onCancel={closeModal}
-                // FIXED: Updated signature
                 onSave={(items: DataItem[]) => {
-                  p.onChange({ data: items } as any);
+                  p.onChange({
+                    data: items,
+                  } as any);
                   closeModal();
                 }}
               />
             ),
           })
         }
-        // --- Click to edit data ---
         onItemClick={(index) => {
           openModal({
             title: 'Data fields',
@@ -126,9 +123,10 @@ export default function LegendMenu(p: KindProps) {
                 initial={toDataItems(dataList)}
                 initialSelectedIndex={index}
                 onCancel={closeModal}
-                // FIXED: Updated signature
                 onSave={(items: DataItem[]) => {
-                  p.onChange({ data: items } as any);
+                  p.onChange({
+                    data: items,
+                  } as any);
                   closeModal();
                 }}
               />
@@ -141,7 +139,7 @@ export default function LegendMenu(p: KindProps) {
 
       <ListSection
         title="Interaction list"
-        items={interactionItems}
+        items={interactionListItems}
         onAdd={() => {
           window.dispatchEvent(
             new CustomEvent('designer:open-interactions', {
@@ -149,13 +147,16 @@ export default function LegendMenu(p: KindProps) {
             })
           );
         }}
-        // --- Click to select interaction edge ---
         onItemClick={(i) => {
-          const ix = interactions[i];
-          if (ix) {
+          const item = interactionListItems[i];
+          if (item) {
             window.dispatchEvent(
               new CustomEvent('designer:select-interaction', {
-                detail: { interactionId: ix.id },
+                detail: {
+                  interactionId: item._interactionId,
+                  targetId: item._targetId,
+                  targetDataRef: item._targetDataRef,
+                },
               })
             );
           }

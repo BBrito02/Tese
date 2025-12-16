@@ -1,27 +1,28 @@
 import type { KindProps } from './common';
-import type { DataItem, NodeKind, Interaction } from '../../domain/types';
+import type { DataItem, Interaction } from '../../domain/types';
 import {
   NameField,
   TypeField,
   ListSection,
   AddComponentSection,
-  DescriptionSection,
   SectionTitle,
-  type ListItem,
+  type StyledListItem,
 } from './sections';
-import { nanoid } from 'nanoid'; // Import nanoid
+import { nanoid } from 'nanoid';
 import { useModal } from '../ui/ModalHost';
-import { allowedChildKinds } from '../../domain/rules';
 import AddComponentPopup from '../popups/ComponentPopup';
 import DataPopup from '../popups/DataPopup';
 
-export default function TooltipMenu(p: KindProps) {
+// --- NEW: Extend props ---
+type ExtendedKindProps = KindProps & {
+  nodeNames?: Record<string, string>;
+};
+
+export default function TooltipMenu(p: ExtendedKindProps) {
   const d: any = p.node.data;
   const disabled = p.disabled;
+  const { openModal, closeModal } = useModal();
 
-  const dataList = d.data as (string | DataItem)[] | undefined;
-
-  // UPDATED: Ensure all items have an ID
   const toDataItems = (list?: (string | DataItem)[]): DataItem[] =>
     Array.isArray(list)
       ? list.map((v) => {
@@ -39,48 +40,70 @@ export default function TooltipMenu(p: KindProps) {
     ? (d.interactions as Interaction[])
     : [];
 
-  // Map interactions to { name, badge }
-  const interactionItems: ListItem[] = interactions.map((ix) => ({
-    name: ix.name,
-    badge: ix.result,
-  }));
+  // --- NEW: Explode interactions logic ---
+  const interactionListItems: (StyledListItem & {
+    _interactionId: string;
+    _targetId?: string;
+    _targetDataRef?: string;
+  })[] = [];
 
-  const { openModal, closeModal } = useModal();
+  interactions.forEach((ix) => {
+    if (ix.targetDetails && ix.targetDetails.length > 0) {
+      ix.targetDetails.forEach((detail) => {
+        const targetName =
+          p.nodeNames?.[detail.targetId] || detail.targetId || 'Unknown';
 
-  // --- RESTORED: Add Component Handler ---
+        let subtitle = `Target: ${targetName}`;
+        if (detail.targetDataRef) {
+          subtitle += ' (Data)';
+        }
+
+        interactionListItems.push({
+          name: ix.name,
+          badge: ix.result,
+          subtitle,
+          _interactionId: ix.id,
+          _targetId: detail.targetId,
+          _targetDataRef: detail.targetDataRef,
+        });
+      });
+    } else if (ix.targets && ix.targets.length > 0) {
+      ix.targets.forEach((targetId) => {
+        const targetName = p.nodeNames?.[targetId] || targetId;
+        interactionListItems.push({
+          name: ix.name,
+          badge: ix.result,
+          subtitle: `Target: ${targetName}`,
+          _interactionId: ix.id,
+          _targetId: targetId,
+        });
+      });
+    } else {
+      interactionListItems.push({
+        name: ix.name,
+        badge: ix.result,
+        subtitle: '(No target)',
+        _interactionId: ix.id,
+      });
+    }
+  });
+
+  const dataList = d.data as (string | DataItem)[] | undefined;
+
   const handleAddComponent = () => {
-    const parentKind = (p.node.data?.kind ?? 'Visualization') as NodeKind;
-    const baseKinds = allowedChildKinds(parentKind).filter(
-      (k) => k !== 'Graph'
-    );
-    const kinds = [...baseKinds, 'GraphType', 'VisualVariable'] as const;
-
     openModal({
       title: 'Component Menu',
       node: (
         <AddComponentPopup
-          kinds={kinds as any}
-          initialVisualVars={d.visualVars ?? []}
-          initialGraphTypes={d.graphTypes ?? []}
+          kinds={[
+            'Visualization',
+            'Button',
+            'Filter',
+            'Parameter',
+            'DataAction',
+          ]} // Reasonable children for a tooltip
           onCancel={closeModal}
           onSave={(payload) => {
-            if (payload.kind === 'GraphType') {
-              window.dispatchEvent(
-                new CustomEvent('designer:edit-graphs', {
-                  detail: {
-                    parentId: p.node.id,
-                    graphTypes: payload.graphTypes,
-                  },
-                })
-              );
-              closeModal();
-              return;
-            }
-            if (payload.kind === 'VisualVariable') {
-              p.onChange({ visualVars: payload.variables });
-              closeModal();
-              return;
-            }
             window.dispatchEvent(
               new CustomEvent('designer:add-component', {
                 detail: { parentId: p.node.id, payload },
@@ -96,27 +119,22 @@ export default function TooltipMenu(p: KindProps) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ fontWeight: 700, textAlign: 'center' }}>MENU</div>
-
       <SectionTitle>Properties</SectionTitle>
-
       <NameField
         value={d.title ?? ''}
         onChange={(val) => p.onChange({ title: val })}
         disabled={disabled}
       />
-
       <TypeField value="Tooltip" />
 
       <SectionTitle>Actions</SectionTitle>
 
-      {/* --- RESTORED: Add Component Section --- */}
       <AddComponentSection
         title="Add component"
         disabled={disabled}
         onAdd={handleAddComponent}
       />
 
-      {/* Data list */}
       <ListSection
         title="Data list"
         items={dataList ?? []}
@@ -127,16 +145,16 @@ export default function TooltipMenu(p: KindProps) {
               <DataPopup
                 initial={toDataItems(dataList)}
                 onCancel={closeModal}
-                // FIXED: Updated signature
                 onSave={(items: DataItem[]) => {
-                  p.onChange({ data: items } as any);
+                  p.onChange({
+                    data: items,
+                  } as any);
                   closeModal();
                 }}
               />
             ),
           })
         }
-        // --- Click to edit data ---
         onItemClick={(index) => {
           openModal({
             title: 'Data fields',
@@ -145,9 +163,10 @@ export default function TooltipMenu(p: KindProps) {
                 initial={toDataItems(dataList)}
                 initialSelectedIndex={index}
                 onCancel={closeModal}
-                // FIXED: Updated signature
                 onSave={(items: DataItem[]) => {
-                  p.onChange({ data: items } as any);
+                  p.onChange({
+                    data: items,
+                  } as any);
                   closeModal();
                 }}
               />
@@ -158,10 +177,9 @@ export default function TooltipMenu(p: KindProps) {
         disabled={disabled}
       />
 
-      {/* Interaction list */}
       <ListSection
         title="Interaction list"
-        items={interactionItems}
+        items={interactionListItems}
         onAdd={() => {
           window.dispatchEvent(
             new CustomEvent('designer:open-interactions', {
@@ -169,26 +187,23 @@ export default function TooltipMenu(p: KindProps) {
             })
           );
         }}
-        // --- Click to select interaction edge ---
+        // --- NEW: Strict selection ---
         onItemClick={(i) => {
-          const ix = interactions[i];
-          if (ix) {
+          const item = interactionListItems[i];
+          if (item) {
             window.dispatchEvent(
               new CustomEvent('designer:select-interaction', {
-                detail: { interactionId: ix.id },
+                detail: {
+                  interactionId: item._interactionId,
+                  targetId: item._targetId,
+                  targetDataRef: item._targetDataRef,
+                },
               })
             );
           }
         }}
         addTooltip="Add interaction"
         disabled={disabled}
-      />
-
-      <DescriptionSection
-        placeholder="Describe this tooltip"
-        value={d.description}
-        disabled={disabled}
-        onChange={(val) => p.onChange({ description: val })}
       />
     </div>
   );

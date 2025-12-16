@@ -6,20 +6,23 @@ import {
   ListSection,
   AddComponentSection,
   SectionTitle,
-  type ListItem,
+  type StyledListItem,
 } from './sections';
-import { nanoid } from 'nanoid'; // Import nanoid
+import { nanoid } from 'nanoid';
 import { useModal } from '../ui/ModalHost';
 import { allowedChildKinds } from '../../domain/rules';
 import AddComponentPopup from '../popups/ComponentPopup';
 import DataPopup from '../popups/DataPopup';
 
-export default function VisualizationMenu(p: KindProps) {
+type ExtendedKindProps = KindProps & {
+  nodeNames?: Record<string, string>;
+};
+
+export default function VisualizationMenu(p: ExtendedKindProps) {
   const d: any = p.node.data;
   const disabled = p.disabled;
   const { openModal, closeModal } = useModal();
 
-  // UPDATED: Ensure all items have an ID
   const toDataItems = (list?: (string | DataItem)[]): DataItem[] =>
     Array.isArray(list)
       ? list.map((v) => {
@@ -37,16 +40,62 @@ export default function VisualizationMenu(p: KindProps) {
     ? (d.interactions as Interaction[])
     : [];
 
-  // Map interactions to { name, badge } for chip styling
-  const interactionItems: ListItem[] = interactions.map((ix) => ({
-    name: ix.name,
-    badge: ix.result,
-  }));
+  // --- CHANGED: Flatten interaction list ---
+  const interactionListItems: (StyledListItem & {
+    _interactionId: string;
+    _targetId?: string;
+    _targetDataRef?: string;
+  })[] = [];
+
+  interactions.forEach((ix) => {
+    // If targetDetails (new format) exists, use it
+    if (ix.targetDetails && ix.targetDetails.length > 0) {
+      ix.targetDetails.forEach((detail) => {
+        const targetName =
+          p.nodeNames?.[detail.targetId] || detail.targetId || 'Unknown';
+
+        let subtitle = `Target: ${targetName}`;
+        if (detail.targetDataRef) {
+          subtitle += ' (Data)';
+        }
+
+        interactionListItems.push({
+          name: ix.name,
+          badge: ix.result,
+          subtitle,
+          _interactionId: ix.id,
+          _targetId: detail.targetId,
+          _targetDataRef: detail.targetDataRef,
+        });
+      });
+    }
+    // Fallback for legacy target IDs array
+    else if (ix.targets && ix.targets.length > 0) {
+      ix.targets.forEach((targetId) => {
+        const targetName = p.nodeNames?.[targetId] || targetId;
+        interactionListItems.push({
+          name: ix.name,
+          badge: ix.result,
+          subtitle: `Target: ${targetName}`,
+          _interactionId: ix.id,
+          _targetId: targetId,
+        });
+      });
+    }
+    // No targets
+    else {
+      interactionListItems.push({
+        name: ix.name,
+        badge: ix.result,
+        subtitle: '(No target)',
+        _interactionId: ix.id,
+      });
+    }
+  });
 
   const tooltips: string[] = d.tooltips ?? [];
   const dataList = d.data as (string | DataItem)[] | undefined;
 
-  // --- RESTORED: Add Component Handler ---
   const handleAddComponent = () => {
     const parentKind = (p.node.data?.kind ?? 'Visualization') as NodeKind;
     const baseKinds = allowedChildKinds(parentKind).filter(
@@ -105,7 +154,6 @@ export default function VisualizationMenu(p: KindProps) {
 
       <SectionTitle>Actions</SectionTitle>
 
-      {/* --- RESTORED: Add Component Section --- */}
       <AddComponentSection
         title="Add component"
         disabled={disabled}
@@ -122,7 +170,6 @@ export default function VisualizationMenu(p: KindProps) {
               <DataPopup
                 initial={toDataItems(dataList)}
                 onCancel={closeModal}
-                // FIXED: Updated signature
                 onSave={(items: DataItem[]) => {
                   p.onChange({
                     data: items,
@@ -141,7 +188,6 @@ export default function VisualizationMenu(p: KindProps) {
                 initial={toDataItems(dataList)}
                 initialSelectedIndex={index}
                 onCancel={closeModal}
-                // FIXED: Updated signature
                 onSave={(items: DataItem[]) => {
                   p.onChange({
                     data: items,
@@ -158,7 +204,7 @@ export default function VisualizationMenu(p: KindProps) {
 
       <ListSection
         title="Interaction list"
-        items={interactionItems}
+        items={interactionListItems}
         onAdd={() => {
           window.dispatchEvent(
             new CustomEvent('designer:open-interactions', {
@@ -166,12 +212,17 @@ export default function VisualizationMenu(p: KindProps) {
             })
           );
         }}
+        // --- CHANGED: Use strictly identified interaction/target ---
         onItemClick={(i) => {
-          const ix = interactions[i];
-          if (ix) {
+          const item = interactionListItems[i];
+          if (item) {
             window.dispatchEvent(
               new CustomEvent('designer:select-interaction', {
-                detail: { interactionId: ix.id },
+                detail: {
+                  interactionId: item._interactionId,
+                  targetId: item._targetId,
+                  targetDataRef: item._targetDataRef,
+                },
               })
             );
           }
@@ -190,7 +241,6 @@ export default function VisualizationMenu(p: KindProps) {
             })
           );
         }}
-        // --- ADDED: Click handler to select tooltip node ---
         onItemClick={(i) => {
           const label = tooltips[i];
           window.dispatchEvent(

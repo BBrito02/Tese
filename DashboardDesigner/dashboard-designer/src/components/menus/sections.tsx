@@ -7,6 +7,7 @@ import { WhiteField, GhostLine } from './common';
 export interface StyledListItem {
   name: string;
   badge?: string;
+  subtitle?: string;
 }
 export type ListItem = string | DataItem | StyledListItem;
 
@@ -138,7 +139,72 @@ export function Chips({
           const label = it.name;
           const badgeText =
             'dtype' in it ? it.dtype : (it as StyledListItem).badge;
+          const subtitle =
+            'subtitle' in it ? (it as StyledListItem).subtitle : undefined;
 
+          // --- CHANGED: Use unified blue style for cards too ---
+          if (subtitle) {
+            return (
+              <div
+                key={`obj-${label}-${i}`}
+                {...clickProps}
+                style={{
+                  width: '100%',
+                  padding: '8px 10px',
+                  borderRadius: 8,
+                  // Changed to match standard chip color
+                  background: '#eef2ff',
+                  border: '1px solid #c7d2fe',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 2,
+                  position: 'relative',
+                  ...clickProps.style,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: '#0f172a', // Darker text for better contrast
+                    }}
+                  >
+                    {label}
+                  </span>
+                  {badgeText && <span style={dtypeBadge}>{badgeText}</span>}
+                </div>
+                <div style={{ fontSize: 11, color: '#64748b' }}>{subtitle}</div>
+
+                {onRemove && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRemove(i);
+                    }}
+                    disabled={disabled}
+                    style={{
+                      position: 'absolute',
+                      right: 8,
+                      top: 8,
+                      border: 'none',
+                      background: 'transparent',
+                      cursor: disabled ? 'not-allowed' : 'pointer',
+                      padding: 0,
+                      color: '#94a3b8',
+                      fontSize: 16,
+                    }}
+                    title="Remove"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            );
+          }
+
+          // Standard Chip style
           return (
             <span
               key={`obj-${label}-${i}`}
@@ -193,7 +259,6 @@ export function Chips({
               style={{ ...tooltipPill, ...clickProps.style }}
               title={parsed.title}
             >
-              {/* --- CHANGED: Title first, then Badge --- */}
               <span style={{ fontWeight: 600, color: '#000000ff' }}>
                 {parsed.title}
               </span>
@@ -271,6 +336,7 @@ export function Chips({
   );
 }
 
+// ... (rest of the file: NameField, TypeField, etc. - UNCHANGED)
 export function NameField(props: {
   value: string;
   placeholder?: string;

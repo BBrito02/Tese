@@ -57,6 +57,9 @@ import ComponentsMenu from './components/menus/ComponentsMenu';
 import AddComponentPopup from './components/popups/ComponentPopup';
 import DataPopup from './components/popups/DataPopup';
 import SavePopup from './components/popups/SavePopup';
+import InteractionPopup from './components/popups/InteractionPopup';
+import TooltipPopup from './components/popups/TooltipPopup';
+
 import NodeGhost from './canvas/nodes/NodeGhost';
 import InteractionEdgeMenu from './components/menus/InteractionEdgeMenu';
 import TooltipEdgeMenu from './components/menus/TooltipEdgeMenu';
@@ -201,6 +204,15 @@ export default function Editor() {
       setNodes as React.Dispatch<React.SetStateAction<AppNode[]>>,
       takeSnapshot
     );
+
+  // --- Map ID -> Title for resolution in menus ---
+  const nodeNames = useMemo(() => {
+    const map: Record<string, string> = {};
+    nodes.forEach((n) => {
+      map[n.id] = n.data.title || n.id;
+    });
+    return map;
+  }, [nodes]);
 
   // --- NODE PRUNING (DELETION) LOGIC ---
   const pruneAfterRemoval = useCallback(
@@ -484,13 +496,11 @@ export default function Editor() {
       const patchAny = patch as any;
 
       if (patchAny.data && Array.isArray(patchAny.data)) {
-        // --- CLEANUP LOGIC FOR REMOVED ITEMS ---
         const node = nodes.find((n) => n.id === id);
         const rawOld = (node?.data as any)?.data;
         const oldItems: DataItem[] = Array.isArray(rawOld) ? rawOld : [];
         const newItems: DataItem[] = patchAny.data;
 
-        // Compare by ID to find removals
         const newIds = new Set(newItems.map((i) => i.id));
         const removedItems = oldItems.filter((i) => !newIds.has(i.id));
 
@@ -506,7 +516,6 @@ export default function Editor() {
 
           edges.forEach((e) => {
             let isMatch = false;
-            // Check source handle
             if (e.source === id && e.sourceHandle) {
               for (const prefix of removedHandlePrefixes) {
                 if (e.sourceHandle.startsWith(prefix)) {
@@ -515,7 +524,6 @@ export default function Editor() {
                 }
               }
             }
-            // Check target handle
             if (!isMatch && e.target === id && e.targetHandle) {
               for (const prefix of removedHandlePrefixes) {
                 if (e.targetHandle.startsWith(prefix)) {
@@ -527,11 +535,9 @@ export default function Editor() {
 
             if (isMatch) {
               edgeIdsToDelete.push(e.id);
-              // If it's a tooltip edge from this node, mark the tooltip node for deletion
               if (e.type === 'tooltip' && e.source === id) {
                 nodeIdsToDelete.push(e.target);
               }
-              // If interaction edge, track ID to remove from metadata
               if (e.type === 'interaction') {
                 const d: any = e.data || {};
                 if (d?.interactionId) interactionsToRemove.add(d.interactionId);
@@ -755,7 +761,6 @@ export default function Editor() {
       })
   );
 
-  // --- RESTORED: Modal handling effect for Drag & Drop ---
   useEffect(() => {
     if (modal?.type !== 'add-component') return;
     const { nodeId, presetKind, position } = modal;
@@ -852,6 +857,360 @@ export default function Editor() {
     window.addEventListener('designer:edit-data', onEditData);
     return () => window.removeEventListener('designer:edit-data', onEditData);
   }, [nodes, edges, openModal, closeModal, updateNodeById]);
+
+  // --- INTERACTION POPUP LISTENER ---
+  useEffect(() => {
+    function onOpenInteractions(e: Event) {
+      const sourceId = (e as CustomEvent).detail?.nodeId;
+      const source = nodes.find((n) => n.id === sourceId);
+      if (!sourceId || !source) return;
+
+      const availableTargets = nodes
+        .filter((n) => n.id !== sourceId)
+        .map((n) => {
+          const nd = n.data as any;
+          const dataAttrs = Array.isArray(nd.data)
+            ? nd.data.map((v: any) => ({ ref: v.id, label: v.name }))
+            : [];
+          return {
+            id: n.id,
+            title: nd.title || n.id,
+            kind: nd.kind || 'Node',
+            badge: nd.badge,
+            parentId: n.parentNode as string,
+            dataAttributes: dataAttrs,
+          };
+        });
+
+      const rawData = (source.data as any)?.data || [];
+      const dataAttributes = rawData.map((it: any) => ({
+        ref: it.id,
+        label: it.name,
+      }));
+
+      openModal({
+        title: 'Add interaction',
+        node: (
+          <InteractionPopup
+            sourceKind={source.data.kind}
+            availableTargets={availableTargets}
+            dataAttributes={dataAttributes}
+            onCancel={closeModal}
+            onSave={({
+              name,
+              trigger,
+              result,
+              targets,
+              sourceType,
+              sourceDataRef,
+              targetDetails,
+              newDashboardName,
+            }) => {
+              const interactionId = nanoid();
+              const isParameter = source.data.kind === 'Parameter';
+
+              const nodesToUpdate = new Map<string, any>();
+
+              if (isParameter) {
+                targetDetails.forEach((detail) => {
+                  if (detail.targetType === 'data' && detail.targetDataRef) {
+                    const attrId = detail.targetDataRef;
+                    const targetNode = nodes.find(
+                      (n) => n.id === detail.targetId
+                    );
+
+                    if (targetNode) {
+                      const rawDataList = (targetNode.data as any)?.data || [];
+                      const itemIndex = rawDataList.findIndex(
+                        (it: any) => it.id === attrId
+                      );
+
+                      if (itemIndex > -1) {
+                        const originalItem = rawDataList[itemIndex];
+                        const baseName = originalItem.name.split(' = ')[0];
+                        const newName = `${baseName} = ?`;
+
+                        const newDataList = [...rawDataList];
+                        newDataList[itemIndex] = {
+                          ...originalItem,
+                          name: newName,
+                        };
+
+                        const prevUpdate = nodesToUpdate.get(targetNode.id) || {
+                          ...targetNode,
+                        };
+                        const nextData = {
+                          ...prevUpdate.data,
+                          ...((prevUpdate.data as any).data
+                            ? { data: newDataList }
+                            : {}),
+                        };
+                        nodesToUpdate.set(targetNode.id, {
+                          ...prevUpdate,
+                          data: nextData,
+                        });
+                      }
+                    }
+                  }
+                });
+              }
+
+              let finalTargets = targets;
+              let finalTargetDetailsList = targetDetails;
+              let newDashboardNode: AppNode | null = null;
+              if (result === 'dashboard' && newDashboardName) {
+                const newDashId = nanoid();
+                newDashboardNode = {
+                  id: newDashId,
+                  type: 'dashboard',
+                  position: {
+                    x: source.position.x + 400,
+                    y: source.position.y,
+                  },
+                  data: {
+                    kind: 'Dashboard',
+                    title: newDashboardName,
+                    badge: nextBadgeFor('Dashboard', nodes),
+                  } as NodeData,
+                  style: { width: 800, height: 600 },
+                } as AppNode;
+                finalTargets = [newDashId];
+                finalTargetDetailsList = [
+                  { targetId: newDashId, targetType: 'component' },
+                ];
+              }
+
+              setNodes((nds) => {
+                let all = nds.map((n) =>
+                  nodesToUpdate.has(n.id) ? nodesToUpdate.get(n.id) : n
+                );
+                if (newDashboardNode) all.push(newDashboardNode);
+                const idx = all.findIndex((n) => n.id === sourceId);
+                if (idx >= 0) {
+                  const cur = (all[idx].data as any).interactions || [];
+                  all[idx] = {
+                    ...all[idx],
+                    data: {
+                      ...all[idx].data,
+                      interactions: [
+                        ...cur,
+                        {
+                          id: interactionId,
+                          name,
+                          trigger,
+                          result,
+                          targets: finalTargets,
+                          targetDetails: finalTargetDetailsList,
+                        },
+                      ],
+                    } as any,
+                  };
+                }
+                return all;
+              });
+
+              setEdges((eds) => {
+                let nextEdges = [...eds];
+                const sourceHandleId = isParameter
+                  ? null
+                  : sourceType === 'component'
+                  ? `${sourceId}:act:${trigger}`
+                  : `data:${sourceDataRef}:${trigger}`;
+                const add = finalTargetDetailsList.map((detail) => {
+                  const tid = detail.targetId;
+                  const targetHandle =
+                    detail.targetType === 'data' && detail.targetDataRef
+                      ? `data:${detail.targetDataRef}:target`
+                      : `${tid}:target`;
+
+                  // --- FIX: Deterministic unique ID for specific target connection ---
+                  const uniqueEdgeId = `ixedge-${interactionId}-${tid}-${
+                    detail.targetDataRef || 'comp'
+                  }`;
+
+                  return {
+                    id: uniqueEdgeId,
+                    source: sourceId,
+                    sourceHandle: sourceHandleId,
+                    target: tid,
+                    targetHandle,
+                    type: 'interaction',
+                    data: {
+                      kind: 'interaction-link',
+                      label: name,
+                      trigger,
+                      result,
+                      sourceHandle: sourceHandleId,
+                      sourceType,
+                      interactionId,
+                      targetId: tid,
+                      targetType: detail.targetType,
+                      targetDataRef: detail.targetDataRef,
+                    },
+                  } as AppEdge;
+                });
+                return nextEdges.concat(add);
+              });
+              closeModal();
+            }}
+          />
+        ),
+      });
+    }
+    window.addEventListener(
+      'designer:open-interactions',
+      onOpenInteractions as EventListener
+    );
+    return () =>
+      window.removeEventListener(
+        'designer:open-interactions',
+        onOpenInteractions as EventListener
+      );
+  }, [nodes, openModal, closeModal, setNodes, setEdges]);
+
+  // --- TOOLTIP POPUP LISTENER ---
+  useEffect(() => {
+    function onOpenTooltips(e: Event) {
+      const vizId = (e as CustomEvent).detail?.nodeId;
+      const n = nodes.find((x) => x.id === vizId);
+      if (!n) return;
+      const availableData = (n.data as any)?.data || [];
+      const abs = getAbsolutePosition(n, nodes);
+      openModal({
+        title: 'Tooltip menu',
+        node: (
+          <TooltipPopup
+            availableData={availableData}
+            onCancel={closeModal}
+            onSave={(spec) => {
+              const { attachRef, activation, newTooltip, attachValue } = spec;
+              const tipId = nanoid();
+              const tipBadge = nextBadgeFor('Tooltip', nodes);
+              const title = newTooltip?.title?.trim() || 'Tooltip';
+
+              setNodes((nds) => {
+                const next = [
+                  ...nds,
+                  {
+                    id: tipId,
+                    type: 'tooltip',
+                    position: { x: abs.x - 250 - 24, y: abs.y + 8 },
+                    style: { width: 250, height: 180 },
+                    hidden: selectedId !== vizId,
+                    data: {
+                      kind: 'Tooltip',
+                      title,
+                      attachedTo: vizId,
+                      activation,
+                      badge: tipBadge,
+                    } as any,
+                  } as AppNode,
+                ];
+                return next.map((x) =>
+                  x.id === vizId
+                    ? {
+                        ...x,
+                        data: {
+                          ...x.data,
+                          tooltips: [
+                            ...((x.data as any).tooltips || []),
+                            `${tipBadge ? tipBadge + ' ' : ''}${title}`,
+                          ],
+                        },
+                      }
+                    : x
+                );
+              });
+
+              const targetHandle = `${tipId}:target`;
+              const sourceHandle =
+                attachRef === 'viz' ? null : `data:${attachRef}:${activation}`;
+
+              setEdges((eds) => [
+                ...eds,
+                {
+                  id: `e-viz-${vizId}-${sourceHandle || 'node'}-tip-${tipId}`,
+                  source: vizId,
+                  target: tipId,
+                  sourceHandle,
+                  targetHandle,
+                  type: 'tooltip',
+                  data: {
+                    activation,
+                    attachRef,
+                    attachValue,
+                  },
+                } as any, // Cast to any to avoid TS error
+              ]);
+              closeModal();
+            }}
+          />
+        ),
+      });
+    }
+    window.addEventListener(
+      'designer:open-tooltips',
+      onOpenTooltips as EventListener
+    );
+    return () =>
+      window.removeEventListener(
+        'designer:open-tooltips',
+        onOpenTooltips as EventListener
+      );
+  }, [nodes, selectedId, openModal, closeModal, setNodes, setEdges]);
+
+  // --- PARAMETER VALUE CHANGE LISTENER ---
+  useEffect(() => {
+    const onParamChange = (e: Event) => {
+      const { nodeId, value } = (e as CustomEvent).detail;
+      if (!nodeId || !value) return;
+
+      const connectedEdges = edges.filter((ed) => ed.source === nodeId);
+      if (connectedEdges.length === 0) return;
+
+      takeSnapshot();
+      let nodesMap = new Map(nodes.map((n) => [n.id, { ...n }]));
+
+      connectedEdges.forEach((edge) => {
+        const targetId = edge.target;
+        const targetNode = nodesMap.get(targetId);
+        if (!targetNode) return;
+
+        if (edge.targetHandle && edge.targetHandle.startsWith('data:')) {
+          const parts = edge.targetHandle.split(':');
+          if (parts.length < 2) return;
+          const attrId = parts[1];
+
+          const dataList = (targetNode.data as any).data || [];
+          const itemIndex = dataList.findIndex((it: any) => it.id === attrId);
+
+          if (itemIndex > -1) {
+            const item = dataList[itemIndex];
+            const baseName = item.name.split(' = ')[0];
+            const newName = `${baseName} = ${value}`;
+            const newDataList = [...dataList];
+            newDataList[itemIndex] = { ...item, name: newName };
+
+            const nextData = { ...targetNode.data };
+            if ((nextData as any).data) (nextData as any).data = newDataList;
+            targetNode.data = nextData as any;
+            nodesMap.set(targetId, targetNode);
+          }
+        }
+      });
+      setNodes(Array.from(nodesMap.values()));
+    };
+
+    window.addEventListener(
+      'designer:parameter-value-change',
+      onParamChange as EventListener
+    );
+    return () =>
+      window.removeEventListener(
+        'designer:parameter-value-change',
+        onParamChange as EventListener
+      );
+  }, [nodes, edges, setNodes, setEdges, takeSnapshot]);
 
   // --- SAVE/LOAD & MODALS ---
   const buildSave = useCallback((): SaveFile => {
@@ -1114,7 +1473,7 @@ export default function Editor() {
 
         // --- Value Condition Check ---
         const edge = edges.find((e) => e.target === tip.id);
-        const edgeData = edge?.data as any;
+        const edgeData = edge?.data as any; // Cast to any to avoid TS errors
         const attachValue = edgeData?.attachValue;
         const attachRef = edgeData?.attachRef;
 
@@ -1142,7 +1501,6 @@ export default function Editor() {
         const vizSelected =
           selectedId === attachedTo || vizIdFromEdge === attachedTo;
         const tipSelected = selectedId === tip.id;
-        // Find node object safely
         const selNode = next.find((n) => n.id === selectedId);
 
         const tipChildSelected = selNode
@@ -1532,6 +1890,7 @@ export default function Editor() {
               <ComponentsMenu
                 key={selectedNode.id}
                 node={selectedNode as AppNode}
+                nodeNames={nodeNames}
                 onChange={(p) => updateNodeById(selectedNode.id, p)}
                 onDelete={deleteSelectedNode}
                 reviewMode={reviewMode}

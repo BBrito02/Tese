@@ -143,11 +143,30 @@ export function useGlobalEvents({
 
   useEffect(() => {
     const onSelectInteraction = (e: Event) => {
-      const { interactionId } = (e as CustomEvent).detail || {};
+      const { interactionId, targetId, targetDataRef } =
+        (e as CustomEvent).detail || {};
       if (!interactionId) return;
-      const targetEdge = edges.find(
-        (e) => e.data?.interactionId === interactionId
-      );
+
+      const targetEdge = edges.find((e) => {
+        const d = e.data || {};
+
+        // 1. Must match Interaction ID
+        if (d.interactionId !== interactionId) return false;
+
+        // 2. Must match Target Node ID (if provided)
+        if (targetId && e.target !== targetId) return false;
+
+        // 3. Must match Target Data Reference (if provided)
+        if (targetDataRef !== undefined) {
+          if (d.targetDataRef !== targetDataRef) return false;
+        } else if (targetId && !targetDataRef) {
+          // If selecting a Component connection, ignore edges that point to Data attributes
+          if (d.targetDataRef) return false;
+        }
+
+        return true;
+      });
+
       if (targetEdge) {
         setNodes((nds) =>
           nds.map((n) => (n.selected ? { ...n, selected: false } : n))
