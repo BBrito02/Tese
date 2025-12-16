@@ -1836,6 +1836,9 @@ export default function Editor() {
               }}
               panOnDrag={!lassoMode && !isDraggingFromPalette}
               selectionOnDrag={lassoMode}
+              minZoom={0.1}
+              maxZoom={4}
+              fitView
             >
               <Background />
               <Controls>
