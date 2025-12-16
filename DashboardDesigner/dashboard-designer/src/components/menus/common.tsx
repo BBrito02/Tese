@@ -27,7 +27,7 @@ export type KindProps = {
   onDelete?: () => void;
   disabled?: boolean;
 
-  // --- NEW: Map of node ID -> Title ---
+  // --- Map of node ID -> Title ---
   nodeNames?: Record<string, string>;
 
   // Review Mode Props
@@ -155,7 +155,6 @@ export function BaseMenu({
   children,
   node,
   onDelete,
-  ...props
 }: KindProps & { children?: React.ReactNode }) {
   return (
     <Panel title={(node.data as any).title || node.id}>
