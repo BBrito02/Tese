@@ -1016,6 +1016,7 @@ export default function Editor() {
                   : sourceType === 'component'
                   ? `${sourceId}:act:${trigger}`
                   : `data:${sourceDataRef}:${trigger}`;
+
                 const add = finalTargetDetailsList.map((detail) => {
                   const tid = detail.targetId;
                   const targetHandle =
@@ -1023,7 +1024,6 @@ export default function Editor() {
                       ? `data:${detail.targetDataRef}:target`
                       : `${tid}:target`;
 
-                  // --- FIX: Deterministic unique ID for specific target connection ---
                   const uniqueEdgeId = `ixedge-${interactionId}-${tid}-${
                     detail.targetDataRef || 'comp'
                   }`;
@@ -1211,6 +1211,55 @@ export default function Editor() {
         onParamChange as EventListener
       );
   }, [nodes, edges, setNodes, setEdges, takeSnapshot]);
+
+  // --- NEW: Toggle Edge Visibility Listener ---
+  useEffect(() => {
+    const onToggleHidden = (e: Event) => {
+      const { nodeId, category, hidden } = (e as CustomEvent).detail;
+      if (!nodeId) return;
+
+      setEdges((eds) =>
+        eds.map((edge) => {
+          let shouldHide = edge.hidden;
+
+          if (category === 'interactions') {
+            // Hide OUTGOING interaction edges from this node
+            if (edge.source === nodeId && edge.type === 'interaction') {
+              shouldHide = hidden;
+            }
+          } else if (category === 'tooltips') {
+            // Hide OUTGOING tooltip edges from this node
+            if (edge.source === nodeId && edge.type === 'tooltip') {
+              shouldHide = hidden;
+            }
+          } else if (category === 'data') {
+            // Hide INCOMING data edges to this node
+            if (
+              edge.target === nodeId &&
+              edge.targetHandle &&
+              edge.targetHandle.startsWith('data:')
+            ) {
+              shouldHide = hidden;
+            }
+          }
+
+          return edge.hidden === shouldHide
+            ? edge
+            : { ...edge, hidden: shouldHide };
+        })
+      );
+    };
+
+    window.addEventListener(
+      'designer:toggle-hidden',
+      onToggleHidden as EventListener
+    );
+    return () =>
+      window.removeEventListener(
+        'designer:toggle-hidden',
+        onToggleHidden as EventListener
+      );
+  }, [setEdges]);
 
   // --- SAVE/LOAD & MODALS ---
   const buildSave = useCallback((): SaveFile => {
@@ -1471,6 +1520,14 @@ export default function Editor() {
           continue;
         }
 
+        // --- NEW: Check if parent has hidden tooltips (Category Collapsed) ---
+        // This ensures Tooltip NODES are hidden if the category is collapsed
+        const parent = next.find((n) => n.id === attachedTo);
+        if (parent?.data?.collapsedCategories?.tooltips) {
+          // Skip adding to rawVisibility -> effectively hides it from canvas
+          continue;
+        }
+
         // --- Value Condition Check ---
         const edge = edges.find((e) => e.target === tip.id);
         const edgeData = edge?.data as any; // Cast to any to avoid TS errors
@@ -1600,7 +1657,8 @@ export default function Editor() {
           ...e,
           style:
             e.type === 'interaction' ? { ...e.style, opacity: 1 } : e.style,
-          hidden: e.type === 'interaction' ? false : e.hidden,
+          // --- CHANGED: Respect e.hidden from toggle listener ---
+          hidden: e.hidden,
           data: {
             ...(e.data || {}),
             reviewMode,
@@ -1688,6 +1746,7 @@ export default function Editor() {
               rightLabel="Review"
             />
           </div>
+          {/* Top-Right Buttons */}
           <div
             style={{
               position: 'absolute',
@@ -1838,7 +1897,6 @@ export default function Editor() {
               selectionOnDrag={lassoMode}
               minZoom={0.1}
               maxZoom={4}
-              fitView
             >
               <Background />
               <Controls>

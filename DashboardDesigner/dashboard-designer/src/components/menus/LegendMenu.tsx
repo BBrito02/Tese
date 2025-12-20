@@ -20,6 +20,19 @@ export default function LegendMenu(p: ExtendedKindProps) {
   const disabled = p.disabled;
   const { openModal, closeModal } = useModal();
 
+  const handleToggleHidden = (
+    category: 'data' | 'interactions',
+    val: boolean
+  ) => {
+    const nextCats = { ...(d.collapsedCategories || {}), [category]: val };
+    p.onChange({ collapsedCategories: nextCats } as any);
+    window.dispatchEvent(
+      new CustomEvent('designer:toggle-hidden', {
+        detail: { nodeId: p.node.id, category, hidden: val },
+      })
+    );
+  };
+
   const toDataItems = (list?: (string | DataItem)[]): DataItem[] =>
     Array.isArray(list)
       ? list.map((v) => {
@@ -163,6 +176,8 @@ export default function LegendMenu(p: ExtendedKindProps) {
         }}
         addTooltip="Add interaction"
         disabled={disabled}
+        hidden={d.collapsedCategories?.interactions}
+        onToggleHidden={(v) => handleToggleHidden('interactions', v)}
       />
     </div>
   );

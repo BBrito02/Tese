@@ -1,9 +1,8 @@
 import React, { useState, type ElementType } from 'react';
-import { LuPlus, LuPencil, LuTag } from 'react-icons/lu';
+import { LuPlus, LuPencil, LuTag, LuEye, LuEyeOff } from 'react-icons/lu';
 import type { DataItem } from '../../domain/types';
 import { WhiteField, GhostLine } from './common';
 
-// --- CHANGED: Unified ListItem type ---
 export interface StyledListItem {
   name: string;
   badge?: string;
@@ -142,7 +141,7 @@ export function Chips({
           const subtitle =
             'subtitle' in it ? (it as StyledListItem).subtitle : undefined;
 
-          // --- CHANGED: Use unified blue style for cards too ---
+          // Render as Card if subtitle exists
           if (subtitle) {
             return (
               <div
@@ -152,7 +151,6 @@ export function Chips({
                   width: '100%',
                   padding: '8px 10px',
                   borderRadius: 8,
-                  // Changed to match standard chip color
                   background: '#eef2ff',
                   border: '1px solid #c7d2fe',
                   display: 'flex',
@@ -167,7 +165,7 @@ export function Chips({
                     style={{
                       fontSize: 13,
                       fontWeight: 600,
-                      color: '#0f172a', // Darker text for better contrast
+                      color: '#0f172a',
                     }}
                   >
                     {label}
@@ -336,7 +334,6 @@ export function Chips({
   );
 }
 
-// ... (rest of the file: NameField, TypeField, etc. - UNCHANGED)
 export function NameField(props: {
   value: string;
   placeholder?: string;
@@ -453,14 +450,48 @@ export function ListSection(props: {
   onItemClick?: (index: number) => void;
   addTooltip?: string;
   disabled?: boolean;
+  hidden?: boolean;
+  onToggleHidden?: (hidden: boolean) => void;
 }) {
-  const { title, items, onAdd, onItemClick, addTooltip, disabled } = props;
+  const {
+    title,
+    items,
+    onAdd,
+    onItemClick,
+    addTooltip,
+    disabled,
+    hidden,
+    onToggleHidden,
+  } = props;
+
   return (
     <div>
       <div style={headerRow}>
-        <label style={{ fontSize: 12, opacity: 0.8, paddingLeft: 6 }}>
-          {title}
-        </label>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <label style={{ fontSize: 12, opacity: 0.8, paddingLeft: 6 }}>
+            {title}
+          </label>
+
+          {onToggleHidden && (
+            <button
+              type="button"
+              onClick={() => onToggleHidden(!hidden)}
+              title={hidden ? 'Show items on canvas' : 'Hide items on canvas'}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 0,
+                display: 'flex',
+                alignItems: 'center',
+                color: hidden ? '#94a3b8' : '#3b82f6',
+              }}
+            >
+              {hidden ? <LuEyeOff size={14} /> : <LuEye size={14} />}
+            </button>
+          )}
+        </div>
+
         {onAdd && (
           <button
             type="button"

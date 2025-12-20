@@ -99,6 +99,11 @@ interface NodeDataBase {
   interactions?: Interaction[];
   perspectives?: string[];
   highlighted?: boolean;
+  collapsedCategories?: {
+    data?: boolean;
+    interactions?: boolean;
+    tooltips?: boolean;
+  };
 }
 
 const KIND_PREFIX = {

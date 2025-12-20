@@ -109,7 +109,7 @@ function DataPills({
       }}
     >
       {items.map((it, i) => {
-        // --- CHANGED: Use Stable ID for Handles ---
+        // --- Use Stable ID for Handles ---
         const handleId = `data:${it.id}`;
         const label = it.name;
         const title = `${it.name} · ${it.dtype}`;
@@ -248,10 +248,12 @@ export default function BaseNodeShell({
     unresolved: reviewUnresolvedCount,
   } = useReviews(id);
 
-  // --- Track IDs for updates ---
+  // --- REVERTED: Always show footer items (Data Attributes) ---
+  const visibleFooterItems = footerItems;
+
   const pillHandleIds = useMemo(
-    () => (footerItems ?? []).map((it) => `data:${it.id}`),
-    [footerItems]
+    () => (visibleFooterItems ?? []).map((it) => `data:${it.id}`),
+    [visibleFooterItems]
   );
 
   useEffect(() => {
@@ -266,7 +268,8 @@ export default function BaseNodeShell({
     return () => clearTimeout(t);
   }, [id, updateNodeInternals, canInteract]);
 
-  const hasFooter = Array.isArray(footerItems) && footerItems.length > 0;
+  const hasFooter =
+    Array.isArray(visibleFooterItems) && visibleFooterItems.length > 0;
 
   // --- HIGHLIGHT LOGIC ---
   const isHighlighted = !!data.highlighted;
@@ -526,7 +529,7 @@ export default function BaseNodeShell({
               }}
             >
               <DataPills
-                items={footerItems as DataItem[]}
+                items={visibleFooterItems as DataItem[]}
                 onClick={handlePillClick}
               />
             </div>

@@ -13,7 +13,6 @@ import { useModal } from '../ui/ModalHost';
 import AddComponentPopup from '../popups/ComponentPopup';
 import DataPopup from '../popups/DataPopup';
 
-// --- NEW: Extend props ---
 type ExtendedKindProps = KindProps & {
   nodeNames?: Record<string, string>;
 };
@@ -22,6 +21,19 @@ export default function TooltipMenu(p: ExtendedKindProps) {
   const d: any = p.node.data;
   const disabled = p.disabled;
   const { openModal, closeModal } = useModal();
+
+  const handleToggleHidden = (
+    category: 'data' | 'interactions',
+    val: boolean
+  ) => {
+    const nextCats = { ...(d.collapsedCategories || {}), [category]: val };
+    p.onChange({ collapsedCategories: nextCats } as any);
+    window.dispatchEvent(
+      new CustomEvent('designer:toggle-hidden', {
+        detail: { nodeId: p.node.id, category, hidden: val },
+      })
+    );
+  };
 
   const toDataItems = (list?: (string | DataItem)[]): DataItem[] =>
     Array.isArray(list)
@@ -40,7 +52,6 @@ export default function TooltipMenu(p: ExtendedKindProps) {
     ? (d.interactions as Interaction[])
     : [];
 
-  // --- NEW: Explode interactions logic ---
   const interactionListItems: (StyledListItem & {
     _interactionId: string;
     _targetId?: string;
@@ -52,12 +63,8 @@ export default function TooltipMenu(p: ExtendedKindProps) {
       ix.targetDetails.forEach((detail) => {
         const targetName =
           p.nodeNames?.[detail.targetId] || detail.targetId || 'Unknown';
-
         let subtitle = `Target: ${targetName}`;
-        if (detail.targetDataRef) {
-          subtitle += ' (Data)';
-        }
-
+        if (detail.targetDataRef) subtitle += ' (Data)';
         interactionListItems.push({
           name: ix.name,
           badge: ix.result,
@@ -101,7 +108,7 @@ export default function TooltipMenu(p: ExtendedKindProps) {
             'Filter',
             'Parameter',
             'DataAction',
-          ]} // Reasonable children for a tooltip
+          ]}
           onCancel={closeModal}
           onSave={(payload) => {
             window.dispatchEvent(
@@ -187,7 +194,6 @@ export default function TooltipMenu(p: ExtendedKindProps) {
             })
           );
         }}
-        // --- NEW: Strict selection ---
         onItemClick={(i) => {
           const item = interactionListItems[i];
           if (item) {
@@ -204,6 +210,8 @@ export default function TooltipMenu(p: ExtendedKindProps) {
         }}
         addTooltip="Add interaction"
         disabled={disabled}
+        hidden={d.collapsedCategories?.interactions}
+        onToggleHidden={(v) => handleToggleHidden('interactions', v)}
       />
     </div>
   );

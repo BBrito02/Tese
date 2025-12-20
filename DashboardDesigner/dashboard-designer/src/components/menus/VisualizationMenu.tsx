@@ -23,6 +23,20 @@ export default function VisualizationMenu(p: ExtendedKindProps) {
   const disabled = p.disabled;
   const { openModal, closeModal } = useModal();
 
+  const handleToggleHidden = (
+    category: 'data' | 'interactions' | 'tooltips',
+    val: boolean
+  ) => {
+    const nextCats = { ...(d.collapsedCategories || {}), [category]: val };
+    p.onChange({ collapsedCategories: nextCats } as any);
+
+    window.dispatchEvent(
+      new CustomEvent('designer:toggle-hidden', {
+        detail: { nodeId: p.node.id, category, hidden: val },
+      })
+    );
+  };
+
   const toDataItems = (list?: (string | DataItem)[]): DataItem[] =>
     Array.isArray(list)
       ? list.map((v) => {
@@ -40,7 +54,6 @@ export default function VisualizationMenu(p: ExtendedKindProps) {
     ? (d.interactions as Interaction[])
     : [];
 
-  // --- CHANGED: Flatten interaction list ---
   const interactionListItems: (StyledListItem & {
     _interactionId: string;
     _targetId?: string;
@@ -48,16 +61,12 @@ export default function VisualizationMenu(p: ExtendedKindProps) {
   })[] = [];
 
   interactions.forEach((ix) => {
-    // If targetDetails (new format) exists, use it
     if (ix.targetDetails && ix.targetDetails.length > 0) {
       ix.targetDetails.forEach((detail) => {
         const targetName =
           p.nodeNames?.[detail.targetId] || detail.targetId || 'Unknown';
-
         let subtitle = `Target: ${targetName}`;
-        if (detail.targetDataRef) {
-          subtitle += ' (Data)';
-        }
+        if (detail.targetDataRef) subtitle += ' (Data)';
 
         interactionListItems.push({
           name: ix.name,
@@ -68,9 +77,7 @@ export default function VisualizationMenu(p: ExtendedKindProps) {
           _targetDataRef: detail.targetDataRef,
         });
       });
-    }
-    // Fallback for legacy target IDs array
-    else if (ix.targets && ix.targets.length > 0) {
+    } else if (ix.targets && ix.targets.length > 0) {
       ix.targets.forEach((targetId) => {
         const targetName = p.nodeNames?.[targetId] || targetId;
         interactionListItems.push({
@@ -81,9 +88,7 @@ export default function VisualizationMenu(p: ExtendedKindProps) {
           _targetId: targetId,
         });
       });
-    }
-    // No targets
-    else {
+    } else {
       interactionListItems.push({
         name: ix.name,
         badge: ix.result,
@@ -212,7 +217,6 @@ export default function VisualizationMenu(p: ExtendedKindProps) {
             })
           );
         }}
-        // --- CHANGED: Use strictly identified interaction/target ---
         onItemClick={(i) => {
           const item = interactionListItems[i];
           if (item) {
@@ -229,6 +233,8 @@ export default function VisualizationMenu(p: ExtendedKindProps) {
         }}
         addTooltip="Add interaction"
         disabled={disabled}
+        hidden={d.collapsedCategories?.interactions}
+        onToggleHidden={(v) => handleToggleHidden('interactions', v)}
       />
 
       <ListSection
@@ -251,6 +257,8 @@ export default function VisualizationMenu(p: ExtendedKindProps) {
         }}
         addTooltip="Associate tooltip"
         disabled={disabled}
+        hidden={d.collapsedCategories?.tooltips}
+        onToggleHidden={(v) => handleToggleHidden('tooltips', v)}
       />
     </div>
   );
