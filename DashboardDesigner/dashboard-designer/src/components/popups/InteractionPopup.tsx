@@ -63,7 +63,8 @@ const ALLOWED_RESULTS: Partial<Record<NodeKind, InteractionResult[]>> = {
   Button: ['dashboard'],
   Filter: ['filter'],
   Parameter: ['binding' as InteractionResult],
-  Visualization: ['filter', 'highlight', 'dashboard', 'link'],
+  // Updated Visualization results:
+  Visualization: ['filter', 'highlight', 'dashboard'],
   Graph: ['filter', 'highlight', 'dashboard', 'link'],
   Tooltip: ['filter', 'highlight', 'dashboard', 'link'],
   DataAction: ['filter', 'highlight'],
@@ -87,17 +88,35 @@ export default function InteractionPopup({
   onSave,
 }: Props) {
   const isParameter = sourceKind === 'Parameter';
+  const isFilter = sourceKind === 'Filter';
+  const isButton = sourceKind === 'Button';
+  const isLegend = sourceKind === 'Legend';
+  const isVisualization = sourceKind === 'Visualization';
+
+  // Group special behaviors
+
+  // Nodes that enforce Trigger='click' and Source='component' (Hides these UI sections)
+  // Visualization is NOT here because it allows click/hover and component/data
+  const hasFixedTriggerSource = isParameter || isFilter || isButton || isLegend;
+
+  // Nodes that enforce a specific single Result (Hides Dropdown, shows Label)
+  const hasFixedResult = isParameter || isFilter || isButton;
 
   // --- Defaults ---
   const [name, setName] = useState(initialName);
 
-  // Force Parameter defaults
+  // Force defaults for Fixed Nodes
   const [trigger, setTrigger] = useState<InteractionType>(
-    isParameter ? ('click' as InteractionType) : initialType
+    hasFixedTriggerSource ? ('click' as InteractionType) : initialType
   );
-  const [result, setResult] = useState<InteractionResult>(
-    isParameter ? ('binding' as InteractionResult) : initialResult
-  );
+
+  // Determine initial result based on node type
+  const [result, setResult] = useState<InteractionResult>(() => {
+    if (isParameter) return 'binding' as InteractionResult;
+    if (isFilter) return 'filter';
+    if (isButton) return 'dashboard';
+    return initialResult;
+  });
 
   const [newDashName, setNewDashName] = useState('');
   const isDashboard = result === 'dashboard';
@@ -107,9 +126,10 @@ export default function InteractionPopup({
   );
 
   const hasSourceDataAttrs = dataAttributes.length > 0;
-  // Force 'component' source for Parameter
+
+  // Force 'component' source for Fixed Nodes
   const [sourceType, setSourceType] = useState<SourceType>(
-    isParameter ? 'component' : 'component'
+    hasFixedTriggerSource ? 'component' : 'component'
   );
   const [sourceDataRef, setSourceDataRef] = useState<string>(
     dataAttributes[0]?.ref ?? ''
@@ -122,19 +142,41 @@ export default function InteractionPopup({
     );
   }, [sourceKind]);
 
-  // Enforce Parameter constraints
+  // Enforce Constraints
   useEffect(() => {
     if (isParameter) {
-      setTrigger('click' as InteractionType);
-      setResult('binding' as InteractionResult);
+      setTrigger('click');
+      setResult('binding');
       setSourceType('component');
-    } else if (allowedResults.length > 0 && !allowedResults.includes(result)) {
+      return;
+    }
+    if (isFilter) {
+      setTrigger('click');
+      setResult('filter');
+      setSourceType('component');
+      return;
+    }
+    if (isButton) {
+      setTrigger('click');
+      setResult('dashboard');
+      setSourceType('component');
+      return;
+    }
+    if (isLegend) {
+      setTrigger('click');
+      setSourceType('component');
+      // Result is mutable for Legend
+    }
+    // Visualization has no fixed constraints on load,
+    // but we ensure the current result is valid
+    if (allowedResults.length > 0 && !allowedResults.includes(result)) {
       setResult(allowedResults[0]);
     }
-  }, [allowedResults, result, isParameter]);
+  }, [allowedResults, result, isParameter, isFilter, isButton, isLegend]);
 
   useEffect(() => {
-    if (isParameter) return;
+    if (hasFixedTriggerSource) return;
+    // For standard nodes (Visualization, etc), ensure source validity
     if (!hasSourceDataAttrs) {
       setSourceType('component');
       setSourceDataRef('');
@@ -143,7 +185,12 @@ export default function InteractionPopup({
     if (!dataAttributes.some((a) => a.ref === sourceDataRef)) {
       setSourceDataRef(dataAttributes[0]?.ref ?? '');
     }
-  }, [hasSourceDataAttrs, dataAttributes, sourceDataRef, isParameter]);
+  }, [
+    hasSourceDataAttrs,
+    dataAttributes,
+    sourceDataRef,
+    hasFixedTriggerSource,
+  ]);
 
   // Use all targets except Graphs (internal)
   const validTargets = useMemo(() => {
@@ -214,7 +261,6 @@ export default function InteractionPopup({
       if (isDataKey(key)) {
         const [targetId, dataRef] = key.split(DATA_DELIM);
         const t = targetById.get(targetId);
-        // dataRef is the ID, use it to find the label
         const attr = t?.dataAttributes?.find((a) => a.ref === dataRef);
 
         const badgePrefix = t?.badge ? t.badge + ' ' : '';
@@ -246,14 +292,42 @@ export default function InteractionPopup({
     const indent = depth * 18;
     const children = childrenByParent.get(t.id) ?? [];
 
-    // PARAMETER LOGIC:
-    // If it's a Parameter interaction, users can select Dashboards/Visualizations directly.
-    // For other components (like Legends), they should select the inner data attribute, not the node itself.
     let isUnavailable = false;
+    let areAttributesUnavailable = false;
+
+    // PARAMETER LOGIC:
     if (isParameter) {
       if (t.kind !== 'Dashboard' && t.kind !== 'Visualization') {
         isUnavailable = true;
+        areAttributesUnavailable = true;
       }
+    }
+
+    // FILTER LOGIC:
+    if (isFilter) {
+      const allowed = ['Visualization', 'Dashboard', 'Filter', 'Placeholder'];
+      if (!allowed.includes(t.kind)) {
+        isUnavailable = true;
+        areAttributesUnavailable = true;
+      }
+    }
+
+    // LEGEND LOGIC:
+    if (isLegend) {
+      if (t.kind !== 'Visualization') {
+        isUnavailable = true;
+      }
+      areAttributesUnavailable = true;
+    }
+
+    // VISUALIZATION LOGIC:
+    if (isVisualization) {
+      const allowed = ['Visualization', 'Legend'];
+      if (!allowed.includes(t.kind)) {
+        isUnavailable = true;
+      }
+      // Usually filters/highlights target the component shell, so we disable attributes
+      areAttributesUnavailable = true;
     }
 
     return (
@@ -316,14 +390,24 @@ export default function InteractionPopup({
             {t.dataAttributes.map((attr) => {
               const key = makeDataKey(t.id, attr.ref);
               const checked = selected.has(key);
+              const isAttrDisabled = areAttributesUnavailable;
+
               return (
                 <div
                   key={key}
-                  onClick={() => toggleKey(key)}
-                  onKeyDown={(e) => {
-                    if (e.key === ' ' || e.key === 'Enter') toggleKey(key);
+                  onClick={() => {
+                    if (!isAttrDisabled) toggleKey(key);
                   }}
-                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (
+                      !isAttrDisabled &&
+                      (e.key === ' ' || e.key === 'Enter')
+                    ) {
+                      e.preventDefault();
+                      toggleKey(key);
+                    }
+                  }}
+                  tabIndex={isAttrDisabled ? -1 : 0}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -332,9 +416,14 @@ export default function InteractionPopup({
                     margin: '2px 4px',
                     borderRadius: 8,
                     border: '1px dashed #e5e7eb',
-                    background: checked ? '#ecfeff' : 'transparent',
-                    cursor: 'pointer',
+                    background: isAttrDisabled
+                      ? '#f9fafb'
+                      : checked
+                      ? '#ecfeff'
+                      : 'transparent',
+                    cursor: isAttrDisabled ? 'default' : 'pointer',
                     userSelect: 'none',
+                    opacity: isAttrDisabled ? 0.5 : 1,
                   }}
                 >
                   <div
@@ -343,12 +432,24 @@ export default function InteractionPopup({
                       height: 12,
                       borderRadius: 999,
                       border: '1px solid #94a3b8',
-                      background: checked ? '#06b6d4' : '#fff',
+                      background:
+                        !isAttrDisabled && checked ? '#06b6d4' : '#fff',
+                      borderColor: isAttrDisabled ? '#cbd5e1' : '#94a3b8',
                     }}
                   />
-                  <div style={{ fontSize: 12, color: '#0f172a' }}>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: isAttrDisabled ? '#94a3b8' : '#0f172a',
+                    }}
+                  >
                     {attr.label}
-                    <span style={{ color: '#6b7280' }}> · data attribute</span>
+                    <span
+                      style={{ color: isAttrDisabled ? '#cbd5e1' : '#6b7280' }}
+                    >
+                      {' '}
+                      · data attribute
+                    </span>
                   </div>
                 </div>
               );
@@ -363,6 +464,13 @@ export default function InteractionPopup({
         )}
       </div>
     );
+  };
+
+  const getResultLabel = () => {
+    if (isParameter) return 'Parameter Binding';
+    if (isFilter) return 'Filter';
+    if (isButton) return 'Dashboard';
+    return result;
   };
 
   return (
@@ -397,12 +505,45 @@ export default function InteractionPopup({
         />
       </section>
 
-      {/* --- CUSTOM PARAMETER UI --- */}
-      {isParameter ? (
+      {/* --- TRIGGER UI --- */}
+      {/* Hidden for fixed nodes (Parameter / Filter / Button / Legend) */}
+      {/* Visible for Visualization */}
+      {!hasFixedTriggerSource && (
         <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>
-            Result
+            Trigger
           </div>
+          <div style={{ display: 'flex', gap: 12 }}>
+            {(['hover', 'click'] as InteractionType[]).map((t) => (
+              <label
+                key={t}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  cursor: 'pointer',
+                }}
+              >
+                <input
+                  type="radio"
+                  name="int-trigger"
+                  value={t}
+                  checked={trigger === t}
+                  onChange={() => setTrigger(t)}
+                />
+                {t.charAt(0).toUpperCase() + t.slice(1)}
+              </label>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* --- RESULT UI --- */}
+      <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>
+          Result
+        </div>
+        {hasFixedResult ? (
           <div
             style={{
               padding: '8px 12px',
@@ -414,20 +555,46 @@ export default function InteractionPopup({
               fontWeight: 600,
             }}
           >
-            Parameter Binding
+            {getResultLabel()}
           </div>
-        </section>
-      ) : (
-        /* Standard UI */
-        <>
-          <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>
-              Trigger
+        ) : (
+          <select
+            value={result}
+            onChange={(e) => setResult(e.target.value as InteractionResult)}
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #e5e7eb',
+              borderRadius: 12,
+              background: '#fff',
+              fontWeight: 700,
+            }}
+          >
+            {allowedResults.map((r) => (
+              <option key={r} value={r}>
+                {r.charAt(0).toUpperCase() + r.slice(1)}
+              </option>
+            ))}
+          </select>
+        )}
+      </section>
+
+      {/* --- SOURCE UI --- */}
+      {/* Hidden for fixed nodes */}
+      {!hasFixedTriggerSource && (
+        <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>
+            Source
+          </div>
+          {!hasSourceDataAttrs && (
+            <div style={{ fontSize: 12, color: '#6b7280' }}>
+              This component has no data attributes. The source will be the
+              component itself.
             </div>
-            <div style={{ display: 'flex', gap: 12 }}>
-              {(['hover', 'click'] as InteractionType[]).map((t) => (
+          )}
+          {hasSourceDataAttrs && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ display: 'flex', gap: 12 }}>
                 <label
-                  key={t}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -437,111 +604,53 @@ export default function InteractionPopup({
                 >
                   <input
                     type="radio"
-                    name="int-trigger"
-                    value={t}
-                    checked={trigger === t}
-                    onChange={() => setTrigger(t)}
-                  />
-                  {t.charAt(0).toUpperCase() + t.slice(1)}
+                    name="int-source-kind"
+                    value="component"
+                    checked={sourceType === 'component'}
+                    onChange={() => setSourceType('component')}
+                  />{' '}
+                  Component
                 </label>
-              ))}
-            </div>
-          </section>
-
-          <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>
-              Result
-            </div>
-            <select
-              value={result}
-              onChange={(e) => setResult(e.target.value as InteractionResult)}
-              style={{
-                padding: '8px 12px',
-                border: '1px solid #e5e7eb',
-                borderRadius: 12,
-                background: '#fff',
-                fontWeight: 700,
-              }}
-            >
-              {allowedResults.map((r) => (
-                <option key={r} value={r}>
-                  {r.charAt(0).toUpperCase() + r.slice(1)}
-                </option>
-              ))}
-            </select>
-          </section>
-
-          <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>
-              Source
-            </div>
-            {!hasSourceDataAttrs && (
-              <div style={{ fontSize: 12, color: '#6b7280' }}>
-                This component has no data attributes. The source will be the
-                component itself.
+                <label
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="int-source-kind"
+                    value="data"
+                    checked={sourceType === 'data'}
+                    onChange={() => setSourceType('data')}
+                  />{' '}
+                  Data attribute
+                </label>
               </div>
-            )}
-            {hasSourceDataAttrs && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ display: 'flex', gap: 12 }}>
-                  <label
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <input
-                      type="radio"
-                      name="int-source-kind"
-                      value="component"
-                      checked={sourceType === 'component'}
-                      onChange={() => setSourceType('component')}
-                    />{' '}
-                    Component
-                  </label>
-                  <label
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <input
-                      type="radio"
-                      name="int-source-kind"
-                      value="data"
-                      checked={sourceType === 'data'}
-                      onChange={() => setSourceType('data')}
-                    />{' '}
-                    Data attribute
-                  </label>
-                </div>
-                {sourceType === 'data' && (
-                  <select
-                    value={sourceDataRef}
-                    onChange={(e) => setSourceDataRef(e.target.value)}
-                    style={{
-                      padding: '6px 10px',
-                      borderRadius: 8,
-                      border: '1px solid #e5e7eb',
-                      background: '#fff',
-                      fontSize: 13,
-                    }}
-                  >
-                    {dataAttributes.map((a) => (
-                      <option key={a.ref} value={a.ref}>
-                        {a.label}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-            )}
-          </section>
-        </>
+              {sourceType === 'data' && (
+                <select
+                  value={sourceDataRef}
+                  onChange={(e) => setSourceDataRef(e.target.value)}
+                  style={{
+                    padding: '6px 10px',
+                    borderRadius: 8,
+                    border: '1px solid #e5e7eb',
+                    background: '#fff',
+                    fontSize: 13,
+                  }}
+                >
+                  {dataAttributes.map((a) => (
+                    <option key={a.ref} value={a.ref}>
+                      {a.label}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
+        </section>
       )}
 
       {isDashboard ? (
