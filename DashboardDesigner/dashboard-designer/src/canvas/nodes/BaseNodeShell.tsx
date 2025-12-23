@@ -488,7 +488,7 @@ export default function BaseNodeShell({
                   P({perspectiveCount})
                 </span>
               )}
-              {reviewMode && (
+              {reviewMode && (reviewCount || 0) > 0 && (
                 <div
                   className="nodrag nopan"
                   style={{ display: 'inline-flex' }}
@@ -538,7 +538,8 @@ export default function BaseNodeShell({
           ))}
       </div>
 
-      {(overlayTopRight || (reviewMode && hideHeader)) && (
+      {(overlayTopRight ||
+        (reviewMode && hideHeader && (reviewCount || 0) > 0)) && (
         <div
           style={{
             position: 'absolute',
@@ -550,7 +551,7 @@ export default function BaseNodeShell({
           className="nodrag nopan"
         >
           {overlayTopRight}
-          {reviewMode && hideHeader && (
+          {reviewMode && hideHeader && (reviewCount || 0) > 0 && (
             <ReviewBadge
               total={reviewCount}
               unresolved={reviewUnresolvedCount}

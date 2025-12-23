@@ -1763,7 +1763,14 @@ export default function Editor() {
         position: 'relative',
       }}
     >
-      <ReviewContext.Provider value={{ reviewsByTarget, reviewMode }}>
+      <ReviewContext.Provider
+        value={{
+          reviewsByTarget,
+          reviewMode,
+          nodes: nodes as any, // Cast if necessary to match generic types
+          edges,
+        }}
+      >
         <DndContext
           sensors={sensors}
           onDragStart={handleDragStart}

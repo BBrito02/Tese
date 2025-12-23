@@ -48,7 +48,6 @@ function PriorityPill({ level }: { level: Review['priority'] }) {
 
 export default function ReviewMenu({
   targetLabel,
-  sourceLabel,
   reviews,
   onCreate,
   onToggle,
