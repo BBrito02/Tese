@@ -15,15 +15,13 @@ export type Reply = {
   author?: string; // Optional
 };
 
-export type ReviewPriority = 'Low' | 'Medium' | 'High';
-
 // add near your other domain types
 export type Review = {
   id: string;
   targetId: string; // node id or edge id
   text: string;
   category?: 'Design' | 'Functionality' | 'Data' | 'Other';
-  priority?: ReviewPriority;
+  priority?: 'Low' | 'Medium' | 'High';
   resolved: boolean;
   author?: string;
   createdAt: number; // Date.now()

@@ -2,11 +2,7 @@ import {
   Handle,
   Position,
   useUpdateNodeInternals,
-  useNodes,
-  useEdges,
   type NodeProps,
-  type Node,
-  type Edge,
 } from 'reactflow';
 import { useEffect, useMemo } from 'react';
 import { useDroppable } from '@dnd-kit/core';
@@ -38,7 +34,7 @@ const MIN_SIZE: Record<string, { w: number; h: number }> = {
 
 export type BaseNodeShellProps = NodeProps<NodeData> & {
   body?: React.ReactNode;
-  footerItems?: DataItem[];
+  footerItems?: DataItem[]; // Changed to strict DataItem[]
   visualVars?: VisualVariable[];
   tooltipCount?: number;
   perspectiveCount?: number;
@@ -113,6 +109,7 @@ function DataPills({
       }}
     >
       {items.map((it, i) => {
+        // --- Use Stable ID for Handles ---
         const handleId = `data:${it.id}`;
         const label = it.name;
         const title = `${it.name} · ${it.dtype}`;
@@ -150,6 +147,7 @@ function DataPills({
               {label}
             </button>
 
+            {/* Target Handle (Top) - Connects to data:{id}:target */}
             <Handle
               id={`${handleId}:target`}
               type="target"
@@ -170,6 +168,7 @@ function DataPills({
               }}
             />
 
+            {/* Source Handles (Bottom) */}
             <Handle
               id={`${handleId}:click`}
               type="source"
@@ -185,7 +184,7 @@ function DataPills({
                 borderWidth: 1,
                 borderStyle: 'solid',
                 borderColor: '#222',
-                background: '#3b82f6',
+                background: '#3b82f6', // Blue for click
                 zIndex: 10,
               }}
             />
@@ -204,7 +203,7 @@ function DataPills({
                 borderWidth: 1,
                 borderStyle: 'solid',
                 borderColor: '#222',
-                background: '#fbbf24',
+                background: '#fbbf24', // Amber for hover
                 zIndex: 10,
               }}
             />
@@ -213,70 +212,6 @@ function DataPills({
       })}
     </div>
   );
-}
-
-// --- HELPER: Recursively find dependent nodes and edges ---
-function getAggregatedReviewCounts(
-  rootId: string,
-  nodes: Node[],
-  edges: Edge[],
-  reviewsByTarget: Record<string, any[]>
-) {
-  const relevantNodeIds = new Set<string>();
-  const queue = [rootId];
-
-  // 1. Identify all related Nodes (Self + Children + Connected Tooltips)
-  while (queue.length > 0) {
-    const currentId = queue.shift()!;
-    if (relevantNodeIds.has(currentId)) continue;
-    relevantNodeIds.add(currentId);
-
-    // A) Direct Children (inside the node)
-    const children = nodes.filter((n) => n.parentNode === currentId);
-    children.forEach((child) => queue.push(child.id));
-
-    // B) Connected Tooltips (Outgoing edges from current node to a Tooltip node)
-    const connectedEdges = edges.filter((e) => e.source === currentId);
-    connectedEdges.forEach((edge) => {
-      const targetNode = nodes.find((n) => n.id === edge.target);
-      if (
-        targetNode &&
-        targetNode.data?.kind === 'Tooltip' &&
-        !relevantNodeIds.has(targetNode.id)
-      ) {
-        queue.push(targetNode.id);
-      }
-    });
-  }
-
-  // 2. Identify all relevant Edges (Edges originating from the identified nodes)
-  const relevantEdgeIds = new Set<string>();
-  edges.forEach((edge) => {
-    // If the edge starts from one of our relevant nodes, it counts as part of this component's logic/interaction
-    if (relevantNodeIds.has(edge.source)) {
-      relevantEdgeIds.add(edge.id);
-    }
-  });
-
-  // 3. Sum up reviews
-  let total = 0;
-  let unresolved = 0;
-
-  // Sum for Nodes
-  relevantNodeIds.forEach((id) => {
-    const reviews = reviewsByTarget[id] || [];
-    total += reviews.length;
-    unresolved += reviews.filter((r) => !r.resolved).length;
-  });
-
-  // Sum for Edges
-  relevantEdgeIds.forEach((id) => {
-    const reviews = reviewsByTarget[id] || [];
-    total += reviews.length;
-    unresolved += reviews.filter((r) => !r.resolved).length;
-  });
-
-  return { total, unresolved };
 }
 
 export default function BaseNodeShell({
@@ -304,22 +239,16 @@ export default function BaseNodeShell({
   const updateNodeInternals = useUpdateNodeInternals();
   const { setNodeRef, isOver } = useDroppable({ id });
 
-  // Access global graph state to calculate dependencies
-  const nodes = useNodes();
-  const edges = useEdges();
-
-  // Access global reviews
-  const { reviewsByTarget, reviewMode } = useReviews();
-
-  // Calculate aggregated counts including connected edges
-  const { total: aggregatedTotal, unresolved: aggregatedUnresolved } = useMemo(
-    () => getAggregatedReviewCounts(id, nodes, edges, reviewsByTarget),
-    [id, nodes, edges, reviewsByTarget]
-  );
-
   const minW = MIN_SIZE[data.kind]?.w ?? 180;
   const minH = MIN_SIZE[data.kind]?.h ?? 100;
 
+  const {
+    reviewMode,
+    total: reviewCount,
+    unresolved: reviewUnresolvedCount,
+  } = useReviews(id);
+
+  // --- REVERTED: Always show footer items (Data Attributes) ---
   const visibleFooterItems = footerItems;
 
   const pillHandleIds = useMemo(
@@ -349,10 +278,12 @@ export default function BaseNodeShell({
   const dynamicBorderColor = isOver
     ? '#38bdf8'
     : isSelected
-    ? '#3b82f6'
+    ? '#3b82f6' // Match Standard Blue
     : 'transparent';
 
   const borderColor = highlightBorder ? dynamicBorderColor : '#e5e7eb';
+
+  // Add Glow Effect for Highlighting
   const boxShadow = isSelected
     ? '0 0 0 2px rgba(59, 130, 246, 0.5)'
     : '0 1px 3px rgba(0,0,0,0.06)';
@@ -381,7 +312,7 @@ export default function BaseNodeShell({
       }}
     >
       <NodeResizer
-        isVisible={!!selected}
+        isVisible={!!selected} // Only show resize handles when actually selected (not just highlighted)
         minWidth={minW}
         minHeight={minH}
         handleStyle={{ width: 12, height: 12, borderRadius: 4 }}
@@ -403,7 +334,7 @@ export default function BaseNodeShell({
           borderWidth,
           borderStyle: 'solid',
           borderColor,
-          boxShadow,
+          boxShadow, // Applied here
           overflow: isParameter ? 'visible' : 'hidden',
           boxSizing: 'border-box',
           transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -557,15 +488,15 @@ export default function BaseNodeShell({
                   P({perspectiveCount})
                 </span>
               )}
-              {reviewMode && aggregatedTotal > 0 && (
+              {reviewMode && (
                 <div
                   className="nodrag nopan"
                   style={{ display: 'inline-flex' }}
                 >
                   <ReviewBadge
-                    total={aggregatedTotal}
-                    unresolved={aggregatedUnresolved}
-                    title="Reviews (Aggregated)"
+                    total={reviewCount}
+                    unresolved={reviewUnresolvedCount}
+                    title="Reviews"
                   />
                 </div>
               )}
@@ -607,8 +538,7 @@ export default function BaseNodeShell({
           ))}
       </div>
 
-      {(overlayTopRight ||
-        (reviewMode && hideHeader && aggregatedTotal > 0)) && (
+      {(overlayTopRight || (reviewMode && hideHeader)) && (
         <div
           style={{
             position: 'absolute',
@@ -620,11 +550,11 @@ export default function BaseNodeShell({
           className="nodrag nopan"
         >
           {overlayTopRight}
-          {reviewMode && hideHeader && aggregatedTotal > 0 && (
+          {reviewMode && hideHeader && (
             <ReviewBadge
-              total={aggregatedTotal}
-              unresolved={aggregatedUnresolved}
-              title="Reviews (Aggregated)"
+              total={reviewCount}
+              unresolved={reviewUnresolvedCount}
+              title="Reviews"
             />
           )}
         </div>
