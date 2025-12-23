@@ -40,9 +40,13 @@ A ferramenta permite desenhar e prototipar Dashboards de Visualização de Infor
 
 ## COMO EXECUTAR O PROJETO
 
-Requisitos: Node.js instalado.
+**Requisitos:** Node.js instalado (versão LTS recomendada).
+
+Para garantir a compatibilidade entre diferentes computadores (Windows, macOS, Linux) e evitar erros de permissões (ex: _permission denied_), utilize o comando de "instalação limpa" em vez da instalação normal.
 
 1. Abrir o terminal na pasta raiz do projeto.
-2. Instalar as dependências com o comando: npm install
-3. Iniciar a aplicação com o comando: npm run dev
-4. Abrir o link fornecido no browser (habitualmente http://localhost:5173).
+2. Executar o seguinte comando para reinstalar dependências e iniciar a aplicação:
+   ```bash
+   npm ci && npm run dev
+   ```
+3. Abrir o link fornecido no browser (habitualmente http://localhost:5173).
