@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import type { Review, Reply } from '../../domain/types';
+import type { Review } from '../../domain/types';
 import { SectionTitle, NameField } from '../menus/sections';
 import {
   LuCheck,
@@ -27,39 +27,6 @@ function PriorityPill({ level }: { level: Review['priority'] }) {
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        padding: '2px 6px', // Reduced padding
-        fontSize: 9, // Slightly smaller font
-        fontWeight: 700,
-        borderRadius: 999,
-        background: styles.bg,
-        border: `1px solid ${styles.br}`,
-        color: styles.fg,
-        textTransform: 'uppercase',
-        letterSpacing: 0.3,
-        whiteSpace: 'nowrap', // Prevent pill breaking
-      }}
-    >
-      {level}
-    </span>
-  );
-}
-
-function CategoryPill({ category }: { category: Review['category'] | string }) {
-  const norm = String(category || '').toLowerCase();
-  const styles =
-    norm === 'design'
-      ? { bg: '#eff6ff', br: '#bfdbfe', fg: '#1e3a8a' }
-      : norm === 'functionality'
-      ? { bg: '#f5f3ff', br: '#ddd6fe', fg: '#4c1d95' }
-      : norm === 'data'
-      ? { bg: '#ecfeff', br: '#a5f3fc', fg: '#164e63' }
-      : { bg: '#f1f5f9', br: '#e2e8f0', fg: '#0f172a' };
-
-  return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
         padding: '2px 6px',
         fontSize: 9,
         fontWeight: 700,
@@ -67,21 +34,18 @@ function CategoryPill({ category }: { category: Review['category'] | string }) {
         background: styles.bg,
         border: `1px solid ${styles.br}`,
         color: styles.fg,
-        letterSpacing: 0.2,
+        textTransform: 'uppercase',
+        letterSpacing: 0.3,
         whiteSpace: 'nowrap',
-        maxWidth: 80, // Truncate really long custom categories
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
       }}
     >
-      {category}
+      {level}
     </span>
   );
 }
 
 export default function ReviewMenu({
   targetLabel,
-  sourceLabel,
   reviews,
   onCreate,
   onToggle,
@@ -93,9 +57,9 @@ export default function ReviewMenu({
   targetLabel?: string;
   sourceLabel?: string;
   reviews: Review[];
+  // Removed category from onCreate signature
   onCreate: (
     text: string,
-    category: Review['category'],
     priority: Review['priority'],
     author: string
   ) => void;
@@ -109,18 +73,15 @@ export default function ReviewMenu({
 
   // Add Form State
   const [text, setText] = useState('');
-  const [category, setCategory] = useState<Review['category']>('Design');
+  // Removed category state
   const [priority, setPriority] = useState<Review['priority']>('Medium');
-  const [customCategory, setCustomCategory] = useState<string>('');
 
   // Edit State
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
-  const [editCategory, setEditCategory] =
-    useState<Review['category']>('Design');
+  // Removed editCategory state
   const [editPriority, setEditPriority] =
     useState<Review['priority']>('Medium');
-  const [editCustomCategory, setEditCustomCategory] = useState('');
 
   // Reply State
   const [replyingId, setReplyingId] = useState<string | null>(null);
@@ -143,7 +104,6 @@ export default function ReviewMenu({
     marginBottom: 4,
   };
 
-  // ✅ FIX 1: Ensure all inputs use border-box so padding doesn't expand width
   const inputStyle: React.CSSProperties = {
     width: '100%',
     padding: '6px 8px',
@@ -152,22 +112,15 @@ export default function ReviewMenu({
     fontSize: 12,
     background: '#fff',
     outline: 'none',
-    boxSizing: 'border-box', // Crucial for layout
+    boxSizing: 'border-box',
   };
 
-  const needsCustom = category === 'Other';
-  const canSubmit = !!text.trim() && (!needsCustom || !!customCategory.trim());
+  const canSubmit = !!text.trim();
 
   // Edit Logic
   const startEdit = (r: Review) => {
     setEditingId(r.id);
-    const baseCat = ['Design', 'Functionality', 'Data', 'Other'].includes(
-      String(r.category)
-    )
-      ? (r.category as Review['category'])
-      : 'Other';
-    setEditCategory(baseCat as Review['category']);
-    setEditCustomCategory(baseCat === 'Other' ? String(r.category) : '');
+    // Removed category logic
     setEditPriority(r.priority || 'Medium');
     setEditText(r.text || '');
     setReplyingId(null);
@@ -176,8 +129,6 @@ export default function ReviewMenu({
   const cancelEdit = () => {
     setEditingId(null);
     setEditText('');
-    setEditCustomCategory('');
-    setEditCategory('Design');
     setEditPriority('Medium');
   };
 
@@ -185,13 +136,10 @@ export default function ReviewMenu({
     if (!editingId) return;
     const t = editText.trim();
     if (!t) return;
-    const effCat =
-      editCategory === 'Other'
-        ? editCustomCategory.trim() || 'Other'
-        : editCategory;
+
+    // Removed category from update payload
     onUpdate(editingId, {
       text: t,
-      category: effCat as Review['category'],
       priority: editPriority,
     });
     cancelEdit();
@@ -204,9 +152,7 @@ export default function ReviewMenu({
     setReplyingId(null);
   };
 
-  const needsCustomEdit = editCategory === 'Other';
-  const canSaveEdit =
-    !!editText.trim() && (!needsCustomEdit || !!editCustomCategory.trim());
+  const canSaveEdit = !!editText.trim();
 
   return (
     <div style={{ paddingBottom: 20, width: '100%', boxSizing: 'border-box' }}>
@@ -256,46 +202,19 @@ export default function ReviewMenu({
             />
           </div>
 
-          <div
-            style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}
-          >
-            <div style={{ minWidth: 0 }}>
-              {' '}
-              {/* minWidth 0 prevents flex blowouts */}
-              <label style={fieldLabel}>Category</label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value as any)}
-                style={inputStyle}
-              >
-                <option>Design</option>
-                <option>Functionality</option>
-                <option>Data</option>
-                <option>Other</option>
-              </select>
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <label style={fieldLabel}>Priority</label>
-              <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as any)}
-                style={inputStyle}
-              >
-                <option>Low</option>
-                <option>Medium</option>
-                <option>High</option>
-              </select>
-            </div>
-          </div>
-
-          {needsCustom && (
-            <input
-              placeholder="Custom category..."
-              value={customCategory}
-              onChange={(e) => setCustomCategory(e.target.value)}
+          {/* Only Priority Input Now */}
+          <div style={{ minWidth: 0 }}>
+            <label style={fieldLabel}>Priority</label>
+            <select
+              value={priority}
+              onChange={(e) => setPriority(e.target.value as any)}
               style={inputStyle}
-            />
-          )}
+            >
+              <option>Low</option>
+              <option>Medium</option>
+              <option>High</option>
+            </select>
+          </div>
 
           <textarea
             value={text}
@@ -308,20 +227,11 @@ export default function ReviewMenu({
           <button
             onClick={() => {
               const t = text.trim();
-              const custom = customCategory.trim();
               if (!t) return;
-              if (needsCustom && !custom) return;
-              const effectiveCategory = needsCustom
-                ? (custom as any)
-                : category;
-              onCreate(
-                t,
-                effectiveCategory as any,
-                priority,
-                currentUser || 'Anonymous'
-              );
+
+              // Removed category argument
+              onCreate(t, priority, currentUser || 'Anonymous');
               setText('');
-              if (needsCustom) setCustomCategory('');
             }}
             disabled={!canSubmit}
             style={{
@@ -374,7 +284,7 @@ export default function ReviewMenu({
                 padding: 12,
                 boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
                 transition: 'all 200ms ease',
-                boxSizing: 'border-box', // Ensure padding doesn't cause overflow
+                boxSizing: 'border-box',
                 width: '100%',
               }}
             >
@@ -394,7 +304,7 @@ export default function ReviewMenu({
                 {!isEditing && (
                   <>
                     <span style={{ color: '#cbd5e1' }}>•</span>
-                    {r.category && <CategoryPill category={r.category} />}
+                    {/* Removed CategoryPill */}
                     {r.priority && <PriorityPill level={r.priority} />}
                   </>
                 )}
@@ -412,7 +322,6 @@ export default function ReviewMenu({
 
               {/* === MAIN CONTENT === */}
               {!isEditing ? (
-                // ✅ FIX 2: Break long words to prevent horizontal scroll
                 <div
                   style={{
                     color: r.resolved ? '#15803d' : '#334155',
@@ -438,48 +347,18 @@ export default function ReviewMenu({
                     boxSizing: 'border-box',
                   }}
                 >
-                  <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: '1fr 1fr',
-                      gap: 8,
-                    }}
-                  >
-                    <div style={{ minWidth: 0 }}>
-                      <label style={fieldLabel}>Category</label>
-                      <select
-                        value={editCategory}
-                        onChange={(e) => setEditCategory(e.target.value as any)}
-                        style={inputStyle}
-                      >
-                        <option>Design</option>
-                        <option>Functionality</option>
-                        <option>Data</option>
-                        <option>Other</option>
-                      </select>
-                    </div>
-                    <div style={{ minWidth: 0 }}>
-                      <label style={fieldLabel}>Priority</label>
-                      <select
-                        value={editPriority}
-                        onChange={(e) => setEditPriority(e.target.value as any)}
-                        style={inputStyle}
-                      >
-                        <option>Low</option>
-                        <option>Medium</option>
-                        <option>High</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {needsCustomEdit && (
-                    <input
-                      placeholder="Custom category..."
-                      value={editCustomCategory}
-                      onChange={(e) => setEditCustomCategory(e.target.value)}
+                  <div style={{ minWidth: 0 }}>
+                    <label style={fieldLabel}>Priority</label>
+                    <select
+                      value={editPriority}
+                      onChange={(e) => setEditPriority(e.target.value as any)}
                       style={inputStyle}
-                    />
-                  )}
+                    >
+                      <option>Low</option>
+                      <option>Medium</option>
+                      <option>High</option>
+                    </select>
+                  </div>
 
                   <textarea
                     value={editText}
@@ -561,7 +440,6 @@ export default function ReviewMenu({
                           borderTopLeftRadius: '2px',
                           fontSize: 12,
                           lineHeight: 1.4,
-                          // ✅ FIX 3: Break long words in replies too
                           overflowWrap: 'anywhere',
                           wordBreak: 'break-word',
                           whiteSpace: 'pre-wrap',
@@ -690,7 +568,7 @@ export default function ReviewMenu({
                     onClick={() => onToggle(r.id, !r.resolved)}
                     style={{
                       flex: 1,
-                      minWidth: '80px', // Prevent crushing
+                      minWidth: '80px',
                       padding: '4px 8px',
                       borderRadius: 6,
                       border: r.resolved
