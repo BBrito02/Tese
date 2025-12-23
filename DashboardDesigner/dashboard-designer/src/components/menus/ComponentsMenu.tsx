@@ -316,12 +316,13 @@ export default function ComponentsMenu(props: Props) {
             }
             sourceLabel={reviewSourceLabel}
             reviews={reviews}
-            onCreate={(text, category, priority, author) =>
+            // --- FIX START: Removed 'category' from args and payload ---
+            onCreate={(text, priority, author) =>
               onReviewCreate?.({
                 id: nanoid(),
                 targetId: reviewTargetId ?? panelNode.id,
                 text,
-                category,
+                // category: removed
                 priority,
                 createdAt: Date.now(),
                 resolved: false,
@@ -329,6 +330,7 @@ export default function ComponentsMenu(props: Props) {
                 replies: [],
               })
             }
+            // --- FIX END ---
             onToggle={(id, next) => onReviewUpdate?.(id, { resolved: next })}
             onDelete={(id) => onReviewDelete?.(id)}
             onUpdate={(id, patch) => onReviewUpdate?.(id, patch)}

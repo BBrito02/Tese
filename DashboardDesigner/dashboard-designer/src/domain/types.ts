@@ -20,7 +20,7 @@ export type Review = {
   id: string;
   targetId: string; // node id or edge id
   text: string;
-  category?: 'Design' | 'Functionality' | 'Data' | 'Other';
+  //category?: 'Design' | 'Functionality' | 'Data' | 'Other';
   priority?: 'Low' | 'Medium' | 'High';
   resolved: boolean;
   author?: string;
