@@ -32,6 +32,7 @@ import type {
   Review,
   Reply,
   DataItem,
+  GraphType,
 } from './domain/types';
 import { canConnect } from './domain/rules';
 import { nextBadgeFor } from './domain/types';
@@ -59,6 +60,7 @@ import DataPopup from './components/popups/DataPopup';
 import SavePopup from './components/popups/SavePopup';
 import InteractionPopup from './components/popups/InteractionPopup';
 import TooltipPopup from './components/popups/TooltipPopup';
+import GraphTypePopup from './components/popups/GraphTypePopup';
 
 import NodeGhost from './canvas/nodes/NodeGhost';
 import InteractionEdgeMenu from './components/menus/InteractionEdgeMenu';
@@ -359,8 +361,8 @@ export default function Editor() {
     [setNodes, setEdges, takeSnapshot, syncParentGraphTypes]
   );
 
-  const handleCreatePerspective = useCallback(
-    (sourceId: string) => {
+  const executeCreatePerspective = useCallback(
+    (sourceId: string, graphTypeOverride?: GraphType) => {
       takeSnapshot();
       const newId = nanoid();
 
@@ -388,12 +390,23 @@ export default function Editor() {
             title: newTitle,
             badge: nextBadgeFor(sourceNode.data.kind, all),
             perspectives: nextPerspectives,
+            // Logic:
+            // 1. If override is present (Graph popup), use it.
+            // 2. If not, try to inherit (e.g. if we allowed cloning graphs without popup).
+            // 3. Otherwise undefined.
+            graphType:
+              graphTypeOverride ?? sourceNode.data.graphType ?? undefined,
             visualVars: [],
-            graphType: undefined,
             data: [],
             interactions: [],
             tooltips: [],
             attachedTo: (sourceNode.data as any).attachedTo,
+            // Logic:
+            // If we changed the type (override), we must clear the old preview image.
+            // If we are just cloning, we keep it.
+            previewImageId: graphTypeOverride
+              ? undefined
+              : (sourceNode.data as any).previewImageId,
           } as NodeData,
           style: sourceNode.style,
           parentNode: sourceNode.parentNode,
@@ -444,7 +457,47 @@ export default function Editor() {
 
       requestAnimationFrame(() => setSelectedId(newId));
     },
-    [setNodes, setEdges, takeSnapshot]
+    [setNodes, setEdges, takeSnapshot, setSelectedId]
+  );
+
+  // 3. REPLACE THE EXISTING handleCreatePerspective WITH THIS
+  const handleCreatePerspective = useCallback(
+    (sourceId: string) => {
+      const sourceNode = nodes.find((n) => n.id === sourceId);
+      if (!sourceNode) return;
+
+      // Check if it's a Graph node
+      if (sourceNode.data.kind === 'Graph') {
+        openModal({
+          title: 'Select Graph Type',
+          node: (
+            <ModalCleanup onCleanup={() => {}}>
+              <GraphTypePopup
+                // Pass existing type as array
+                initialGraphTypes={
+                  sourceNode.data.graphType ? [sourceNode.data.graphType] : []
+                }
+                // --- ENABLE SINGLE SELECTION MODE ---
+                multiSelect={false}
+                onCancel={() => {
+                  closeModal();
+                }}
+                onConfirm={(types) => {
+                  closeModal();
+                  // In single mode, we expect an array of length 1
+                  if (types.length > 0) {
+                    executeCreatePerspective(sourceId, types[0]);
+                  }
+                }}
+              />
+            </ModalCleanup>
+          ),
+        });
+      } else {
+        executeCreatePerspective(sourceId);
+      }
+    },
+    [nodes, openModal, closeModal, executeCreatePerspective]
   );
 
   const handleNavigate = useCallback(
@@ -2015,11 +2068,7 @@ export default function Editor() {
                   if (selectedNode)
                     setModal({ type, nodeId: selectedNode.id } as any);
                 }}
-                onCreatePerspective={
-                  (selectedNode.data as any).kind !== 'Graph'
-                    ? handleCreatePerspective
-                    : undefined
-                }
+                onCreatePerspective={handleCreatePerspective}
                 onNavigate={handleNavigate}
               />
             </div>

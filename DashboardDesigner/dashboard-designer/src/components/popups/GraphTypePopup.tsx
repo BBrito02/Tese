@@ -7,12 +7,14 @@ export type Props = {
   initialGraphTypes: GraphType[];
   onCancel: () => void;
   onConfirm: (types: GraphType[]) => void;
+  multiSelect?: boolean; // NEW PROP
 };
 
 export default function GraphTypePopup({
   initialGraphTypes,
   onCancel,
   onConfirm,
+  multiSelect = true, // Default to multiple
 }: Props) {
   // Selected types
   const [selected, setSelected] = useState<Set<GraphType>>(
@@ -25,11 +27,17 @@ export default function GraphTypePopup({
   const ALL: GraphType[] = Object.keys(GRAPH_TYPE_ICONS) as GraphType[];
 
   function toggle(gt: GraphType) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      next.has(gt) ? next.delete(gt) : next.add(gt);
-      return next;
-    });
+    if (multiSelect) {
+      // Standard Toggle behavior
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.has(gt) ? next.delete(gt) : next.add(gt);
+        return next;
+      });
+    } else {
+      // Radio/Single Select behavior
+      setSelected(new Set([gt]));
+    }
   }
 
   const list = useMemo(() => Array.from(selected), [selected]);
@@ -39,7 +47,7 @@ export default function GraphTypePopup({
     <div style={{ display: 'grid', gap: 16, minWidth: 560 }}>
       {/* Title */}
       <div style={{ fontWeight: 700, fontSize: 12, opacity: 0.85 }}>
-        Graph type selection
+        {multiSelect ? 'Select Graph Types' : 'Select Graph Type'}
       </div>
 
       {/* Selection grid */}
@@ -75,10 +83,16 @@ export default function GraphTypePopup({
                 cursor: 'pointer',
                 boxShadow: isActive ? '0 0 0 2px #38bdf8' : 'none',
                 transition: 'box-shadow 0.1s ease',
-                height: 40, // Enforce fixed height for buttons
+                height: 40,
               }}
             >
-              <input type="checkbox" readOnly checked={isChecked} />
+              {/* Visual Cue: Radio for single, Checkbox for multi */}
+              <input
+                type={multiSelect ? 'checkbox' : 'radio'}
+                readOnly
+                checked={isChecked}
+                style={{ cursor: 'pointer' }}
+              />
               <img
                 src={GRAPH_TYPE_ICONS[gt]}
                 alt={gt}
@@ -90,8 +104,8 @@ export default function GraphTypePopup({
         })}
       </div>
 
-      {/* Selected Chips */}
-      {list.length > 0 ? (
+      {/* Selected Chips (Only show for MultiSelect) */}
+      {multiSelect && list.length > 0 ? (
         <div
           style={{ display: 'flex', gap: 6, flexWrap: 'wrap', minHeight: 24 }}
         >
@@ -124,18 +138,17 @@ export default function GraphTypePopup({
           ))}
         </div>
       ) : (
-        <div style={{ minHeight: 24 }} />
+        <div style={{ minHeight: 12 }} />
       )}
 
       {/* --- Show Me panel --- */}
       <div
         style={{
           marginTop: 4,
-          padding: 16, // Slightly more padding for a spacious look
+          padding: 16,
           border: '1px solid #e5e7eb',
           borderRadius: 10,
           background: '#f8fafc',
-          // Taller fixed height to fit all content without scrollbar
           height: 200,
           display: 'flex',
           flexDirection: 'column',
@@ -146,7 +159,7 @@ export default function GraphTypePopup({
             fontWeight: 700,
             fontSize: 13,
             color: '#0f172a',
-            marginBottom: 12, // Increased margin
+            marginBottom: 12,
             display: 'flex',
             justifyContent: 'space-between',
             flexShrink: 0,
@@ -156,6 +169,10 @@ export default function GraphTypePopup({
             Show me
             {active ? (
               <span style={{ fontWeight: 400, marginLeft: 4 }}>— {active}</span>
+            ) : list.length === 1 ? (
+              <span style={{ fontWeight: 400, marginLeft: 4 }}>
+                — {list[0]} (Selected)
+              </span>
             ) : (
               <span style={{ fontWeight: 400, opacity: 0.5, marginLeft: 4 }}>
                 (Hover to see requirements)
@@ -166,7 +183,9 @@ export default function GraphTypePopup({
 
         {/* Content container */}
         <div style={{ flex: 1 }}>
-          <ShowMeHint type={active} />
+          <ShowMeHint
+            type={active || (list.length === 1 ? list[0] : undefined)}
+          />
         </div>
       </div>
 
@@ -195,7 +214,7 @@ export default function GraphTypePopup({
             cursor: canSave ? 'pointer' : 'not-allowed',
           }}
         >
-          Apply
+          {multiSelect ? 'Apply' : 'Create Perspective'}
         </button>
       </div>
     </div>

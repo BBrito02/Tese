@@ -16,6 +16,8 @@ export default function VisualVariablePopup({
   onSave,
 }: Props) {
   const [setVars, setSetVars] = useState(new Set(initial));
+  // --- NEW: Track active hover state ---
+  const [active, setActive] = useState<VisualVariable | undefined>(undefined);
 
   const toggle = (vv: VisualVariable) => {
     setSetVars((prev) => {
@@ -42,11 +44,16 @@ export default function VisualVariablePopup({
       >
         {ALL_VV.map((vv) => {
           const selected = setVars.has(vv);
+          const isActive = active === vv;
+
           return (
             <button
               key={vv}
               type="button"
               onClick={() => toggle(vv)}
+              // --- NEW: Mouse Events ---
+              onMouseEnter={() => setActive(vv)}
+              onMouseLeave={() => setActive(undefined)}
               aria-pressed={selected}
               title={vv}
               style={{
@@ -58,9 +65,17 @@ export default function VisualVariablePopup({
                 padding: '6px 8px',
                 background: selected ? '#eef2ff' : '#fff',
                 cursor: 'pointer',
+                // --- NEW: Hover Style ---
+                boxShadow: isActive ? '0 0 0 2px #38bdf8' : 'none',
+                transition: 'box-shadow 0.1s ease',
               }}
             >
-              <input type="checkbox" readOnly checked={selected} />
+              <input
+                type="checkbox"
+                readOnly
+                checked={selected}
+                style={{ cursor: 'pointer' }}
+              />
               <img
                 src={VISUAL_VAR_ICONS[vv]}
                 alt={vv}
@@ -79,6 +94,9 @@ export default function VisualVariablePopup({
             <button
               key={`cur-${vv}`}
               onClick={() => toggle(vv)}
+              // --- NEW: Mouse Events for chips as well ---
+              onMouseEnter={() => setActive(vv)}
+              onMouseLeave={() => setActive(undefined)}
               title={`Remove ${vv}`}
               style={{
                 border: '1px solid #e5e7eb',
@@ -90,6 +108,9 @@ export default function VisualVariablePopup({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 6,
+                // --- NEW: Visual feedback on chips ---
+                borderColor: active === vv ? '#38bdf8' : '#e5e7eb',
+                transition: 'border-color 0.1s ease',
               }}
             >
               <img
